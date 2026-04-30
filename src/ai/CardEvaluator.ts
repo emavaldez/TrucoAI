@@ -1,6 +1,7 @@
 // Card Evaluator - assesses hand strength for AI decision making
 
-import { Card, getCardRanking } from '../core/Card.js';
+import { Card } from '../core/Card.js';
+import { getCardRank } from '../core/Rules.js';
 import { Player } from '../core/Player.js';
 
 export type HandStrength = 'very-weak' | 'weak' | 'average' | 'good' | 'excellent';
@@ -39,7 +40,7 @@ export class CardEvaluator {
     let worstCard: Card | null = null;
 
     for (const card of cards) {
-      const ranking = getCardRanking(card);
+      const ranking = getCardRank(card);
       totalStrength += ranking;
 
       if (ranking > bestRanking) {
@@ -107,7 +108,7 @@ export class CardEvaluator {
 
   /** Get probability of winning a hand with current card vs unknown opponent */
   getWinProbability(card: Card): number {
-    const ranking = getCardRanking(card);
+    const ranking = getCardRank(card);
 
     // Simple probability model based on card ranking
     // Higher ranking = higher win probability
