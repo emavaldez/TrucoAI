@@ -9,7 +9,8 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true
+    sourcemap: true,
+    emptyOutDir: true
   },
   resolve: {
     alias: {
