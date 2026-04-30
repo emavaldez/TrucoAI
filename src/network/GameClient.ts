@@ -123,59 +123,59 @@ export class GameClient {
     if (!this.room) return;
 
     this.room.onMessage("state-update", (state) => {
-      if (this.onStateUpdate) this.onStateUpdate(state);
+      if (this.onStateUpdate) this.onStateUpdate(state as any);
     });
 
     this.room.onMessage("player-count", (data) => {
-      if (this.onPlayerCount) this.onPlayerCount(data);
+      if (this.onPlayerCount) this.onPlayerCount(data as any);
     });
 
     this.room.onMessage("game-started", (data) => {
-      if (this.onGameStarted) this.onGameStarted(data);
+      if (this.onGameStarted) this.onGameStarted(data as any);
     });
 
     this.room.onMessage("round-started", (data) => {
-      if (this.onRoundStarted) this.onRoundStarted(data);
+      if (this.onRoundStarted) this.onRoundStarted(data as any);
     });
 
     this.room.onMessage("turn-changed", (data) => {
-      if (this.onTurnChanged) this.onTurnChanged(data);
+      if (this.onTurnChanged) this.onTurnChanged(data as any);
     });
 
     this.room.onMessage("card-played", (data) => {
-      if (this.onCardPlayed) this.onCardPlayed(data);
+      if (this.onCardPlayed) this.onCardPlayed(data as any);
     });
 
     this.room.onMessage("envido-declared", (data) => {
-      if (this.onEnvidoDeclared) this.onEnvidoDeclared(data);
+      if (this.onEnvidoDeclared) this.onEnvidoDeclared(data as any);
     });
 
     this.room.onMessage("envido-responded", (data) => {
-      if (this.onEnvidoResponded) this.onEnvidoResponded(data);
+      if (this.onEnvidoResponded) this.onEnvidoResponded(data as any);
     });
 
     this.room.onMessage("truco-declared", (data) => {
-      if (this.onTrucoDeclared) this.onTrucoDeclared(data);
+      if (this.onTrucoDeclared) this.onTrucoDeclared(data as any);
     });
 
     this.room.onMessage("truco-responded", (data) => {
-      if (this.onTrucoResponded) this.onTrucoResponded(data);
+      if (this.onTrucoResponded) this.onTrucoResponded(data as any);
     });
 
     this.room.onMessage("player-folded", (data) => {
-      if (this.onPlayerFolded) this.onPlayerFolded(data);
+      if (this.onPlayerFolded) this.onPlayerFolded(data as any);
     });
 
     this.room.onMessage("ai-action", (data) => {
-      if (this.onAIAction) this.onAIAction(data);
+      if (this.onAIAction) this.onAIAction(data as any);
     });
 
     this.room.onMessage("player-ready", (data) => {
-      if (this.onPlayerReady) this.onPlayerReady(data);
+      if (this.onPlayerReady) this.onPlayerReady(data as any);
     });
 
     this.room.onMessage("player-left", (data) => {
-      if (this.onPlayerLeft) this.onPlayerLeft(data);
+      if (this.onPlayerLeft) this.onPlayerLeft(data as any);
     });
 
     this.room.onMessage("room-empty", () => {
@@ -183,11 +183,11 @@ export class GameClient {
     });
 
     this.room.onMessage("chat-message", (data) => {
-      if (this.onChatMessage) this.onChatMessage(data);
+      if (this.onChatMessage) this.onChatMessage(data as any);
     });
 
     this.room.onMessage("error", (data) => {
-      if (this.onError) this.onError(data);
+      if (this.onError) this.onError(data as any);
     });
 
     this.room.onLeave((code) => {
