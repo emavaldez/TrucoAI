@@ -9,6 +9,7 @@ export interface PlayerInfo {
   isHuman: boolean;
   isAI: boolean;
   difficulty?: 'easy' | 'normal' | 'hard';
+  team?: number; // 0 or 1 for team-based play
 }
 
 export class Player {

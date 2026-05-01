@@ -1,588 +1,552 @@
-// GameEngine - Core game logic for Truco (supports 2 and 4 players)
+// GameEngine - Core game logic for Argentine Truco (2/4/6 players)
+// Supports: 1v1, 2v2 (4 players), 3v3 (6 players)
+// Truco levels: Truco (1pt) → Retruco (2pts) → Vale 4 (4pts)
+// Envido levels: Envido (2pts) → Real Envido (3pts) → Falta Envido (6pts)
+// Winning score: 30
 
-import { Deck } from './Deck.js';
 import type { Card } from './Card.js';
+import { Deck } from './Deck.js';
+import { getCardRank } from './Rules.js';
 import type { PlayerInfo } from './Player.js';
-import { getCardRank, compareCards } from './Rules.js';
 
-export type GamePhase = 'menu' | 'dealing' | 'playing' | 'envido-pending'
-  | 'truco-pending' | 'retruco-pending' | 'vale4-pending'
-  | 'round-over' | 'game-over';
+// ─── Types ───────────────────────────────────────────────
+
+export type PlayerCount = 2 | 4 | 6;
+export type TrucoPhase = 'none' | 'challenged' | 'accepted' | 'rejected';
+export type EnvidoPhase = 'none' | 'challenged' | 'resolved';
+export type GamePhase = 'menu' | 'round-start' | 'playing' | 'envido-pending'
+  | 'envido-pending-response' | 'truco-pending' | 'round-over' | 'game-over';
 
 export interface RoundState {
   hands: Record<string, Card[]>;
-  playedCards: Record<number, Record<string, Card | null>>; // trickIndex -> playerId -> card
-  currentTrick: number;
-  trickWinners: string[]; // who won each trick
-  handsWon: Record<string, number>; // teamId -> tricks won
-  currentTurn: string; // playerId whose turn it is
+  playedCards: Record<number, Record<string, Card | null>>; // trick index → player → card
+  trickWinners: string[]; // player IDs who won each trick
+  currentTrick: number; // 0, 1, 2
+  currentTurn: string; // player ID whose turn it is
+  trickScore: number[]; // points per trick: team0 - team1
+  playerIds: string[];
 }
 
 export interface GameEvent {
-  type: 'round-start' | 'card-played' | 'trick-winner' | 'round-winner' | 'game-over'
-    | 'envido-challenge' | 'truco-challenge' | 'retruco-challenge' | 'vale4-challenge'
-    | 'truco-accepted' | 'truco-rejected' | 'envido-result';
-  data?: any;
+  type: string;
+  data: Record<string, any>;
 }
 
-const WINNING_SCORE = 30;
+export interface TrucoState {
+  level: number; // 0=none, 1=truco, 2=retruco, 3=vale4
+  phase: TrucoPhase;
+  challengedBy: string | null; // who challenged
+  roundPoints: number; // points at stake this round (1, 2, or 4)
+}
+
+export interface EnvidoState {
+  phase: EnvidoPhase;
+  team0Score: number; // best envido score for team 0
+  team1Score: number; // best envido score for team 1
+  challengedBy: string | null;
+  envidoType: string; // 'envido', 'real_envido', 'falta_envido'
+}
+
+// ─── Envido calculation ──────────────────────────────────
+
+export function calculateEnvidoForHand(cards: Card[]): { score: number; suit: string; cards: Card[] } {
+  if (cards.length === 0) return { score: 0, suit: '', cards: [] };
+
+  const suitGroups: Record<string, Card[]> = {};
+  for (const card of cards) {
+    if (!suitGroups[card.suit]) suitGroups[card.suit] = [];
+    suitGroups[card.suit].push(card);
+  }
+
+  let bestScore = 0;
+  let bestSuit = '';
+  let bestCards: Card[] = [];
+
+  for (const [suit, suitCards] of Object.entries(suitGroups)) {
+    if (suitCards.length >= 2) {
+      // Sort by number descending, take top 2
+      const sorted = [...suitCards].sort((a, b) => b.number - a.number);
+      const score = 20 + sorted[0].number + sorted[1].number;
+      if (score > bestScore) {
+        bestScore = score;
+        bestSuit = suit;
+        bestCards = sorted.slice(0, 2);
+      }
+    }
+  }
+
+  if (bestScore === 0) {
+    // No pair of same suit — take highest card number
+    const topCard = [...cards].sort((a, b) => b.number - a.number)[0];
+    if (topCard) {
+      bestScore = topCard.number;
+      bestSuit = topCard.suit;
+      bestCards = [topCard];
+    }
+  }
+
+  return { score: bestScore, suit: bestSuit, cards: bestCards };
+}
+
+export function getEnvidoType(score: number): string {
+  if (score >= 30) return 'falta_envido';
+  if (score >= 28) return 'real_envido';
+  return 'envido';
+}
+
+export function getEnvidoPoints(envidoType: string): number {
+  switch (envidoType) {
+    case 'falta_envido': return 6;
+    case 'real_envido': return 3;
+    default: return 2;
+  }
+}
+
+// ─── GameEngine ──────────────────────────────────────────
 
 export class GameEngine {
-  private _scores: Record<string, number> = { '0': 0, '1': 0 };
-  private deck = new Deck();
-  private phase: GamePhase = 'menu';
-  private round: RoundState | null = null;
-  private _currentTrucoLevel: number = 0;
-  private trucoChallenger: string | null = null;
-  private trucoPending: boolean = false;
-  private envidoPending: boolean = false;
-  private envidoChallenger: string | null = null;
-  private onEventCallback: ((event: GameEvent) => void) | null = null;
-  private _playerCount: 2 | 4 = 2;
-  private playerTeams: Record<string, number> = {}; // playerId -> teamId
-  private teamNames: Record<number, string> = { 0: '0', 1: '1' };
-  private playerNames: Record<string, string> = {};
+  private _playerCount: PlayerCount = 2;
+  private _players: PlayerInfo[] = [];
+  private _scores: Record<number, number> = { 0: 0, 1: 0 };
+  private _roundState: RoundState | null = null;
+  private _phase: GamePhase = 'menu';
+  private _deck = new Deck();
 
-  get phaseValue(): GamePhase { return this.phase; }
-  get currentTrucoLevel(): number { return this._currentTrucoLevel; }
-  set currentTrucoLevel(val: number) { this._currentTrucoLevel = val; }
-  get scores(): Record<string, number> { return this._scores; }
-  set scores(val: Record<string, number>) { this._scores = val; }
-  set onEvent(fn: ((event: GameEvent) => void) | null) { this.onEventCallback = fn; }
-  get roundState(): RoundState | null { return this.round; }
-  get playerCount(): 2 | 4 { return this._playerCount; }
+  // Truco state
+  private _truco: TrucoState = {
+    level: 0, phase: 'none', challengedBy: null, roundPoints: 0
+  };
 
-  emit(event: GameEvent): void {
-    if (this.onEventCallback) {
-      this.onEventCallback(event);
-    }
-  }
+  // Envido state
+  private _envido: EnvidoState = {
+    phase: 'none', team0Score: 0, team1Score: 0, challengedBy: null, envidoType: 'envido'
+  };
 
-  init(players: PlayerInfo[], playerCount: 2 | 4 = 2): void {
+  // Human players (who can click to play)
+  private _humanPlayers: string[] = [];
+
+  // Events
+  public onEvent: ((event: GameEvent) => void) | null = null;
+
+  // ─── Properties ────────────────────────────────────────
+
+  get playerCount(): PlayerCount { return this._playerCount; }
+  get players(): PlayerInfo[] { return this._players; }
+  get scores(): Record<number, number> { return { ...this._scores }; }
+  get roundState(): RoundState | null { return this._roundState; }
+  get phase(): GamePhase { return this._phase; }
+  get phaseValue(): GamePhase { return this._phase; }
+  get currentTrucoLevel(): number { return this._truco.level; }
+  get trucoState(): TrucoState { return { ...this._truco }; }
+  get envidoState(): EnvidoState { return { ...this._envido }; }
+  get humanPlayers(): string[] { return [...this._humanPlayers]; }
+
+  // ─── Initialization ────────────────────────────────────
+
+  init(players: PlayerInfo[], playerCount: PlayerCount): void {
+    this._players = players;
     this._playerCount = playerCount;
-    this._scores = { '0': 0, '1': 0 };
-    this._currentTrucoLevel = 0;
-    this.trucoChallenger = null;
-    this.trucoPending = false;
-    this.envidoPending = false;
-    this.phase = 'menu';
+    this._scores = { 0: 0, 1: 0 };
 
-    // Assign teams: for 2 players, team 0 = player, team 1 = AI
-    // For 4 players: indices 0,1 = team 0; indices 2,3 = team 1
-    this.playerTeams = {};
-    this.playerNames = {};
+    // Determine teams: even-indexed players = team 0, odd-indexed = team 1
+    // player-0 → team 0, player-1 → team 0 (teammate), player-2 → team 1, etc.
     for (let i = 0; i < players.length; i++) {
-      const p = players[i];
-      this.playerTeams[p.id] = i % 2; // 2 players: p0=team0, p1=team1; 4 players: p0,p2=team0, p1,p3=team1
-      this.playerNames[p.id] = p.name;
-    }
-    // For 4 players: alternate assignment (mano, pie, contra, contra-manos)
-    if (playerCount === 4) {
-      this.playerTeams[players[0].id] = 0; // mano -> team 0
-      this.playerTeams[players[1].id] = 1; // pie -> team 1
-      this.playerTeams[players[2].id] = 0; // contra -> team 0
-      this.playerTeams[players[3].id] = 1; // contra-manos -> team 1
+      players[i].team = i % 2;
     }
   }
+
+  setHumanPlayers(ids: string[]): void {
+    this._humanPlayers = ids;
+  }
+
+  // ─── Start Round ───────────────────────────────────────
 
   startRound(): void {
-    if (this.deck.remaining < 12) {
-      this.deck.reset();
-    }
+    // Reset round state
+    this._truco = { level: 0, phase: 'none', challengedBy: null, roundPoints: 0 };
+    this._envido = { phase: 'none', team0Score: 0, team1Score: 0, challengedBy: null, envidoType: 'envido' };
+    this._phase = 'round-start';
 
-    const numPlayers = this._playerCount;
-    const hands: Record<string, Card[]> = {};
-    const playerIds = Object.keys(this.playerTeams);
+    // Reset trick state
+    this._roundState = {
+      hands: {},
+      playedCards: {},
+      trickWinners: [],
+      currentTrick: 0,
+      currentTurn: '',
+      trickScore: [],
+      playerIds: this._players.map(p => p.id)
+    };
 
-    // Deal 3 cards to each player
-    for (let i = 0; i < 3; i++) {
-      for (const pid of playerIds) {
-        const card = this.deck.draw();
+    // Deal cards: each player gets 3
+    this._deck = new Deck();
+    for (const player of this._players) {
+      this._roundState!.hands[player.id] = [];
+      for (let i = 0; i < 3; i++) {
+        const card = this._deck.draw();
         if (card) {
-          if (!hands[pid]) hands[pid] = [];
-          hands[pid].push(card);
+          this._roundState!.hands[player.id].push(card);
         }
       }
     }
 
-    // Determine who goes first (mano) - first player in the list
-    const manoId = playerIds[0];
+    // First trick: player 0 goes first (mano)
+    this._roundState!.currentTurn = this._players[0].id;
 
-    this.round = {
-      hands,
-      playedCards: {},
-      currentTrick: 0,
-      trickWinners: [],
-      handsWon: { '0': 0, '1': 0 },
-      currentTurn: manoId,
-    };
-
-    this._currentTrucoLevel = 0;
-    this.trucoChallenger = null;
-    this.trucoPending = false;
-    this.envidoPending = false;
-    this.phase = 'dealing';
-
-    this.emit({ type: 'round-start', data: {
-      hands,
-      scores: { ...this._scores },
-      currentTurn: manoId,
-    }});
-
-    this.phase = 'playing';
-
-    // If it's AI's turn, trigger AI play
-    if (!this.isHumanTurn()) {
-      setTimeout(() => this.aiPlay(), 800);
-    }
+    this._phase = 'playing';
+    this.emit('round-start', {
+      playerCount: this._playerCount,
+      hands: this._roundState!.hands,
+      currentTurn: this._roundState!.currentTurn
+    });
   }
 
-  /**
-   * Check if it's a human player's turn
-   */
-  isHumanTurn(): boolean {
-    if (!this.round) return false;
-    const playerId = this.round.currentTurn;
-    // Check if this player is human
-    // We need to check against the players list
-    // For now, use a simple check: if the player has an isHuman flag
-    // This is set via the App class
-    return this.humanPlayers.has(playerId);
-  }
+  // ─── Card Playing ──────────────────────────────────────
 
-  private humanPlayers = new Set<string>();
-
-  setHumanPlayer(id: string): void {
-    this.humanPlayers.add(id);
-  }
-
-  setHumanPlayers(ids: string[]): void {
-    this.humanPlayers = new Set(ids);
-  }
-
-  /**
-   * Player plays a card by index in their hand
-   */
   playerPlayCard(playerId: string, cardIndex: number): Card | null {
-    if (this.phase !== 'playing' || this.trucoPending) return null;
-    if (!this.round) return null;
-    if (this.round.currentTurn !== playerId) return null;
-    if (!this.round.hands[playerId]) return null;
-    if (cardIndex < 0 || cardIndex >= this.round.hands[playerId].length) return null;
+    if (this._phase !== 'playing') return null;
+    if (this._roundState!.currentTurn !== playerId) return null;
 
-    const card = this.round.hands[playerId].splice(cardIndex, 1)[0];
-    if (!card) return null;
+    const player = this._players.find(p => p.id === playerId);
+    if (!player) return null;
 
-    const trick = this.round.playedCards[this.round.currentTrick];
-    if (!trick) {
-      this.round.playedCards[this.round.currentTrick] = {};
+    const hand = this._roundState!.hands[playerId] || [];
+    if (cardIndex < 0 || cardIndex >= hand.length) return null;
+
+    const card = hand[cardIndex];
+
+    // Remove from round state hand
+    this._roundState!.hands[playerId] = hand.filter(
+      (c, i) => i !== cardIndex
+    );
+
+    // Place card in current trick
+    const trickIdx = this._roundState!.currentTrick;
+    if (!this._roundState!.playedCards[trickIdx]) {
+      this._roundState!.playedCards[trickIdx] = {};
     }
-    if (this.round.playedCards[this.round.currentTrick][playerId]) {
-      // Already played this trick
-      this.round.hands[playerId].splice(cardIndex, 0, card);
-      return null;
+    this._roundState!.playedCards[trickIdx][playerId] = card;
+
+    // Advance turn BEFORE emitting so listeners see the updated state
+    const allPlayed = this._players.every(p =>
+      this._roundState!.playedCards[trickIdx]?.[p.id] !== undefined
+    );
+    if (!allPlayed) {
+      this.advanceTurn();
     }
 
-    this.round.playedCards[this.round.currentTrick][playerId] = card;
-
-    this.emit({ type: 'card-played', data: {
-      card, playerId, trick: this.round.currentTrick,
-    }});
-
-    // Check if all players have played this trick
-    const playerIds = Object.keys(this.playerTeams);
-    const allPlayed = playerIds.every(pid => this.round!.playedCards[this.round!.currentTrick][pid] !== undefined);
+    this.emit('card-played', { playerId, card, trick: trickIdx });
 
     if (allPlayed) {
-      this.resolveTrick();
-    } else {
-      // Advance turn to next player
-      this.advanceTurn();
+      // Resolve trick — wait for AI to respond if it's the next player's turn
+      const nextPlayer = this._roundState!.currentTurn;
+      const isAI = this._players.find(p => p.id === nextPlayer)?.isAI ?? false;
+      const waitTime = isAI ? 1500 : 500; // Give AI time to respond
+      setTimeout(() => this.resolveTrick(), waitTime);
     }
 
     return card;
   }
 
-  /**
-   * AI plays a card
-   */
-  aiPlay(): void {
-    if (!this.round || this.phase !== 'playing' || this.trucoPending) return;
-    if (!this.isHumanTurn()) return;
+  // ─── Trick Resolution ──────────────────────────────────
 
-    const playerId = this.round.currentTurn;
-    const hand = this.round.hands[playerId];
-    if (!hand || hand.length === 0) return;
-
-    // Simple AI: play highest ranking card
-    let bestIndex = 0;
-    let bestRank = -Infinity;
-    for (let i = 0; i < hand.length; i++) {
-      const rank = getCardRank(hand[i]);
-      if (rank > bestRank) {
-        bestRank = rank;
-        bestIndex = i;
-      }
-    }
-
-    this.playerPlayCard(playerId, bestIndex);
-  }
-
-  /**
-   * Advance turn to next player
-   */
-  private advanceTurn(): void {
-    if (!this.round) return;
-    const playerIds = Object.keys(this.playerTeams);
-    const currentIdx = playerIds.indexOf(this.round.currentTurn);
-    const nextIdx = (currentIdx + 1) % playerIds.length;
-    this.round.currentTurn = playerIds[nextIdx];
-
-    // If it's AI's turn, trigger AI play
-    if (!this.humanPlayers.has(this.round.currentTurn)) {
-      setTimeout(() => this.aiPlay(), 800);
-    }
-  }
-
-  /**
-   * Resolve a completed trick
-   */
   private resolveTrick(): void {
-    if (!this.round) return;
+    if (!this._roundState) return;
+    const trickIdx = this._roundState.currentTrick;
+    const trick = this._roundState.playedCards[trickIdx];
+    if (!trick) return;
 
-    const trick = this.round.playedCards[this.round.currentTrick];
-    const playerIds = Object.keys(this.playerTeams);
+    // Find the winning card per team
+    // In 2-player: highest card wins
+    // In 4/6-player: each team's best card vs other team's best card
+    const team0Cards: Card[] = [];
+    const team1Cards: Card[] = [];
 
-    // Find the first played card to determine the suit/leading card
-    let leadingCard: Card | null = null;
-    let leadingPlayer: string | null = null;
-    for (const pid of playerIds) {
-      if (trick[pid]) {
-        leadingCard = trick[pid];
-        leadingPlayer = pid;
-        break;
-      }
+    for (const [pid, card] of Object.entries(trick)) {
+      if (!card) continue;
+      const player = this._players.find(p => p.id === pid);
+      if (!player) continue;
+      if (player.team === 0) team0Cards.push(card);
+      else team1Cards.push(card);
     }
 
-    if (!leadingCard || !leadingPlayer) return;
+    // Find best card per team
+    const team0Best = team0Cards.reduce((best, c) =>
+      getCardRank(c) > getCardRank(best) ? c : best, team0Cards[0]);
+    const team1Best = team1Cards.reduce((best, c) =>
+      getCardRank(c) > getCardRank(best) ? c : best, team1Cards[0]);
 
-    // Compare all played cards against the leading card
-    let winner = leadingPlayer;
-    let winnerRank = getCardRank(leadingCard);
-
-    for (const pid of playerIds) {
-      const played = trick[pid];
-      if (played && pid !== winner) {
-        const rank = getCardRank(played);
-        if (rank > winnerRank) {
-          winner = pid;
-          winnerRank = rank;
-        }
-      }
+    let winningTeam: number;
+    if (this._playerCount === 2) {
+      // 2-player: direct comparison
+      const r0 = getCardRank(team0Best);
+      const r1 = getCardRank(team1Best);
+      winningTeam = r0 >= r1 ? 0 : 1;
+    } else {
+      // 4/6-player: team best vs team best
+      const r0 = getCardRank(team0Best);
+      const r1 = getCardRank(team1Best);
+      winningTeam = r0 >= r1 ? 0 : 1;
     }
 
-    this.round.trickWinners.push(winner);
+    // Award point to winning team
+    this._roundState!.trickScore.push(winningTeam);
+    this._roundState!.trickWinners.push(this._players.find(p => p.team === winningTeam)!.id);
 
-    // Determine which team won
-    const winningTeam = this.playerTeams[winner];
-    this.round.handsWon[String(winningTeam)] = (this.round.handsWon[String(winningTeam)] || 0) + 1;
-
-    this.emit({ type: 'trick-winner', data: {
-      trick: this.round.currentTrick,
-      winner,
+    const winnerName = this._players.find(p => p.id === this._roundState!.trickWinners[0])?.name || 'Team ' + winningTeam;
+    this.emit('trick-winner', {
       winningTeam,
-      playerCards: Object.fromEntries(playerIds.map(pid => [pid, trick[pid]])),
-    }});
+      winner: this._roundState!.trickWinners[0],
+      trick: trickIdx,
+      winnerName
+    });
 
     // Check if round is over (3 tricks played)
-    if (this.round.trickWinners.length >= 3) {
-      this.endRound();
+    if (this._roundState!.trickScore.length >= 3) {
+      setTimeout(() => this.resolveRound(), 800);
+    } else {
+      // Next trick
+      this._roundState!.currentTrick++;
+      // Winner of previous trick goes first
+      this._roundState!.currentTurn = this._roundState!.trickWinners[0];
+      this._phase = 'playing';
+      this.emit('round-start-trick', {
+        trick: this._roundState!.currentTrick,
+        currentTurn: this._roundState!.currentTurn
+      });
+    }
+  }
+
+  // ─── Round Resolution ──────────────────────────────────
+
+  private resolveRound(): void {
+    if (!this._roundState) return;
+
+    // Count tricks won per team
+    let team0Tricks = this._roundState.trickScore.filter(t => t === 0).length;
+    let team1Tricks = this._roundState.trickScore.filter(t => t === 1).length;
+
+    let winningTeam: number;
+    if (team0Tricks > team1Tricks) winningTeam = 0;
+    else if (team1Tricks > team0Tricks) winningTeam = 1;
+    else {
+      // Tie: no one wins the round (empate)
+      this.emit('round-winner', { winningTeam: -1, team0Tricks, team1Tricks });
+      this._phase = 'round-over';
       return;
     }
 
-    // Winner of this trick leads the next trick
-    this.round.currentTrick++;
-    this.round.currentTurn = winner;
+    // Award points
+    const points = this._truco.roundPoints || 1;
+    this._scores[winningTeam] = (this._scores[winningTeam] || 0) + points;
 
-    // If it's AI's turn, trigger AI play
-    if (!this.humanPlayers.has(this.round.currentTurn)) {
-      setTimeout(() => this.aiPlay(), 800);
-    }
-  }
-
-  /**
-   * End the current round and award points
-   */
-  private endRound(): void {
-    if (!this.round) return;
-
-    const handsWon = this.round.handsWon;
-    let winningTeam: number;
-
-    if (handsWon['0'] >= 2) {
-      winningTeam = 0;
-    } else if (handsWon['1'] >= 2) {
-      winningTeam = 1;
-    } else {
-      // 1-1 tie — mano's team wins
-      winningTeam = 0;
-    }
-
-    this._scores[String(winningTeam)] += 1;
-
-    this.emit({ type: 'round-winner', data: {
+    this.emit('round-winner', {
       winningTeam,
-      handsWon,
-      scores: { ...this._scores },
-    }});
+      team0Tricks,
+      team1Tricks,
+      points,
+      scores: { ...this._scores }
+    });
 
-    this.phase = 'round-over';
-    this.checkGameOver();
-  }
-
-  /**
-   * Check if any team has reached the winning score
-   */
-  private checkGameOver(): void {
-    if (this._scores['0'] >= WINNING_SCORE || this._scores['1'] >= WINNING_SCORE) {
-      const winningTeam = this._scores['0'] >= WINNING_SCORE ? 0 : 1;
-      this.phase = 'game-over';
-      this.emit({ type: 'game-over', data: { winningTeam, scores: { ...this._scores } }});
-    } else {
-      // Start next round after a delay
-      setTimeout(() => {
-        if (this.phase === 'round-over') {
-          this.startRound();
-        }
-      }, 2500);
+    // Check for game over (30 points)
+    if (this._scores[winningTeam] >= 30) {
+      this._phase = 'game-over';
+      this.emit('game-over', { winningTeam, scores: { ...this._scores } });
+      return;
     }
+
+    // Round over — wait for player to click "SIGUIENTE MANO"
+    this._phase = 'round-over';
+    this.emit('round-over', { winningTeam, team0Tricks, team1Tricks, points });
   }
 
-  /**
-   * Player challenges truco
-   */
-  challengeTruco(): void {
-    if (this.phase !== 'playing' || this.trucoPending) return;
+  // ─── Truco Dynamics ────────────────────────────────────
 
-    switch (this._currentTrucoLevel) {
-      case 0:
-        this._currentTrucoLevel = 1;
-        this.trucoChallenger = 'player';
-        this.trucoPending = true;
-        this.emit({ type: 'truco-challenge', data: { level: 1 } });
-        break;
-      case 1:
-        this._currentTrucoLevel = 2;
-        this.trucoChallenger = 'player';
-        this.trucoPending = true;
-        this.emit({ type: 'retruco-challenge', data: { level: 2 } });
-        break;
-      case 2:
-        this._currentTrucoLevel = 3;
-        this.trucoChallenger = 'player';
-        this.trucoPending = true;
-        this.emit({ type: 'vale4-challenge', data: { level: 3 } });
-        break;
+  challengeTruco(challengerId: string): void {
+    if (this._phase !== 'playing') return;
+    if (this._truco.level >= 3) return; // Already at vale 4
+
+    // Determine challenge level
+    let newLevel: number;
+    switch (this._truco.level) {
+      case 0: newLevel = 1; break; // Truco
+      case 1: newLevel = 2; break; // Retruco
+      case 2: newLevel = 3; break; // Vale 4
+      default: return;
     }
+
+    this._truco.level = newLevel;
+    this._truco.challengedBy = challengerId;
+    this._truco.roundPoints = [0, 1, 2, 4][newLevel];
+    this._truco.phase = 'challenged';
+
+    const levelNames = ['', '¡TRUCO!', '¡RETRUCO!', '¡VALE 4!'];
+    this.emit('truco-challenge', {
+      level: newLevel,
+      name: levelNames[newLevel],
+      points: this._truco.roundPoints,
+      challengedBy: challengerId
+    });
   }
 
-  /**
-   * AI challenges truco
-   */
-  aiChallengeTruco(): void {
-    if (this.phase !== 'playing' || this.trucoPending) return;
-
-    switch (this._currentTrucoLevel) {
-      case 0:
-        this._currentTrucoLevel = 1;
-        this.trucoChallenger = 'ai';
-        this.trucoPending = true;
-        this.emit({ type: 'truco-challenge', data: { level: 1 } });
-        break;
-      case 1:
-        this._currentTrucoLevel = 2;
-        this.trucoChallenger = 'ai';
-        this.trucoPending = true;
-        this.emit({ type: 'retruco-challenge', data: { level: 2 } });
-        break;
-      case 2:
-        this._currentTrucoLevel = 3;
-        this.trucoChallenger = 'ai';
-        this.trucoPending = true;
-        this.emit({ type: 'vale4-challenge', data: { level: 3 } });
-        break;
-    }
-  }
-
-  /**
-   * Accept a truco challenge
-   */
   acceptTruco(): void {
-    if (!this.trucoPending) return;
-    this.trucoPending = false;
-    this.trucoChallenger = null;
-    this.emit({ type: 'truco-accepted', data: { level: this._currentTrucoLevel } });
+    if (this._truco.phase !== 'challenged') return;
+
+    this._truco.phase = 'accepted';
+    const levelNames = ['', '¡TRUCO!', '¡RETRUCO!', '¡VALE 4!'];
+    this.emit('truco-accepted', {
+      level: this._truco.level,
+      name: levelNames[this._truco.level],
+      points: this._truco.roundPoints
+    });
   }
 
-  /**
-   * Reject a truco challenge
-   */
   rejectTruco(): void {
-    if (!this.trucoPending) return;
+    if (this._truco.phase !== 'challenged') return;
 
-    const winner = this.trucoChallenger || 'ai';
-    const points = this.getTrucoPoints();
+    this._truco.phase = 'rejected';
+    // Opposing team wins immediately
+    const challengerTeam = this._players.find(p => p.id === this._truco.challengedBy)?.team;
+    const opponentTeam = challengerTeam === 0 ? 1 : 0;
+    const points = this._truco.roundPoints || 1;
 
-    if (winner === 'player') {
-      this._scores['0'] += points;
+    this._scores[opponentTeam] = (this._scores[opponentTeam] || 0) + points;
+
+    this.emit('truco-rejected', {
+      winner: opponentTeam,
+      points,
+      scores: { ...this._scores }
+    });
+
+    // Check game over
+    if (this._scores[opponentTeam] >= 30) {
+      this._phase = 'game-over';
+      this.emit('game-over', { winningTeam: opponentTeam, scores: { ...this._scores } });
     } else {
-      this._scores['1'] += points;
-    }
-
-    this.trucoPending = false;
-    this.trucoChallenger = null;
-
-    this.emit({ type: 'truco-rejected', data: {
-      winner, points, scores: { ...this._scores },
-    }});
-
-    this.checkGameOver();
-  }
-
-  private getTrucoPoints(): number {
-    switch (this._currentTrucoLevel) {
-      case 1: return 1;
-      case 2: return 2;
-      case 3: return 4;
-      default: return 1;
+      this._phase = 'round-over';
+      setTimeout(() => this.startRound(), 2000);
     }
   }
 
-  /**
-   * Player challenges envido
-   */
-  challengeEnvido(): void {
-    if (this.phase !== 'playing' || this.envidoPending) return;
-    this.envidoPending = true;
-    this.envidoChallenger = 'player';
-    this.emit({ type: 'envido-challenge', data: { challenger: 'player' } });
+  // AI challenges truco (re-truco or vale 4)
+  aiChallengeTruco(playerId: string): void {
+    this.challengeTruco(playerId);
   }
 
-  /**
-   * Resolve envido
-   */
+  // AI challenges envido
+  aiChallengeEnvido(playerId: string): void {
+    this.challengeEnvido(playerId);
+  }
+
+  // ─── Envido Dynamics ───────────────────────────────────
+
+  challengeEnvido(challengerId: string): void {
+    if (this._phase !== 'playing') return;
+
+    // Calculate envido for both teams
+    const team0Cards: Card[] = [];
+    const team1Cards: Card[] = [];
+
+    for (const player of this._players) {
+      const cards = this._roundState?.hands[player.id] || [];
+      if (player.team === 0) team0Cards.push(...cards);
+      else team1Cards.push(...cards);
+    }
+
+    const t0Envido = calculateEnvidoForHand(team0Cards);
+    const t1Envido = calculateEnvidoForHand(team1Cards);
+
+    this._envido.team0Score = t0Envido.score;
+    this._envido.team1Score = t1Envido.score;
+
+    // Determine envido type based on the winning score
+    const winningScore = Math.max(t0Envido.score, t1Envido.score);
+    this._envido.envidoType = getEnvidoType(winningScore);
+    this._envido.challengedBy = challengerId;
+    this._envido.phase = 'challenged';
+
+    this.emit('envido-challenge', {
+      team0Score: t0Envido.score,
+      team1Score: t1Envido.score,
+      envidoType: this._envido.envidoType,
+      challengedBy: challengerId
+    });
+  }
+
   resolveEnvido(): void {
-    if (!this.envidoPending || !this.round) return;
+    if (this._envido.phase !== 'challenged') return;
 
-    const playerIds = Object.keys(this.playerTeams);
-    const team0Cards = playerIds.filter(pid => this.playerTeams[pid] === 0).flatMap(pid => this.round!.hands[pid] || []);
-    const team1Cards = playerIds.filter(pid => this.playerTeams[pid] === 1).flatMap(pid => this.round!.hands[pid] || []);
+    this._envido.phase = 'resolved';
+    const points = getEnvidoPoints(this._envido.envidoType);
+    const winner = this._envido.team0Score >= this._envido.team1Score ? 0 : 1;
 
-    const playerScore = this.calculateEnvidoForHand(team0Cards);
-    const aiScore = this.calculateEnvidoForHand(team1Cards);
+    this._scores[winner] = (this._scores[winner] || 0) + points;
 
-    let winner: number;
-    if (playerScore >= aiScore) {
-      winner = 0;
-      this._scores['0'] += 1;
-    } else {
-      winner = 1;
-      this._scores['1'] += 1;
-    }
-
-    this.envidoPending = false;
-    this.envidoChallenger = null;
-
-    this.emit({ type: 'envido-result', data: {
-      winningTeam: winner, playerScore, aiScore, scores: { ...this._scores },
-    }});
+    this.emit('envido-result', {
+      winningTeam: winner,
+      team0Score: this._envido.team0Score,
+      team1Score: this._envido.team1Score,
+      envidoType: this._envido.envidoType,
+      points,
+      scores: { ...this._scores }
+    });
   }
 
-  /**
-   * Calculate envido for a hand
-   */
-  private calculateEnvidoForHand(cards: Card[]): number {
-    if (cards.length === 0) return 0;
+  // ─── Turn Management ───────────────────────────────────
 
-    const suitCounts: Record<string, number> = {};
-    for (const card of cards) {
-      suitCounts[card.suit] = (suitCounts[card.suit] || 0) + 1;
-    }
+  private advanceTurn(): void {
+    if (!this._roundState) return;
 
-    let maxScore = 0;
-    for (const [suit, count] of Object.entries(suitCounts)) {
-      if (count >= 2) {
-        const suitCards = cards.filter(c => c.suit === suit);
-        suitCards.sort((a, b) => b.number - a.number);
-        const score = 20 + suitCards[0].number + suitCards[1].number;
-        maxScore = Math.max(maxScore, score);
+    const playerIds = this._roundState.playerIds;
+    const currentIdx = playerIds.indexOf(this._roundState.currentTurn);
+    const nextIdx = (currentIdx + 1) % playerIds.length;
+    this._roundState.currentTurn = playerIds[nextIdx];
+  }
+
+  private getNextAIPlayer(): string {
+    // Find next AI player who hasn't played this trick yet
+    if (!this._roundState) return '';
+    const trickIdx = this._roundState.currentTrick;
+    for (const player of this._players) {
+      if (player.isAI && !this._roundState.playedCards[trickIdx]?.[player.id]) {
+        return player.id;
       }
     }
-
-    if (maxScore === 0 && cards.length > 0) {
-      maxScore = Math.max(...cards.map(c => c.number));
-    }
-
-    return maxScore;
+    return '';
   }
 
-  /**
-   * Get the team for a player
-   */
-  getPlayerTeam(playerId: string): number {
-    return this.playerTeams[playerId] ?? 0;
-  }
+  // ─── Visible Cards ─────────────────────────────────────
 
-  /**
-   * Get remaining deck count
-   */
-  get deckRemaining(): number {
-    return this.deck.remaining;
-  }
-
-  /**
-   * Get all player IDs
-   */
-  getPlayerIds(): string[] {
-    return Object.keys(this.playerTeams);
-  }
-
-  /**
-   * Get cards visible to a player (their own hand + played cards on table)
-   */
-  getVisibleCards(playerId: string): Record<string, Card[]> {
-    if (!this.round) return {};
-    const team = this.playerTeams[playerId];
+  getVisibleCards(humanPlayerId: string): Record<string, Card[]> {
     const visible: Record<string, Card[]> = {};
+    const humanTeam = this._players.find(p => p.id === humanPlayerId)?.team ?? 0;
 
-    for (const pid of Object.keys(this.playerTeams)) {
-      // In 2-player mode, you can only see your own cards
-      // In 4-player mode, you can see your own cards and your teammate's cards
-      if (this.playerCount === 4 && this.playerTeams[pid] === team) {
-        visible[pid] = [...(this.round.hands[pid] || [])];
-      } else if (this.playerCount === 2) {
-        // 2-player: only see your own cards
-        if (pid === playerId) {
-          visible[pid] = [...(this.round.hands[pid] || [])];
+    for (const player of this._players) {
+      if (player.isHuman) {
+        // Human players see their own cards
+        visible[player.id] = this._roundState?.hands[player.id] || [];
+      } else if (player.isAI && player.team === humanTeam) {
+        // AI teammates: show cards face-up (in 4/6 player mode)
+        if (this._playerCount > 2) {
+          visible[player.id] = this._roundState?.hands[player.id] || [];
+        } else {
+          // In 2-player mode, opponent is AI — show face-down
+          visible[player.id] = [];
         }
+      } else if (player.isAI && player.team !== humanTeam) {
+        // Opponent AI: show face-down
+        visible[player.id] = [];
       }
     }
 
     return visible;
   }
 
-  /**
-   * Get AI opponent card count (for face-down display)
-   */
-  getOpponentCardCount(playerId: string): number {
-    if (!this.round) return 0;
-    const team = this.playerTeams[playerId];
-    let count = 0;
-    for (const pid of Object.keys(this.playerTeams)) {
-      if (this.playerTeams[pid] !== team && pid !== playerId) {
-        count += (this.round.hands[pid] || []).length;
-      }
+  // ─── Event Emitter ─────────────────────────────────────
+
+  private emit(type: string, data: Record<string, any>): void {
+    if (this.onEvent) {
+      this.onEvent({ type, data });
     }
-    return count;
   }
 }

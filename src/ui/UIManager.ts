@@ -1,21 +1,40 @@
-// UIManager - 2D card game UI for Truco
+// UIManager - 2D card game UI for Truco (2/4/6 players)
+// Handles card rendering, truco/envido response UI, and all game state display
 
 import type { Card } from '../core/Card.js';
+import type { PlayerCount, RoundState, TrucoState, EnvidoState } from '../core/GameEngine.js';
 
-interface CardDisplay {
-  card: Card;
-  index: number;
-  playerId: string;
+// ─── Event Callbacks ─────────────────────────────────────
+
+interface GameCallbacks {
+  onCardPlay: (cardIndex: number) => void;
+  onEnvido: () => void;
+  onTruco: () => void;
+  onAcceptTruco: () => void;
+  onRejectTruco: () => void;
+  onAcceptEnvido: () => void;
+  onRejectEnvido: () => void;
+  onFaltaEnvido: () => void;
+  onNewRound: () => void;
 }
 
 export class UIManager {
   private container: HTMLElement;
-  private onCardPlay?: (cardIndex: number) => void;
-  private onEnvido?: () => void;
-  private onTruco?: () => void;
-  private onAcceptTruco?: () => void;
-  private onRejectTruco?: () => void;
-  private currentPlayerId?: string;
+  private callbacks: GameCallbacks = {
+    onCardPlay: () => {},
+    onEnvido: () => {},
+    onTruco: () => {},
+    onAcceptTruco: () => {},
+    onRejectTruco: () => {},
+    onAcceptEnvido: () => {},
+    onRejectEnvido: () => {},
+    onFaltaEnvido: () => {},
+    onNewRound: () => {},
+  };
+
+  // Track which AI players need response buttons
+  private _aiResponding: Set<string> = new Set();
+  private _currentResponsePlayer: string | null = null;
 
   constructor(containerId = 'game-container') {
     const container = document.getElementById(containerId);
@@ -29,26 +48,19 @@ export class UIManager {
     this.container.innerHTML = `
       <div class="menu-container">
         <h1>TRUCO</h1>
-        <p class="subtitle">Un desafío de cartas contra una IA estratégica.</p>
-
-        <div class="mode-select">
-          <p>Seleccioná el modo de juego:</p>
-          <div class="mode-buttons">
-            <button data-mode="solo" class="btn-mode selected">Solo (vs IA)</button>
-            <button data-mode="multiplayer" class="btn-mode">Multijugador (Online)</button>
-          </div>
-        </div>
+        <p class="subtitle">Truco Argentino contra la IA</p>
 
         <div class="player-count-select">
-          <p>Cantidad de jugadores:</p>
+          <p>Jugadores:</p>
           <div class="count-buttons">
-            <button data-players="2" class="btn-count selected">2</button>
-            <button data-players="4" class="btn-count">4</button>
+            <button data-players="2" class="btn-count selected">2 (1v1)</button>
+            <button data-players="4" class="btn-count">4 (2v2)</button>
+            <button data-players="6" class="btn-count">6 (3v3)</button>
           </div>
         </div>
 
         <div class="difficulty-select">
-          <p>Dificultad de la IA:</p>
+          <p>Dificultad:</p>
           <div class="difficulty-buttons">
             <button data-diff="easy" class="btn-diff">Fácil</button>
             <button data-diff="normal" class="btn-diff selected">Normal</button>
@@ -60,13 +72,7 @@ export class UIManager {
       </div>
     `;
 
-    // Setup button selection
-    this.container.querySelectorAll('.btn-mode').forEach(btn => {
-      btn.addEventListener('click', () => {
-        this.container.querySelectorAll('.btn-mode').forEach(b => b.classList.remove('selected'));
-        btn.classList.add('selected');
-      });
-    });
+    // Setup selection buttons
     this.container.querySelectorAll('.btn-count').forEach(btn => {
       btn.addEventListener('click', () => {
         this.container.querySelectorAll('.btn-count').forEach(b => b.classList.remove('selected'));
@@ -83,7 +89,43 @@ export class UIManager {
 
   // ─── Game HUD ──────────────────────────────────────────
 
-  showHUD(playerIds: string[], playerNames: Record<string, string>, playerCount: 2 | 4): void {
+  showHUD(playerIds: string[], playerNames: Record<string, string>, playerCount: PlayerCount): void {
+    // Build opponent areas dynamically based on player count
+    const myTeam = 0; // Human is always on team 0
+    const teammates: string[] = [];
+    const opponents: string[] = [];
+
+    for (const pid of playerIds) {
+      if (pid !== 'player-0') {
+        // Determine team from index
+        const idx = playerIds.indexOf(pid);
+        if (idx % 2 === 0) teammates.push(pid); // same team as player-0
+        else opponents.push(pid);
+      }
+    }
+
+    // Build teammate card areas
+    let teammateAreasHTML = '';
+    for (let i = 0; i < teammates.length; i++) {
+      teammateAreasHTML += `
+        <div class="teammate-area" id="teammate-area-${i}" style="display:none;">
+          <div class="teammate-label" id="teammate-label-${i}">Compañero</div>
+          <div class="teammate-cards" id="teammate-cards-${i}"></div>
+        </div>
+      `;
+    }
+
+    // Build opponent card areas
+    let opponentAreasHTML = '';
+    for (let i = 0; i < opponents.length; i++) {
+      opponentAreasHTML += `
+        <div class="opponent-area" id="opponent-area-${i}" style="display:none;">
+          <div class="opponent-label" id="opponent-label-${i}">Contrario</div>
+          <div class="opponent-cards" id="opponent-cards-${i}"></div>
+        </div>
+      `;
+    }
+
     this.container.innerHTML = `
       <div class="game-board">
         <!-- Scoreboard -->
@@ -92,21 +134,21 @@ export class UIManager {
             <span class="team-name">Equipo 0</span>
             <span class="team-points" id="score-0">0</span>
           </div>
-          <div class="truce-level" id="truce-level"></div>
+          <div class="game-info" id="game-info"></div>
           <div class="team-score team-1">
             <span class="team-name">Equipo 1</span>
             <span class="team-points" id="score-1">0</span>
           </div>
         </div>
 
-        <!-- Opponent area (top) -->
-        <div class="opponent-area" id="opponent-area">
-          <div class="opponent-cards" id="opponent-cards"></div>
+        <!-- Opponent areas (top) -->
+        <div class="opponents-container" id="opponents-container">
+          ${opponentAreasHTML}
         </div>
 
-        <!-- Teammate area (for 4-player) -->
-        <div class="teammate-area" id="teammate-area">
-          <div class="teammate-cards" id="teammate-cards"></div>
+        <!-- Teammate areas (between opponents and table) -->
+        <div class="teammates-container" id="teammates-container">
+          ${teammateAreasHTML}
         </div>
 
         <!-- Table / played cards area (center) -->
@@ -132,9 +174,34 @@ export class UIManager {
         </div>
 
         <!-- Truco response buttons (hidden by default) -->
-        <div class="truco-response" id="truco-response" style="display:none;">
-          <button class="btn-accept" id="btn-accept">¡ACEPTO!</button>
-          <button class="btn-reject" id="btn-reject">NO ACEPTO</button>
+        <div class="response-panel" id="response-panel" style="display:none;">
+          <div class="response-label" id="response-label"></div>
+          <div class="response-buttons">
+            <button class="btn-accept" id="btn-accept">¡ACEPTO!</button>
+            <button class="btn-reject" id="btn-reject">NO ACEPTO</button>
+          </div>
+        </div>
+
+        <!-- Envido response buttons (hidden by default) -->
+        <div class="response-panel envido-response" id="envido-response-panel" style="display:none;">
+          <div class="response-label" id="envido-response-label"></div>
+          <div class="response-buttons">
+            <button class="btn-accept" id="btn-envido-accept">ACEPTO</button>
+            <button class="btn-reject" id="btn-envido-reject">NO ACEPTO</button>
+            <button class="btn-falta" id="btn-falta-envido">FALTA ENVIDO</button>
+          </div>
+        </div>
+
+        <!-- Round over / new round button -->
+        <div class="round-over-panel" id="round-over-panel" style="display:none;">
+          <div class="round-over-text" id="round-over-text"></div>
+          <button class="btn-new-round" id="btn-new-round">SIGUIENTE MANO</button>
+        </div>
+
+        <!-- Game over panel -->
+        <div class="game-over-panel" id="game-over-panel" style="display:none;">
+          <div class="game-over-text" id="game-over-text"></div>
+          <button class="btn-new-game" id="btn-new-game">JUGAR DE NUEVO</button>
         </div>
       </div>
     `;
@@ -142,147 +209,167 @@ export class UIManager {
     // Bind button events
     const envidoBtn = document.getElementById('btn-envido');
     const trucoBtn = document.getElementById('btn-truco');
-    if (envidoBtn) envidoBtn.addEventListener('click', () => this.onEnvido?.());
-    if (trucoBtn) trucoBtn.addEventListener('click', () => this.onTruco?.());
-
     const acceptBtn = document.getElementById('btn-accept');
     const rejectBtn = document.getElementById('btn-reject');
-    if (acceptBtn) acceptBtn.addEventListener('click', () => this.onAcceptTruco?.());
-    if (rejectBtn) rejectBtn.addEventListener('click', () => this.onRejectTruco?.());
+    const envidoAcceptBtn = document.getElementById('btn-envido-accept');
+    const envidoRejectBtn = document.getElementById('btn-envido-reject');
+    const faltaEnvidoBtn = document.getElementById('btn-falta-envido');
+    const newRoundBtn = document.getElementById('btn-new-round');
+    const newGameBtn = document.getElementById('btn-new-game');
+
+    if (envidoBtn) envidoBtn.addEventListener('click', () => this.callbacks.onEnvido());
+    if (trucoBtn) trucoBtn.addEventListener('click', () => this.callbacks.onTruco());
+    if (acceptBtn) acceptBtn.addEventListener('click', () => this.callbacks.onAcceptTruco());
+    if (rejectBtn) rejectBtn.addEventListener('click', () => this.callbacks.onRejectTruco());
+    if (envidoAcceptBtn) envidoAcceptBtn.addEventListener('click', () => this.callbacks.onAcceptEnvido());
+    if (envidoRejectBtn) envidoRejectBtn.addEventListener('click', () => this.callbacks.onRejectEnvido());
+    if (faltaEnvidoBtn) faltaEnvidoBtn.addEventListener('click', () => this.callbacks.onFaltaEnvido());
+    if (newRoundBtn) newRoundBtn.addEventListener('click', () => this.callbacks.onNewRound());
+    if (newGameBtn) newGameBtn.addEventListener('click', () => this.callbacks.onNewRound());
   }
 
   // ─── Render Methods ────────────────────────────────────
 
-  /**
-   * Render all player hands and table state
-   */
   renderGame(hands: Record<string, Card[]>, scores: Record<string, number>,
              currentTurn: string, playerIds: string[], playerNames: Record<string, string>,
-             playerCount: 2 | 4, visibleCards: Record<string, Card[]>,
+             playerCount: PlayerCount, visibleCards: Record<string, Card[]>,
              playedCards: Record<number, Record<string, Card | null>>,
-             trucoLevel: number): void {
+             trucoState: TrucoState, envidoState: EnvidoState): void {
+
+    // Hide round-over and game-over panels when playing
+    const roundOver = document.getElementById('round-over-panel');
+    const gameOver = document.getElementById('game-over-panel');
+    if (roundOver) roundOver.style.display = 'none';
+    if (gameOver) gameOver.style.display = 'none';
 
     // Update scores
-    document.getElementById('score-0')!.textContent = String(scores['0'] || 0);
-    document.getElementById('score-1')!.textContent = String(scores['1'] || 0);
+    const s0 = document.getElementById('score-0');
+    const s1 = document.getElementById('score-1');
+    if (s0) s0.textContent = String(scores['0'] || 0);
+    if (s1) s1.textContent = String(scores['1'] || 0);
 
-    // Update truco level display
-    const truceEl = document.getElementById('truce-level');
-    if (truceEl) {
-      if (trucoLevel === 0) {
-        truceEl.textContent = '';
-      } else if (trucoLevel === 1) {
-        truceEl.textContent = 'TRUCO';
-      } else if (trucoLevel === 2) {
-        truceEl.textContent = 'RETRUCO';
-      } else if (trucoLevel === 3) {
-        truceEl.textContent = 'VALE 4';
-      }
-    }
+    // Update game info (truco level, envido info)
+    this.updateGameInfo(trucoState, envidoState);
 
-    // Determine which player is "me" (first human player)
-    const myPlayerId = playerIds[0]; // For solo mode, player 0 is human
-    const myTeam = -1; // Will be set by App
+    // Determine my player ID (first human player)
+    const myPlayerId = playerIds[0];
 
-    // Render opponent cards (face-down)
-    this.renderOpponentCards(hands, playerIds, myPlayerId, playerCount);
+    // Render opponent areas
+    this.renderOpponentAreas(hands, playerIds, myPlayerId, visibleCards, playerCount, playerNames);
 
-    // Render teammate cards (for 4-player mode, face-up for teammate)
-    this.renderTeammateCards(hands, playerIds, myPlayerId, playerCount);
+    // Render teammate areas
+    this.renderTeammateAreas(hands, playerIds, myPlayerId, visibleCards, playerCount, playerNames);
 
-    // Render my cards (face-up, clickable)
+    // Render my cards
     this.renderMyCards(hands, myPlayerId, currentTurn);
 
-    // Render played cards on the table
-    this.renderPlayedCards(playedCards, playerIds, playerNames, playerCount);
+    // Render played cards
+    this.renderPlayedCards(playedCards, playerIds, playerNames);
 
-    // Highlight current turn
-    this.highlightTurn(currentTurn, playerNames, playerCount);
+    // Update name display
+    const nameEl = document.getElementById('player-name');
+    if (nameEl) nameEl.textContent = playerNames[currentTurn] || currentTurn;
   }
 
-  private renderOpponentCards(hands: Record<string, Card[]>, playerIds: string[],
-                               myPlayerId: string, playerCount: 2 | 4): void {
-    const container = document.getElementById('opponent-area');
-    const cardsContainer = document.getElementById('opponent-cards');
-    if (!container || !cardsContainer) return;
+  // ─── Opponent Areas ────────────────────────────────────
 
-    // Determine my team (0 or 1)
+  private renderOpponentAreas(hands: Record<string, Card[]>, playerIds: string[],
+                               myPlayerId: string, visibleCards: Record<string, Card[]>,
+                               playerCount: PlayerCount, playerNames: Record<string, string>): void {
     const myTeam = playerIds.indexOf(myPlayerId) % 2;
+    const opponentIds: string[] = [];
 
-    let opponentIds: string[] = [];
     for (const pid of playerIds) {
       if (pid !== myPlayerId && playerIds.indexOf(pid) % 2 !== myTeam) {
         opponentIds.push(pid);
       }
     }
 
-    if (playerCount === 4) {
-      // 4-player: show opponent team at top
-      container.style.display = 'flex';
-    } else {
-      // 2-player: show opponent at top
-      container.style.display = 'flex';
-    }
+    for (let i = 0; i < opponentIds.length; i++) {
+      const pid = opponentIds[i];
+      const area = document.getElementById(`opponent-area-${i}`);
+      const label = document.getElementById(`opponent-label-${i}`);
+      const cardsContainer = document.getElementById(`opponent-cards-${i}`);
 
-    let html = '';
-    for (const pid of opponentIds) {
-      const count = (hands[pid] || []).length;
-      for (let i = 0; i < count; i++) {
-        html += `<div class="card card-back"></div>`;
+      if (!area || !label || !cardsContainer) continue;
+
+      area.style.display = 'flex';
+      label.textContent = this.getPlayerDisplayName(pid, playerIds, playerNames);
+
+      const visible = visibleCards[pid] || [];
+      const hand = hands[pid] || [];
+
+      let html = '';
+      for (let j = 0; j < hand.length; j++) {
+        if (j < visible.length) {
+          // Visible card
+          const c = visible[j];
+          html += this.renderCardHTML(c, false, false);
+        } else {
+          // Face-down card
+          html += this.renderCardBackHTML();
+        }
       }
-      if (count === 0) {
-        html += `<div class="card card-back card-empty"></div>`;
+      if (hand.length === 0) {
+        html += '<div class="card card-empty"></div>';
       }
+      cardsContainer.innerHTML = html;
     }
-    cardsContainer.innerHTML = html;
   }
 
-  private renderTeammateCards(hands: Record<string, Card[]>, playerIds: string[],
-                               myPlayerId: string, playerCount: 2 | 4): void {
-    const container = document.getElementById('teammate-area');
-    const cardsContainer = document.getElementById('teammate-cards');
-    if (!container || !cardsContainer) return;
+  // ─── Teammate Areas ────────────────────────────────────
 
-    if (playerCount === 2) {
-      container.style.display = 'none';
+  private renderTeammateAreas(hands: Record<string, Card[]>, playerIds: string[],
+                               myPlayerId: string, visibleCards: Record<string, Card[]>,
+                               playerCount: PlayerCount, playerNames: Record<string, string>): void {
+    if (playerCount <= 2) {
+      // Hide all teammate areas
+      for (let i = 0; i < 5; i++) {
+        const area = document.getElementById(`teammate-area-${i}`);
+        if (area) area.style.display = 'none';
+      }
       return;
     }
 
-    // Find teammate (same team, not me)
-    const myTeam = (playerIds.indexOf(myPlayerId) % 2);
-    const teammateId = playerIds.find(pid => pid !== myPlayerId && playerIds.indexOf(pid) % 2 === myTeam);
-    console.log('[UI] renderTeammateCards: myPlayerId=', myPlayerId, 'myTeam=', myTeam, 'teammateId=', teammateId, 'hands keys=', Object.keys(hands));
-    if (!teammateId) {
-      container.style.display = 'none';
-      return;
+    const myTeam = playerIds.indexOf(myPlayerId) % 2;
+    const teammateIds: string[] = [];
+    for (const pid of playerIds) {
+      if (pid !== myPlayerId && playerIds.indexOf(pid) % 2 === myTeam) {
+        teammateIds.push(pid);
+      }
     }
 
-    container.style.display = 'flex';
-    const teammateCards = hands[teammateId] || [];
-    const count = teammateCards.length;
-    console.log('[UI] teammate cards count:', count, 'cards:', teammateCards);
+    for (let i = 0; i < teammateIds.length; i++) {
+      const pid = teammateIds[i];
+      const area = document.getElementById(`teammate-area-${i}`);
+      const label = document.getElementById(`teammate-label-${i}`);
+      const cardsContainer = document.getElementById(`teammate-cards-${i}`);
 
-    let html = `<div class="teammate-label">Compañero</div>`;
-    for (let i = 0; i < count; i++) {
-      const c = teammateCards[i];
-      const suitSymbol = this.getSuitSymbol(c.suit);
-      const suitColor = this.getSuitColor(c.suit);
-      const cardName = this.getCardName(c);
-      html += `
-        <div class="card card-front">
-          <div class="card-content">
-            <span class="card-top-left">${c.number} ${suitSymbol}</span>
-            <div class="card-center-suit" style="color: ${suitColor};">${suitSymbol}</div>
-            <span class="card-name">${cardName}</span>
-          </div>
-        </div>
-      `;
+      if (!area || !label || !cardsContainer) continue;
+
+      area.style.display = 'flex';
+      label.textContent = this.getPlayerDisplayName(pid, playerIds, playerNames);
+
+      const visible = visibleCards[pid] || [];
+      const hand = hands[pid] || [];
+
+      let html = '';
+      for (let j = 0; j < hand.length; j++) {
+        if (j < visible.length) {
+          const c = visible[j];
+          html += this.renderCardHTML(c, false, false);
+        } else {
+          html += this.renderCardBackHTML();
+        }
+      }
+      if (hand.length === 0) {
+        html += '<div class="card card-empty"></div>';
+      }
+      cardsContainer.innerHTML = html;
     }
-    if (count === 0) {
-      html += `<div class="card card-back card-empty"></div>`;
-    }
-    cardsContainer.innerHTML = html;
   }
+
+  // ─── My Cards ──────────────────────────────────────────
 
   private renderMyCards(hands: Record<string, Card[]>, playerId: string, currentTurn: string): void {
     const container = document.getElementById('player-cards');
@@ -293,18 +380,13 @@ export class UIManager {
 
     let html = '';
     myCards.forEach((card, index) => {
-      const suitSymbol = this.getSuitSymbol(card.suit);
-      const suitColor = this.getSuitColor(card.suit);
-      const cardName = this.getCardName(card);
       const clickable = isMyTurn ? ' clickable' : '';
       const dimmed = isMyTurn ? '' : ' dimmed';
-
       html += `
-        <div class="card card-front${clickable}${dimmed}" data-card-index="${index}" data-player-id="${playerId}">
+        <div class="card card-front${clickable}${dimmed}" data-card-index="${index}">
           <div class="card-content">
-            <span class="card-top-left">${card.number} ${suitSymbol}</span>
-            <div class="card-center-suit" style="color: ${suitColor};">${suitSymbol}</div>
-            <span class="card-name">${cardName}</span>
+            <span class="card-top-left">${card.number} ${this.getSuitSymbol(card.suit)}</span>
+            <div class="card-center-suit" style="color: ${this.getSuitColor(card.suit)};">${this.getSuitSymbol(card.suit)}</div>
           </div>
         </div>
       `;
@@ -316,17 +398,16 @@ export class UIManager {
       container.querySelectorAll('.card-front.clickable').forEach(el => {
         el.addEventListener('click', () => {
           const idx = parseInt(el.getAttribute('data-card-index') || '-1');
-          if (idx >= 0) {
-            this.onCardPlay?.(idx);
-          }
+          if (idx >= 0) this.callbacks.onCardPlay(idx);
         });
       });
     }
   }
 
+  // ─── Played Cards ──────────────────────────────────────
+
   private renderPlayedCards(playedCards: Record<number, Record<string, Card | null>>,
-                             playerIds: string[], playerNames: Record<string, string>,
-                             playerCount: 2 | 4): void {
+                             playerIds: string[], playerNames: Record<string, string>): void {
     for (let trickIdx = 0; trickIdx < 3; trickIdx++) {
       const slot = document.getElementById(`trick-${trickIdx}`);
       if (!slot) continue;
@@ -341,16 +422,13 @@ export class UIManager {
       for (const pid of playerIds) {
         const card = trick[pid];
         if (card) {
-          const suitSymbol = this.getSuitSymbol(card.suit);
-          const suitColor = this.getSuitColor(card.suit);
-          const name = playerNames[pid] || pid;
           html += `
-            <div class="played-card" title="${name}: ${card.number} de ${card.suit}">
-              <span class="played-card-name">${name}</span>
+            <div class="played-card">
+              <span class="played-card-name">${playerNames[pid] || pid}</span>
               <div class="card card-front small">
                 <div class="card-content">
-                  <span class="card-top-left">${card.number} ${suitSymbol}</span>
-                  <div class="card-center-suit" style="color: ${suitColor}; font-size: 24px;">${suitSymbol}</div>
+                  <span class="card-top-left">${card.number} ${this.getSuitSymbol(card.suit)}</span>
+                  <div class="card-center-suit" style="color: ${this.getSuitColor(card.suit)};">${this.getSuitSymbol(card.suit)}</div>
                 </div>
               </div>
             </div>
@@ -361,27 +439,109 @@ export class UIManager {
     }
   }
 
-  private highlightTurn(currentTurn: string, playerNames: Record<string, string>, playerCount: 2 | 4): void {
-    const nameEl = document.getElementById('player-name');
-    if (nameEl) {
-      nameEl.textContent = playerNames[currentTurn] || currentTurn;
+  // ─── Game Info (Truco level, etc.) ─────────────────────
+
+  private updateGameInfo(trucoState: TrucoState, envidoState: EnvidoState): void {
+    const info = document.getElementById('game-info');
+    if (!info) return;
+
+    let html = '';
+
+    // Truco level
+    if (trucoState.level > 0) {
+      const names = ['', 'TRUCO', 'RETRUCO', 'VALE 4'];
+      const pts = [0, 1, 2, 4][trucoState.level];
+      const phaseText = trucoState.phase === 'challenged' ? ' (pendiente)' :
+                        trucoState.phase === 'accepted' ? ' ✓' : ' ✗';
+      html += `<span class="truco-badge">${names[trucoState.level]} (${pts}pt)${phaseText}</span> `;
     }
 
-    // Show/hide controls based on whose turn it is
+    // Envido info
+    if (envidoState.phase === 'resolved') {
+      const pts = envidoState.team0Score > envidoState.team1Score ? 0 : 1;
+      html += `<span class="envido-badge">Envido: ${envidoState.team0Score}-${envidoState.team1Score}</span>`;
+    }
+
+    info.innerHTML = html;
+  }
+
+  // ─── Truco Response UI ─────────────────────────────────
+
+  showTrucoResponse(show: boolean, message: string = ''): void {
+    const responsePanel = document.getElementById('response-panel');
     const controls = document.getElementById('controls');
-    if (controls) {
-      // For now, always show controls (App will enable/disable)
-      controls.style.display = 'flex';
+    const responseLabel = document.getElementById('response-label');
+    const envidoPanel = document.getElementById('envido-response-panel');
+    const roundOver = document.getElementById('round-over-panel');
+    const gameOver = document.getElementById('game-over-panel');
+
+    // Hide all response panels first
+    if (responsePanel) responsePanel.style.display = 'none';
+    if (envidoPanel) envidoPanel.style.display = 'none';
+    if (roundOver) roundOver.style.display = 'none';
+    if (gameOver) gameOver.style.display = 'none';
+
+    if (show) {
+      if (responsePanel) {
+        responsePanel.style.display = 'flex';
+        if (responseLabel) responseLabel.textContent = message;
+      }
+      if (controls) controls.style.display = 'none';
+    } else {
+      if (controls) controls.style.display = 'flex';
     }
   }
 
-  // ─── Truco Response ────────────────────────────────────
-
-  showTrucoResponse(show: boolean): void {
-    const response = document.getElementById('truco-response');
+  showEnvidoResponse(show: boolean, message: string = '', hasFalta: boolean = false): void {
+    const responsePanel = document.getElementById('response-panel');
+    const envidoPanel = document.getElementById('envido-response-panel');
     const controls = document.getElementById('controls');
-    if (response) response.style.display = show ? 'flex' : 'none';
-    if (controls) controls.style.display = show ? 'none' : 'flex';
+    const envidoLabel = document.getElementById('envido-response-label');
+    const faltaBtn = document.getElementById('btn-falta-envido');
+
+    if (responsePanel) responsePanel.style.display = 'none';
+    if (envidoPanel) envidoPanel.style.display = 'none';
+    if (controls) controls.style.display = 'flex';
+
+    if (show && envidoPanel) {
+      envidoPanel.style.display = 'flex';
+      if (envidoLabel) envidoLabel.textContent = message;
+      if (faltaBtn) faltaBtn.style.display = hasFalta ? 'inline-block' : 'none';
+    }
+  }
+
+  // ─── Round Over / Game Over ────────────────────────────
+
+  showRoundOver(text: string): void {
+    const panel = document.getElementById('round-over-panel');
+    const textEl = document.getElementById('round-over-text');
+    const controls = document.getElementById('controls');
+    const responsePanel = document.getElementById('response-panel');
+    const envidoPanel = document.getElementById('envido-response-panel');
+
+    if (responsePanel) responsePanel.style.display = 'none';
+    if (envidoPanel) envidoPanel.style.display = 'none';
+    if (controls) controls.style.display = 'none';
+
+    if (panel) panel.style.display = 'flex';
+    if (textEl) textEl.textContent = text;
+  }
+
+  showGameOver(text: string): void {
+    const panel = document.getElementById('game-over-panel');
+    const textEl = document.getElementById('game-over-text');
+    const controls = document.getElementById('controls');
+    const responsePanel = document.getElementById('response-panel');
+    const envidoPanel = document.getElementById('envido-response-panel');
+    const roundOver = document.getElementById('round-over-panel');
+
+    if (responsePanel) responsePanel.style.display = 'none';
+    if (envidoPanel) envidoPanel.style.display = 'none';
+    if (controls) controls.style.display = 'none';
+    if (roundOver) roundOver.style.display = 'none';
+
+    if (panel) panel.style.display = 'flex';
+    if (textEl) textEl.textContent = text;
   }
 
   // ─── Message ───────────────────────────────────────────
@@ -412,7 +572,24 @@ export class UIManager {
     if (s1) s1.textContent = String(scores['1'] || 0);
   }
 
-  // ─── Card Helpers ──────────────────────────────────────
+  // ─── Card Rendering Helpers ────────────────────────────
+
+  private renderCardHTML(card: Card, _small: boolean, _clickable: boolean): string {
+    const suitSymbol = this.getSuitSymbol(card.suit);
+    const suitColor = this.getSuitColor(card.suit);
+    return `
+      <div class="card card-front">
+        <div class="card-content">
+          <span class="card-top-left">${card.number} ${suitSymbol}</span>
+          <div class="card-center-suit" style="color: ${suitColor};">${suitSymbol}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  private renderCardBackHTML(): string {
+    return '<div class="card card-back"></div>';
+  }
 
   private getSuitSymbol(suit: string): string {
     switch (suit) {
@@ -434,42 +611,13 @@ export class UIManager {
     }
   }
 
-  private getCardName(card: Card): string {
-    const suitNames: Record<string, string> = {
-      espada: 'Espada',
-      basto: 'Basto',
-      oro: 'Oro',
-      copa: 'Copa',
-    };
-    return `${card.number} de ${suitNames[card.suit] || card.suit}`;
+  private getPlayerDisplayName(pid: string, playerIds: string[], names: Record<string, string>): string {
+    return names[pid] || pid;
   }
 
   // ─── Event Bindings ────────────────────────────────────
 
-  setOnCardPlay(fn: (cardIndex: number) => void): void {
-    this.onCardPlay = fn;
-  }
-
-  setOnEnvido(fn: () => void): void {
-    this.onEnvido = fn;
-  }
-
-  setOnTruco(fn: () => void): void {
-    this.onTruco = fn;
-  }
-
-  setOnAcceptTruco(fn: () => void): void {
-    this.onAcceptTruco = fn;
-  }
-
-  setOnRejectTruco(fn: () => void): void {
-    this.onRejectTruco = fn;
-  }
-
-  // ─── Game Over ─────────────────────────────────────────
-
-  showGameOver(winningTeam: number): void {
-    const msg = `¡Equipo ${winningTeam} gana el juego!`;
-    this.showMessage(msg, 5000);
+  setCallbacks(cb: Partial<GameCallbacks>): void {
+    Object.assign(this.callbacks, cb);
   }
 }
