@@ -1,43 +1,41 @@
-// Main entry point for TrucoAI game
+// Main entry point for TrucoAI game (2D version)
 
 import { GameEngine } from './core/GameEngine.js';
 import { Player } from './core/Player.js';
 import { UIManager } from './ui/UIManager.js';
-import { Scene } from './renderer/Scene.js';
 import { AIPlayer } from './ai/AIPlayer.js';
 import { DecisionEngine } from './ai/DecisionEngine.js';
 import type { Card } from './core/Card.js';
+import type { PlayerInfo } from './core/Player.js';
 
 export type GamePhase = 'waiting' | 'dealing' | 'play' | 'end';
-export type PlayerInfo = {
+export type PlayerInfoExtended = {
   id: string;
   name: string;
   points?: number;
   isHuman: boolean;
   isAI: boolean;
+  difficulty?: 'easy' | 'normal' | 'hard';
 };
 
-/**
- * Main application class - connects game engine, renderer, UI, and AI
- */
 export class App {
   private gameEngine = new GameEngine();
   private uiManager = new UIManager();
-  private scene: Scene | null = null;
   private decisionEngine: DecisionEngine | null = null;
-  private aiPlayer = new AIPlayer('normal');
-  
+  private difficulty: 'easy' | 'normal' | 'hard' = 'normal';
+
   // Player management
-  private humanPlayerId = 'human';
-  private players: Map<string, Player> = new Map();
-  
+  private playerIds: string[] = [];
+  private playerNames: Record<string, string> = {};
+  private playerTeams: Record<string, number> = {};
+  private myPlayerId = 'player-0';
+
   // Game state
   private _isGameRunning = false;
   private _mode: 'solo' | 'multiplayer' = 'solo';
-  private _playerCount = 2 as 2;
-  private difficulty: 'easy' | 'normal' | 'hard' = 'normal';
+  private _playerCount: 2 | 4 = 2;
+
   private container: HTMLElement;
-  private isAITurn = false;
 
   constructor(containerId = 'game-container') {
     const container = document.getElementById(containerId);
@@ -45,65 +43,67 @@ export class App {
     this.container = container;
   }
 
-  /**
-   * Initialize the game
-   */
   init(): void {
-    // Show menu initially
     this.uiManager.showMenu();
     this.setupMenuHandlers();
   }
 
-  /**
-   * Setup menu button handlers
-   */
+  private _menuHandlerCallCount = 0;
+
   private setupMenuHandlers(): void {
-    // We need to wait for the DOM to be ready
+    // Prevent duplicate event listeners
+    const startBtn = document.getElementById('start-btn');
+    if (startBtn && startBtn.dataset.listenerAdded) return;
+    
     setTimeout(() => {
-      const startBtn = document.getElementById('start-btn');
-      if (startBtn) {
-        startBtn.addEventListener('click', () => {
+      const btn = document.getElementById('start-btn');
+      if (btn && !btn.dataset.listenerAdded) {
+        btn.addEventListener('click', () => {
+          this._menuHandlerCallCount++;
+          console.log('[App] Menu handler call #' + this._menuHandlerCallCount);
           const modeBtn = document.querySelector('.btn-mode.selected');
           const countBtn = document.querySelector('.btn-count.selected');
           const diffBtn = document.querySelector('.btn-diff.selected');
-          
+          console.log('[App] Selected buttons: modeBtn=', modeBtn?.textContent, 'countBtn=', countBtn?.textContent, 'diffBtn=', diffBtn?.textContent);
+
           const mode = modeBtn?.getAttribute('data-mode') as 'solo' | 'multiplayer' || 'solo';
           const count = parseInt(countBtn?.getAttribute('data-players') || '2');
           const diff = diffBtn?.getAttribute('data-diff') as 'easy' | 'normal' | 'hard' || 'normal';
-          
-          this.startGame({ mode: mode as 'solo' | 'multiplayer', playerCount: count as 2 | 4 | 6, difficulty: diff });
+
+          console.log('[App] Menu handler: mode=', mode, 'count=', count, 'diff=', diff);
+          this.startGame({ mode: mode as 'solo' | 'multiplayer', playerCount: count as 2 | 4, difficulty: diff });
+          btn.dataset.listenerAdded = 'true';
         });
       }
     }, 100);
   }
 
-  /**
-   * Start a new game session
-   */
+  private _isStarting = false;
+
   startGame(options: {
     mode?: 'solo' | 'multiplayer';
-    playerCount?: 2 | 4 | 6;
+    playerCount?: 2 | 4;
     difficulty?: 'easy' | 'normal' | 'hard';
   } = {}): void {
+    // Prevent duplicate game starts
+    if (this._isStarting) {
+      console.log('[App] startGame already in progress, ignoring duplicate call');
+      return;
+    }
+    this._isStarting = true;
+    console.log('[App] startGame called with options:', JSON.stringify(options));
     this._mode = options.mode || 'solo';
-    this._playerCount = (options.playerCount as 2) || 2;
+    this._playerCount = options.playerCount || 2;
+    console.log('[App] _mode:', this._mode, '_playerCount:', this._playerCount);
     this.difficulty = options.difficulty || 'normal';
 
-    // Create Three.js scene
-    this.scene = new Scene(this.container);
-
-    // Wire up card click handler
-    this.scene.setCardClickCallback((cardIndex: number) => {
-      this.handlePlayerCardClick(cardIndex);
-    });
-
     // Show game UI
-    this.uiManager.showHUD();
-    this.uiManager.bindHUDButtons(
-      () => this.handleEnvidoButton(),
-      () => this.handleTrucoButton(),
-      () => this.handleMazoButton()
-    );
+    this.uiManager.showHUD(this.playerIds, this.playerNames, this._playerCount);
+    this.uiManager.setOnCardPlay((cardIndex: number) => this.handlePlayerCardClick(cardIndex));
+    this.uiManager.setOnEnvido(() => this.handleEnvidoButton());
+    this.uiManager.setOnTruco(() => this.handleTrucoButton());
+    this.uiManager.setOnAcceptTruco(() => this.handleAcceptTruco());
+    this.uiManager.setOnRejectTruco(() => this.handleRejectTruco());
 
     if (this._mode === 'multiplayer') {
       console.log('Multiplayer mode selected');
@@ -112,58 +112,49 @@ export class App {
     }
   }
 
-  /**
-   * Start a solo game with AI opponents
-   */
   private startSoloGame(): void {
-    // Create human player
-    const humanPlayer = { id: 'human', name: 'Vos', isHuman: true, isAI: false };
-    this.addPlayer(humanPlayer);
+    const playerCount = this._playerCount;
 
-    // Create AI opponent
-    const aiPlayer = { 
-      id: 'ai-1', 
-      name: 'La Roca', 
-      isHuman: false, 
-      isAI: true,
-      difficulty: this.difficulty
-    };
-    this.addPlayer(aiPlayer);
+    // Create players
+    const players: PlayerInfo[] = [];
+
+    if (playerCount === 2) {
+      // 2-player: human vs AI
+      players.push({ id: 'player-0', name: 'Vos', isHuman: true, isAI: false });
+      players.push({ id: 'player-1', name: 'La Roca', isHuman: false, isAI: true, difficulty: this.difficulty });
+    } else {
+      // 4-player: 2v2
+      players.push({ id: 'player-0', name: 'Vos', isHuman: true, isAI: false });
+      players.push({ id: 'player-1', name: 'Compañero', isHuman: false, isAI: true, difficulty: 'easy' });
+      players.push({ id: 'player-2', name: 'Contrario 1', isHuman: false, isAI: true, difficulty: this.difficulty });
+      players.push({ id: 'player-3', name: 'Contrario 2', isHuman: false, isAI: true, difficulty: this.difficulty });
+    }
+
+    // Store player info
+    this.playerIds = players.map(p => p.id);
+    this.playerNames = Object.fromEntries(players.map(p => [p.id, p.name]));
+    this.myPlayerId = 'player-0';
 
     // Initialize game engine
-    const playerArray = Array.from(this.players.values());
-    this.gameEngine.init(playerArray as any);
+    this.gameEngine.init(players, playerCount);
+    this.gameEngine.setHumanPlayers([this.myPlayerId]);
 
-    // Setup decision engine
+    // Setup decision engine for AI
     this.decisionEngine = new DecisionEngine(this.difficulty);
-    this.decisionEngine.setGameEngine(this.gameEngine);
 
     // Set up event handlers
     this.setupGameEventHandlers();
 
-    // Deal first round
+    // Start first round
     setTimeout(() => {
       this.gameEngine.startRound();
     }, 500);
-
-    console.log('Game started with', playerArray.length, 'players');
   }
 
-  /**
-   * Add a player to the game
-   */
-  private addPlayer(info: PlayerInfo): void {
-    const player = new Player(info);
-    this.players.set(player.id, player);
-  }
-
-  /**
-   * Set up game event handlers
-   */
   private setupGameEventHandlers(): void {
     this.gameEngine.onEvent = (event) => {
       console.log('Event:', event.type, event.data);
-      
+
       switch (event.type) {
         case 'round-start':
           this.handleRoundStart(event.data);
@@ -201,229 +192,138 @@ export class App {
     };
   }
 
-  /**
-   * Handle round start - deal cards to scene
-   */
   private handleRoundStart(data: any): void {
+    this._isStarting = false;
     this._isGameRunning = true;
-    
-    if (this.scene) {
-      // Deal player cards face up
-      this.scene.dealPlayerHand(data.playerHand);
-      
-      // Deal AI cards face down
-      this.scene.dealAIHand(data.aiHand);
-    }
-    
-    // Update scores
-    this.updateScores();
-    
-    // Show message
-    this.uiManager.showMessage('¡Mano nueva!');
+    this.uiManager.showTrucoResponse(false);
+
+    // Render the full game state
+    this.renderGameState();
   }
 
-  /**
-   * Handle card played event - animate cards on scene
-   */
   private handleCardPlayed(data: any): void {
-    if (!this.scene) return;
-    
-    if (data.playerId === 'player') {
-      this.scene.playPlayerCard(data.card);
-    } else {
-      this.scene.playAICard(data.card);
-    }
+    // After a card is played, re-render
+    this.renderGameState();
   }
 
-  /**
-   * Handle trick winner
-   */
   private handleTrickWinner(data: any): void {
-    const winnerName = data.winner === 'player' ? '¡Ganaste la jugada!' : 'La Roca ganó la jugada';
-    this.uiManager.showMessage(winnerName, 1500);
-    
-    // After trick resolves, check if AI should play next card
-    if (this._isGameRunning && !this.isAITurn) {
-      this.checkAITurn();
-    }
+    const winnerName = data.winner ? (this.playerNames[data.winner] || data.winner) : 'Nadie';
+    this.uiManager.showMessage(`${winnerName} ganó la jugada!`, 1500);
+    this.renderGameState();
   }
 
-  /**
-   * Handle round winner
-   */
   private handleRoundWinner(data: any): void {
     this._isGameRunning = false;
-    
-    const winnerName = data.winner === 'player' ? '¡Ganaste la mano! (+1)' : 'La Roca ganó la mano (+1)';
-    this.uiManager.showMessage(winnerName, 2000);
+    const team = data.winningTeam ?? data.winner;
+    this.uiManager.showMessage(`¡Equipo ${team} gana la mano!`, 2000);
+    this.renderGameState();
   }
 
-  /**
-   * Handle game over
-   */
   private handleGameOver(data: any): void {
     this._isGameRunning = false;
-    
-    const winnerName = data.winner === 'player' ? '¡GANASTE EL JUEGO!' : 'La Roca ganó el juego';
-    this.uiManager.showMessage(winnerName, 5000);
-    
-    setTimeout(() => {
-      this.uiManager.showGameOver(data.winner);
-    }, 3000);
+    this.uiManager.showGameOver(data.winningTeam);
+    this.renderGameState();
   }
 
-  /**
-   * Handle truco challenge from player
-   */
   private handleTrucoChallenge(event: any): void {
-    this.uiManager.showMessage('La Roca pensá...', 1500);
-    
-    // AI decides whether to accept or reject
-    setTimeout(() => {
-      const aiHand = this.gameEngine.aiHand;
-      if (this.decisionEngine) {
-        const action = this.decisionEngine.evaluate(aiHand);
-        if (action) {
-          this.decisionEngine.execute(action);
-        }
-      }
-    }, 1500);
+    // Show truco response buttons
+    this.uiManager.showTrucoResponse(true);
   }
 
-  /**
-   * Handle truco accepted
-   */
   private handleTrucoAccepted(data: any): void {
     const levelNames = ['', '¡TRUCO!', '¡RETRUCO!', '¡VALE CUATRO!'];
     this.uiManager.showMessage(levelNames[data.level] || '¡Truco!', 2000);
+    this.uiManager.showTrucoResponse(false);
+    this.renderGameState();
   }
 
-  /**
-   * Handle truco rejected
-   */
   private handleTrucoRejected(data: any): void {
-    const winnerName = data.winner === 'player' ? '¡Ganaste el truco!' : 'La Roca ganó el truco';
-    this.uiManager.showMessage(`${winnerName} (+${data.points})`, 2000);
+    const winner = data.winner === 'player' ? 'Vos' : 'La Roca';
+    this.uiManager.showMessage(`${winner} ganó el truco! (+${data.points})`, 2000);
+    this.uiManager.showTrucoResponse(false);
+    this._isGameRunning = false;
+    this.renderGameState();
   }
 
-  /**
-   * Handle envido challenge
-   */
   private handleEnvidoChallenge(event: any): void {
     this.uiManager.showMessage('Calculando envido...', 1500);
-    
     setTimeout(() => {
-      if (this.decisionEngine) {
-        const aiHand = this.gameEngine.aiHand;
-        const action = this.decisionEngine.evaluate(aiHand);
-        if (action) {
-          this.decisionEngine.execute(action);
-        }
-      }
-    }, 1500);
+      this.gameEngine.resolveEnvido();
+    }, 1000);
   }
 
-  /**
-   * Handle envido result
-   */
   private handleEnvidoResult(data: any): void {
-    const winnerName = data.winner === 'player' ? '¡Ganaste el envido!' : 'La Roca ganó el envido';
-    this.uiManager.showMessage(`${winnerName} (${data.playerScore} vs ${data.aiScore})`, 2000);
+    const winner = data.winningTeam === 0 ? 'Vos' : 'Equipo 1';
+    this.uiManager.showMessage(`¡${winner} ganó el envido! (${data.playerScore} vs ${data.aiScore})`, 2000);
+    this.renderGameState();
   }
 
   /**
-   * Check if it's AI's turn and play a card
+   * Render the full game state to the UI
    */
-  private checkAITurn(): void {
-    if (this.isAITurn) return;
-    this.isAITurn = true;
-    
-    const aiHand = this.gameEngine.aiHand;
-    if (aiHand.length === 0) {
-      this.isAITurn = false;
-      return;
-    }
+  private renderGameState(): void {
+    const round = this.gameEngine.roundState;
+    if (!round) return;
 
-    if (!this.decisionEngine) {
-      this.isAITurn = false;
-      return;
-    }
+    const scores = this.gameEngine.scores;
+    const visibleCards = this.gameEngine.getVisibleCards(this.myPlayerId);
 
-    const action = this.decisionEngine.evaluate(aiHand);
-    
-    if (action && action.type === 'play-card' && action.cardIndex !== undefined) {
-      // Show thinking delay
-      setTimeout(() => {
-        this.gameEngine.aiPlayCard(action.cardIndex!);
-        this.isAITurn = false;
-      }, 800);
-    } else if (action) {
-      // Execute non-card action (truco, envido, etc.)
-      this.decisionEngine.execute(action);
-      this.isAITurn = false;
-    } else {
-      this.isAITurn = false;
-    }
-  }
-
-  /**
-   * Update score display
-   */
-  private updateScores(): void {
-    const scores: Record<string, number> = {};
-    
-    for (const playerId of [...this.players.keys()]) {
-      scores[playerId] = this.gameEngine.scores[playerId] || 0;
-    }
-    
-    this.uiManager.updateScores(scores);
-  }
-
-  /**
-   * Get scores from game engine
-   */
-  get scores(): Record<string, number> {
-    return this.gameEngine.scores;
+    this.uiManager.renderGame(
+      round.hands,
+      scores,
+      round.currentTurn,
+      this.playerIds,
+      this.playerNames,
+      this._playerCount,
+      visibleCards,
+      round.playedCards,
+      this.gameEngine.currentTrucoLevel
+    );
   }
 
   /**
    * Handle player card click
    */
-  handlePlayerCardClick(cardIndex: number): void {
-    if (!this._isGameRunning || this.isAITurn) return;
-    
-    const card = this.gameEngine.playerPlayCard(cardIndex);
+  private handlePlayerCardClick(cardIndex: number): void {
+    if (!this._isGameRunning) return;
+
+    const round = this.gameEngine.roundState;
+    if (!round || round.currentTurn !== this.myPlayerId) return;
+
+    const card = this.gameEngine.playerPlayCard(this.myPlayerId, cardIndex);
     if (card) {
-      // After player plays, check if AI should respond
-      if (!this.gameEngine['trucoPending']) {
-        setTimeout(() => this.checkAITurn(), 500);
-      }
+      this.renderGameState();
     }
   }
 
   /**
    * Handle truco button click (player challenges)
    */
-  handleTrucoButton(): void {
+  private handleTrucoButton(): void {
     if (!this._isGameRunning) return;
     this.gameEngine.challengeTruco();
   }
 
   /**
-   * Handle envido button click (player challenges)
+   * Handle envido button click
    */
-  handleEnvidoButton(): void {
+  private handleEnvidoButton(): void {
     if (!this._isGameRunning) return;
     this.gameEngine.challengeEnvido();
   }
 
   /**
-   * Handle mazo button click (player passes)
+   * Accept a truco challenge
    */
-  handleMazoButton(): void {
-    if (!this._isGameRunning) return;
-    // Player mazo (passes the trick)
-    this.uiManager.showMessage('Mazo', 1000);
+  private handleAcceptTruco(): void {
+    this.gameEngine.acceptTruco();
+  }
+
+  /**
+   * Reject a truco challenge
+   */
+  private handleRejectTruco(): void {
+    this.gameEngine.rejectTruco();
   }
 }
 
@@ -431,7 +331,7 @@ export class App {
 document.addEventListener('DOMContentLoaded', () => {
   const app = new App();
   app.init();
-  
+
   // Make globally accessible for testing
   (window as any).trucoApp = app;
 });

@@ -6,17 +6,17 @@
   <title>Truco AI</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a1a; font-family: Arial, sans-serif; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #1a472a; font-family: Arial, sans-serif; }
     #game-container { width: 100%; height: 100%; position: relative; }
-    #game-container canvas { display: block; position: absolute; top: 0; left: 0; z-index: 0; }
 
-    /* Menu & HUD styling */
-    .menu-container, .waiting-container, .game-over-container {
+    /* ─── Menu ──────────────────────────────────── */
+    .menu-container {
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       width: 100%; height: 100%; color: white; text-align: center;
       background: linear-gradient(135deg, #0a0a2e 0%, #1a1a3e 100%);
     }
-    .menu-container h1 { font-size: 72px; color: #ffd700; text-shadow: 0 0 20px rgba(255,215,0,0.5); margin-bottom: 30px; }
+    .menu-container h1 { font-size: 72px; color: #ffd700; text-shadow: 0 0 20px rgba(255,215,0,0.5); margin-bottom: 10px; }
+    .menu-container .subtitle { font-size: 18px; color: #ccc; margin-bottom: 30px; }
     .mode-select, .player-count-select, .difficulty-select { margin: 15px 0; }
     .mode-select p, .player-count-select p, .difficulty-select p { font-size: 18px; margin-bottom: 10px; color: #ccc; }
     .mode-buttons, .count-buttons, .difficulty-buttons { display: flex; gap: 15px; justify-content: center; }
@@ -33,35 +33,166 @@
     }
     .btn-start:hover { transform: scale(1.05); }
 
-    .hud-container { width: 100%; height: 100%; display: flex; flex-direction: column; }
-    .scoreboard { position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
-      display: flex; gap: 20px; z-index: 10; }
-    .player-score { background: rgba(0,0,0,0.7); padding: 8px 16px; border-radius: 8px; color: white; }
-    .player-name { font-weight: bold; color: #ffd700; }
-    .score-value { font-size: 20px; margin-left: 8px; }
-    .controls { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
-      display: flex; gap: 10px; z-index: 10; }
-    .controls button { padding: 10px 20px; font-size: 14px; font-weight: bold;
+    /* ─── Game Board ────────────────────────────── */
+    .game-board {
+      width: 100%; height: 100%; position: relative;
+      background: radial-gradient(ellipse at center, #2d7a3a 0%, #1a472a 70%);
+    }
+
+    /* Scoreboard */
+    .scoreboard {
+      position: absolute; top: 8px; left: 0; right: 0;
+      display: flex; align-items: center; justify-content: center; gap: 40px; z-index: 10;
+    }
+    .team-score {
+      background: rgba(0,0,0,0.6); padding: 6px 16px; border-radius: 8px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .team-name { font-size: 13px; color: #ccc; }
+    .team-points { font-size: 22px; font-weight: bold; color: #ffd700; }
+    .truce-level {
+      font-size: 16px; font-weight: bold; color: #ffd700;
+      text-shadow: 0 0 10px rgba(255,215,0,0.6);
+      background: rgba(0,0,0,0.5); padding: 4px 14px; border-radius: 6px;
+    }
+
+    /* Opponent area */
+    .opponent-area {
+      position: absolute; top: 50px; left: 0; right: 0;
+      display: flex; justify-content: center; gap: 10px; z-index: 5;
+    }
+    .opponent-cards { display: flex; gap: 8px; }
+
+    /* Teammate area */
+    .teammate-area {
+      position: absolute; top: 120px; left: 0; right: 0;
+      display: flex; flex-direction: column; align-items: center; gap: 4px; z-index: 6;
+    }
+    .teammate-label { font-size: 12px; color: #aaa; margin-bottom: 4px; }
+    .teammate-cards { display: flex; gap: 8px; }
+    .teammate-cards .card { width: 55px; height: 80px; }
+
+    /* Table area */
+    .table-area {
+      position: absolute; top: 55%; left: 50%; transform: translate(-50%, -50%);
+      width: 80%; height: 35%; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    .played-cards { display: flex; gap: 40px; justify-content: center; width: 100%; }
+    .trick-slot {
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      min-width: 100px; min-height: 80px;
+    }
+    .message-area {
+      margin-top: 10px; font-size: 20px; font-weight: bold; color: #ffd700;
+      text-shadow: 0 0 10px rgba(255,215,0,0.8);
+      transition: opacity 0.3s; opacity: 0;
+    }
+
+    /* Player area */
+    .player-area {
+      position: absolute; bottom: 80px; left: 0; right: 0;
+      display: flex; flex-direction: column; align-items: center; gap: 8px; z-index: 10;
+    }
+    .player-name { font-size: 16px; font-weight: bold; color: #ffd700; text-shadow: 0 0 8px rgba(255,215,0,0.5); }
+    .player-cards { display: flex; gap: 12px; }
+
+    /* Controls */
+    .controls {
+      position: absolute; bottom: 15px; left: 0; right: 0;
+      display: flex; justify-content: center; gap: 12px; z-index: 10;
+    }
+    .controls button {
+      padding: 10px 24px; font-size: 14px; font-weight: bold;
       border: 2px solid #ffd700; background: rgba(0,0,0,0.6); color: #ffd700;
-      border-radius: 8px; cursor: pointer; }
+      border-radius: 8px; cursor: pointer; transition: all 0.2s;
+    }
     .controls button:hover { background: #ffd700; color: #0a0a2e; }
-    .message-area { position: absolute; top: 60px; left: 50%; transform: translateX(-50%);
-      color: white; font-size: 24px; font-weight: bold; text-shadow: 0 0 10px rgba(255,215,0,0.8);
-      z-index: 10; text-align: center; }
-    .card-hand { display: flex; gap: 10px; position: absolute; bottom: 50px; left: 50%;
-      transform: translateX(-50%); z-index: 10; }
-    .card { width: 80px; height: 113px; background: white; border-radius: 8px;
-      border: 2px solid #333; cursor: pointer; transition: transform 0.2s;
-      display: flex; align-items: center; justify-content: center; }
-    .card:hover { transform: translateY(-10px); }
-    .card .card-content { text-align: center; }
-    .card .top-left { font-size: 14px; font-weight: bold; }
-    .card .center-suit { font-size: 36px; }
-    .card.back { background: #1a5c2a; border-color: #145220; }
-    .game-over-container h1 { color: #ffd700; margin-bottom: 20px; }
-    .game-over-container .winner { font-size: 28px; color: white; }
-    .waiting-container h2 { color: #ffd700; margin-bottom: 10px; }
-    .waiting-container p { color: white; font-size: 20px; }
+
+    /* Truco response */
+    .truco-response {
+      position: absolute; bottom: 15px; left: 0; right: 0;
+      display: none; justify-content: center; gap: 12px; z-index: 10;
+    }
+    .btn-accept {
+      padding: 10px 24px; font-size: 14px; font-weight: bold;
+      border: 2px solid #4caf50; background: rgba(0,0,0,0.6); color: #4caf50;
+      border-radius: 8px; cursor: pointer; transition: all 0.2s;
+    }
+    .btn-accept:hover { background: #4caf50; color: white; }
+    .btn-reject {
+      padding: 10px 24px; font-size: 14px; font-weight: bold;
+      border: 2px solid #f44336; background: rgba(0,0,0,0.6); color: #f44336;
+      border-radius: 8px; cursor: pointer; transition: all 0.2s;
+    }
+    .btn-reject:hover { background: #f44336; color: white; }
+
+    /* ─── Cards ──────────────────────────────────── */
+    .card {
+      width: 65px; height: 95px; border-radius: 8px;
+      border: 2px solid #333; position: relative;
+      display: flex; align-items: center; justify-content: center;
+      transition: transform 0.15s, box-shadow 0.15s;
+      user-select: none;
+    }
+    .card-back {
+      background: linear-gradient(135deg, #1a5c2a, #0d3d1a);
+      border-color: #145220;
+      background-image: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(255,255,255,0.03) 5px, rgba(255,255,255,0.03) 10px);
+    }
+    .card-back::after {
+      content: '🂠'; font-size: 32px; opacity: 0.3;
+    }
+    .card-front {
+      background: white; border-color: #888;
+    }
+    .card-front.small {
+      width: 50px; height: 72px;
+    }
+    .card-front.small .card-top-left { font-size: 10px; }
+    .card-front.small .card-center-suit { font-size: 20px; }
+
+    .card-front.clickable {
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    }
+    .card-front.clickable:hover {
+      transform: translateY(-12px);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.5);
+    }
+    .card-front.dimmed {
+      opacity: 0.5;
+      cursor: default;
+    }
+    .card-front.dimmed:hover {
+      transform: none;
+    }
+    .card-content {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      width: 100%; height: 100%; padding: 4px;
+    }
+    .card-top-left { font-size: 12px; font-weight: bold; color: #333; line-height: 1; }
+    .card-center-suit { font-size: 28px; line-height: 1; margin: 2px 0; }
+    .card-name { font-size: 8px; color: #666; margin-top: 2px; }
+
+    .card-empty {
+      border: 2px dashed #2a6b3a; background: rgba(0,0,0,0.1);
+    }
+    .card-empty::after { content: ''; }
+
+    /* Played card */
+    .played-card {
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+    }
+    .played-card-name { font-size: 10px; color: #ffd700; font-weight: bold; }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .menu-container h1 { font-size: 48px; }
+      .card { width: 50px; height: 75px; }
+      .card-front.small { width: 40px; height: 58px; }
+      .card-center-suit { font-size: 22px; }
+      .played-cards { gap: 20px; }
+    }
   </style>
 </head>
 <body>

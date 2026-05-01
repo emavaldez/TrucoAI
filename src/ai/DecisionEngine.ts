@@ -34,7 +34,7 @@ export class DecisionEngine {
    * Evaluate the current game state and return the next AI action.
    * This is the main entry point called after each game event.
    */
-  evaluate(aiHand: Card[]): AIAction | null {
+  evaluate(aiHand: Card[], aiPlayerId: string): AIAction | null {
     if (!this.gameEngine) return null;
 
     const phase = this.gameEngine.phaseValue;
@@ -54,7 +54,7 @@ export class DecisionEngine {
 
     // If playing, decide card to play or whether to challenge
     if (phase === 'playing') {
-      return this.decideAction(aiHand);
+      return this.decideAction(aiHand, aiPlayerId);
     }
 
     return null;
@@ -63,12 +63,12 @@ export class DecisionEngine {
   /**
    * Decide what action to take during playing phase
    */
-  private decideAction(aiHand: Card[]): AIAction {
+  private decideAction(aiHand: Card[], aiPlayerId: string): AIAction {
     const round = this.gameEngine.roundState;
     if (!round) return { type: 'pass' };
 
     // Check if we should challenge truco
-    const shouldChallenge = this.shouldChallengeTruco(aiHand, round);
+    const shouldChallenge = this.shouldChallengeTruco(aiHand, round, aiPlayerId);
     if (shouldChallenge) {
       return { type: 'challenge-truco' };
     }
@@ -80,11 +80,10 @@ export class DecisionEngine {
     }
 
     // Choose card to play
-    const cardIndex = this.ai.chooseCard(
-      aiHand,
-      round.currentTrick,
-      this.gameEngine['playerWonLastTrick']
-    );
+    const wonLastTrick = round.trickWinners.length > 0
+      ? round.trickWinners[round.trickWinners.length - 1] === aiPlayerId
+      : false;
+    const cardIndex = this.ai.chooseCard(aiHand, round.currentTrick, wonLastTrick);
 
     return { type: 'play-card', cardIndex };
   }
@@ -92,7 +91,7 @@ export class DecisionEngine {
   /**
    * Determine if AI should challenge truco based on hand strength and game state
    */
-  private shouldChallengeTruco(aiHand: Card[], round: RoundState): boolean {
+  private shouldChallengeTruco(aiHand: Card[], round: RoundState, aiPlayerId: string): boolean {
     const currentLevel = this.gameEngine.currentTrucoLevel;
 
     // Only challenge if we have cards to play
@@ -100,7 +99,7 @@ export class DecisionEngine {
 
     // Check if AI has already played a card this trick (can't challenge after playing)
     const currentTrick = round.playedCards[round.currentTrick];
-    if (currentTrick && currentTrick.ai) return false;
+    if (currentTrick && currentTrick[aiPlayerId]) return false;
 
     return this.ai.shouldChallengeTruco(aiHand, currentLevel);
   }
@@ -108,13 +107,13 @@ export class DecisionEngine {
   /**
    * Execute an AI action on the game engine
    */
-  execute(action: AIAction): void {
+  execute(action: AIAction, aiPlayerId: string): void {
     if (!this.gameEngine) return;
 
     switch (action.type) {
       case 'play-card':
         if (action.cardIndex !== undefined) {
-          this.gameEngine.aiPlayCard(action.cardIndex);
+          this.gameEngine.playerPlayCard(aiPlayerId, action.cardIndex);
         }
         break;
 
