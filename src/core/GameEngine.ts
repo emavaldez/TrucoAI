@@ -178,11 +178,12 @@ export class GameEngine {
       playerIds: this._players.map(p => p.id)
     };
 
-    // Deal cards: each player gets 3
+    // Deal cards: 3 cards per player in 2/4-player, 6 cards in 6-player
     this._deck = new Deck();
+    const cardsPerPlayer = this._playerCount >= 6 ? 6 : 3;
     for (const player of this._players) {
       this._roundState!.hands[player.id] = [];
-      for (let i = 0; i < 3; i++) {
+      for (let i = 0; i < cardsPerPlayer; i++) {
         const card = this._deck.draw();
         if (card) {
           this._roundState!.hands[player.id].push(card);
