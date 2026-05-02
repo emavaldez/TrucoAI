@@ -202,7 +202,8 @@ export class UIManager {
              playerCount: PlayerCount, visibleCards: Record<string, Card[]>,
              playedCards: Record<number, Record<string, Card | null>>,
              trucoState: TrucoState, envidoState: EnvidoState,
-             myPlayerId: string, canEnvido: boolean): void {
+             myPlayerId: string, canEnvido: boolean,
+             dealerId?: string, deckRemaining?: number): void {
 
     // Hide round-over and game-over panels when playing
     const roundOver = document.getElementById('round-over-panel');
@@ -224,8 +225,13 @@ export class UIManager {
     // Render all player areas (circular seating)
     this.renderCirclePlayers(hands, playerIds, myPlayerId, visibleCards, playerCount, playerNames, currentTurn);
 
-    // Render played cards
-    this.renderPlayedCards(playedCards, playerIds, playerNames);
+    // Render played cards near each player
+    this.renderPlayedCardsNearPlayers(playedCards, playerIds, playerNames);
+
+    // Render deck near dealer
+    if (dealerId && deckRemaining !== undefined) {
+      this.renderDeck(dealerId, deckRemaining, playerIds, playerNames);
+    }
 
     // Enable/disable envido button based on position
     const envidoBtn = document.getElementById('btn-envido') as HTMLButtonElement | null;
@@ -287,39 +293,95 @@ export class UIManager {
     }
   }
 
-  // ─── Played Cards ──────────────────────────────────────
+  // ─── Played Cards Near Players ──────────────────────
 
-  private renderPlayedCards(playedCards: Record<number, Record<string, Card | null>>,
-                             playerIds: string[], playerNames: Record<string, string>): void {
-    for (let trickIdx = 0; trickIdx < 3; trickIdx++) {
-      const slot = document.getElementById(`trick-${trickIdx}`);
-      if (!slot) continue;
-
-      const trick = playedCards[trickIdx];
-      if (!trick) {
-        slot.innerHTML = '';
-        continue;
+  private renderPlayedCardsNearPlayers(playedCards: Record<number, Record<string, Card | null>>,
+                                       playerIds: string[], playerNames: Record<string, string>): void {
+    // Remove old played card overlays from player areas
+    for (let i = 0; i < playerIds.length; i++) {
+      const pid = playerIds[i];
+      const area = document.getElementById(`player-cards-area-${i}`);
+      if (area) {
+        const existing = area.querySelectorAll('.played-card-overlay');
+        existing.forEach(el => el.remove());
       }
+    }
 
-      let html = '';
-      for (const pid of playerIds) {
+    // For each trick, place the played card near the player who played it
+    for (const [trickIdxStr, trick] of Object.entries(playedCards)) {
+      if (!trick) continue;
+
+      for (let i = 0; i < playerIds.length; i++) {
+        const pid = playerIds[i];
         const card = trick[pid];
-        if (card) {
-          html += `
-            <div class="played-card">
-              <span class="played-card-name">${playerNames[pid] || pid}</span>
-              <div class="card card-front small">
-                <div class="card-content">
-                  <span class="card-top-left">${card.number} ${this.getSuitSymbol(card.suit)}</span>
-                  <div class="card-center-suit" style="color: ${this.getSuitColor(card.suit)};">${this.getSuitSymbol(card.suit)}</div>
-                </div>
+        if (!card) continue;
+
+        const area = document.getElementById(`player-cards-area-${i}`);
+        if (!area) continue;
+
+        const overlay = document.createElement('div');
+        overlay.className = 'played-card-overlay';
+        overlay.innerHTML = `
+          <div class="played-card">
+            <span class="played-card-name">${playerNames[pid] || pid}</span>
+            <div class="card card-front small">
+              <div class="card-content">
+                <span class="card-top-left">${card.number} ${this.getSuitSymbol(card.suit)}</span>
+                <div class="card-center-suit" style="color: ${this.getSuitColor(card.suit)};">${this.getSuitSymbol(card.suit)}</div>
               </div>
             </div>
-          `;
-        }
+          </div>
+        `;
+        area.appendChild(overlay);
       }
-      slot.innerHTML = html;
     }
+  }
+
+  // ─── Deck Display ────────────────────────────────────
+
+  private renderDeck(dealerId: string, deckRemaining: number,
+                      playerIds: string[], playerNames: Record<string, string>): void {
+    // Remove old deck display
+    const oldDeck = document.getElementById('deck-display');
+    if (oldDeck) oldDeck.remove();
+
+    // Find dealer's position index
+    const dealerIdx = playerIds.indexOf(dealerId);
+    const dealerArea = document.getElementById(`circle-player-${dealerIdx}`);
+    if (!dealerArea) return;
+
+    const deckEl = document.createElement('div');
+    deckEl.id = 'deck-display';
+    deckEl.className = 'deck-display';
+
+    // Create stacked card backs
+    let pileHTML = '<div class="deck-pile">';
+    const visibleCards = Math.min(deckRemaining, 3);
+    for (let i = 0; i < visibleCards; i++) {
+      pileHTML += '<div class="card card-back"></div>';
+    }
+    pileHTML += '</div>';
+
+    deckEl.innerHTML = `
+      ${pileHTML}
+      <div class="deck-count">${deckRemaining} cartas</div>
+      <div class="deck-label">Reparte</div>
+    `;
+
+    // Position deck to the right of the dealer using CSS transforms
+    // We append to the circle-seating container and position absolutely
+    const containerRect = this.container.getBoundingClientRect();
+    const dealerRect = dealerArea.getBoundingClientRect();
+
+    const deckX = dealerRect.right - containerRect.left + 10;
+    const deckY = dealerRect.top - containerRect.top + dealerRect.height / 2 - 47;
+
+    deckEl.style.position = 'absolute';
+    deckEl.style.left = `${deckX}px`;
+    deckEl.style.top = `${deckY}px`;
+    deckEl.style.zIndex = '6';
+
+    this.container.appendChild(deckEl);
   }
 
   // ─── Game Info (Truco level, etc.) ─────────────────────

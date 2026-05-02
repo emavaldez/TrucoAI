@@ -33,10 +33,12 @@ export interface RoundState {
   trickScore: number[]; // points per trick: team0 - team1
   playerIds: string[]; // playing order (counter-clockwise)
   starterId: string; // who started this mano
+  dealerId: string; // who dealt this mano
   manoNumber: number; // 1 or 2
   firstHandHighestCard: { playerId: string; rank: number } | null; // highest card from mano 1
   firstHandStarter: string | null; // who started mano 1
   secondHandWinner: string | null; // winner of mano 2 (determines truco winner)
+  deckRemaining: number; // remaining cards in deck
 }
 
 export interface GameEvent {
@@ -135,6 +137,12 @@ export class GameEngine {
   // Human players (who can click to play)
   private _humanPlayers: string[] = [];
 
+  // Track if first hand was completed (for mano 2 flow)
+  private _firstHandCompleted = false;
+
+  // Track previous dealer for rotation
+  private _previousDealerId = 'player-0';
+
   // Events
   public onEvent: ((event: GameEvent) => void) | null = null;
 
@@ -178,6 +186,7 @@ export class GameEngine {
         players[i].team = 0;
       }
     }
+    this._firstHandCompleted = false; // Reset for new game
   }
 
   setHumanPlayers(ids: string[]): void {
@@ -192,7 +201,10 @@ export class GameEngine {
     this._envido = { phase: 'none', team0Score: 0, team1Score: 0, challengedBy: null, envidoType: 'envido' };
     this._phase = 'round-start';
 
-    // Reset trick state
+    // Determine the mano number based on whether first hand was completed
+    const isSecondHand = this._firstHandCompleted;
+
+    // Create initial round state (with placeholder values)
     this._roundState = {
       hands: {},
       playedCards: {},
@@ -202,29 +214,39 @@ export class GameEngine {
       trickScore: [],
       playerIds: this._players.map(p => p.id), // playing order (counter-clockwise)
       starterId: '',
-      manoNumber: 1,
+      dealerId: '',
+      manoNumber: isSecondHand ? 2 : 1,
       firstHandHighestCard: null,
       firstHandStarter: null,
-      secondHandWinner: null
+      secondHandWinner: null,
+      deckRemaining: 40
     };
+
+    // Determine who deals this mano (rotates counter-clockwise each mano)
+    const dealerId = this.determineDealer();
+    this._roundState.dealerId = dealerId;
 
     // Determine who starts this mano
     const starterId = this.determineStarter();
     this._roundState.starterId = starterId;
     this._roundState.currentTurn = starterId;
 
-    // Deal cards
+    // Deal cards (dealer deals to next player counter-clockwise)
     this._deck = new Deck();
-    const cardsPerPlayer = 3;
+    // Initialize hands arrays
     for (const player of this._players) {
       this._roundState!.hands[player.id] = [];
-      for (let i = 0; i < cardsPerPlayer; i++) {
+    }
+    const cardsPerPlayer = 3;
+    for (let i = 0; i < cardsPerPlayer; i++) {
+      for (const player of this._players) {
         const card = this._deck.draw();
         if (card) {
           this._roundState!.hands[player.id].push(card);
         }
       }
     }
+    this._roundState!.deckRemaining = this._deck.remaining;
 
     this._phase = 'playing';
     this.emit('round-start', {
@@ -232,15 +254,17 @@ export class GameEngine {
       hands: this._roundState!.hands,
       currentTurn: this._roundState!.currentTurn,
       starterId: starterId,
-      manoNumber: this._roundState!.manoNumber
+      dealerId: dealerId,
+      manoNumber: this._roundState!.manoNumber,
+      deckRemaining: this._deck.remaining
     });
   }
 
   /**
    * Determine who starts this mano.
-   - Mano 1: player-0 always starts.
-   - Mano 2+: the player who had the highest card in the previous mano starts.
-   * If there's a tie, the previous starter starts again.
+   * - Mano 1: player-0 always starts.
+   * - Mano 2+: the player who had the highest card in the previous mano starts.
+   * - If there's a tie, the previous starter starts again.
    */
   private determineStarter(): string {
     if (!this._roundState) return this._players[0].id;
@@ -255,24 +279,50 @@ export class GameEngine {
       return this._roundState.firstHandHighestCard.playerId;
     }
 
-    // Fallback: previous starter
+    // Fallback: previous starter (tie case)
     return this._roundState.starterId;
   }
 
   /**
-   * After mano 1 completes, record the highest card played.
+   * Determine who deals this mano (rotates counter-clockwise each mano).
+   * The dealer rotates in the same direction as play (counter-clockwise).
+   */
+  private determineDealer(): string {
+    if (!this._roundState) return this._players[0].id;
+
+    // If this is the first mano, player-0 deals
+    if (!this._firstHandCompleted) {
+      return this._players[0].id;
+    }
+
+    // Rotate counter-clockwise from previous dealer
+    const playerIds = this._roundState.playerIds;
+    const currentDealerIdx = playerIds.indexOf(this._previousDealerId);
+    // Counter-clockwise: go backward (subtract 1)
+    const nextDealerIdx = (currentDealerIdx - 1 + playerIds.length) % playerIds.length;
+    return playerIds[nextDealerIdx];
+  }
+
+  /**
+   * After mano 1 completes, record the highest card played in the last trick.
    * This determines who starts mano 2.
+   * In case of tie (same rank), the player from the winning team who played first in order starts.
    */
   private recordFirstHandHighestCard(): void {
     if (!this._roundState) return;
     if (this._roundState.manoNumber !== 1) return;
 
+    // Find the highest card played across ALL tricks in this mano
     let highestRank = -1;
     let highestPlayer = this._players[0].id;
 
-    for (const playerId of this._roundState.playerIds) {
-      const hand = this._roundState.hands[playerId] || [];
-      for (const card of hand) {
+    for (let trickIdx = 0; trickIdx < 3; trickIdx++) {
+      const trick = this._roundState.playedCards[trickIdx];
+      if (!trick) continue;
+
+      for (const playerId of this._roundState.playerIds) {
+        const card = trick[playerId];
+        if (!card) continue;
         const rank = getCardRank(card);
         if (rank > highestRank) {
           highestRank = rank;
@@ -474,6 +524,8 @@ export class GameEngine {
     // After mano 1, start mano 2 automatically
     // But first emit round-over so UI can show it
     this._phase = 'round-over';
+    this._firstHandCompleted = true; // Mark for next startRound to use mano 2
+    this._previousDealerId = this._roundState!.dealerId; // Save dealer for rotation
     this.emit('round-over', { winningTeam, team0Tricks, team1Tricks, points, isSecondHand: false });
   }
 

@@ -86,7 +86,7 @@
     }
     .player-label { color: #4caf50; text-shadow: 0 0 6px rgba(76,175,80,0.5); }
     .player-cards-area {
-      display: flex; gap: 4px; margin-top: 2px;
+      display: flex; gap: 4px; margin-top: 2px; position: relative;
     }
 
     /* 2-player layout */
@@ -153,6 +153,56 @@
     .trick-slot {
       display: flex; flex-direction: column; align-items: center; gap: 4px;
       min-width: 100px; min-height: 80px;
+    }
+    /* Played cards displayed near each player */
+    .played-card {
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+    }
+    .played-card-name { font-size: 10px; color: #ffd700; font-weight: bold; }
+    /* Overlay for played cards near player */
+    .played-card-overlay {
+      position: absolute;
+      bottom: -60px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+    }
+    .played-card-overlay .card {
+      transform: scale(0.7);
+    }
+    /* Deck display */
+    .deck-display {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .deck-pile {
+      position: relative;
+      width: 65px;
+      height: 95px;
+    }
+    .deck-pile .card-back {
+      position: absolute;
+      top: 0;
+      left: 0;
+      box-shadow: 2px 2px 4px rgba(0,0,0,0.4);
+    }
+    .deck-pile .card-back:nth-child(1) { transform: translate(0, 0); }
+    .deck-pile .card-back:nth-child(2) { transform: translate(1px, -1px); }
+    .deck-pile .card-back:nth-child(3) { transform: translate(2px, -2px); }
+    .deck-count {
+      font-size: 11px;
+      color: #ffd700;
+      font-weight: bold;
+      background: rgba(0,0,0,0.6);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .deck-label {
+      font-size: 10px;
+      color: #aaa;
     }
     .message-area {
       margin-top: 10px; font-size: 20px; font-weight: bold; color: #ffd700;

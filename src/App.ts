@@ -482,7 +482,9 @@ export class App {
       trucoState,
       envidoState,
       this.myPlayerId,
-      canEnvido
+      canEnvido,
+      round.dealerId,
+      round.deckRemaining
     );
   }
 }
