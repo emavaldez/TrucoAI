@@ -1,8 +1,15 @@
 // GameEngine - Core game logic for Argentine Truco (2/4/6 players)
-// Supports: 1v1, 2v2 (4 players), 3v3 (6 players)
+// Circular seating, counter-clockwise order, alternating teams
 // Truco levels: Truco (1pt) → Retruco (2pts) → Vale 4 (4pts)
 // Envido levels: Envido (2pts) → Real Envido (3pts) → Falta Envido (6pts)
 // Winning score: 30
+// 
+// Rules:
+// - Players sit in a circle, teams alternate (A,B,A,B,A,B)
+// - Play goes counter-clockwise
+// - Second mano starts with player who had highest card in first mano
+// - Only the last player of each team in playing order can sing envido
+// - If there are 2 manos, winner of the second mano wins the truco
 
 import type { Card } from './Card.js';
 import { Deck } from './Deck.js';
@@ -24,7 +31,12 @@ export interface RoundState {
   currentTrick: number; // 0, 1, 2
   currentTurn: string; // player ID whose turn it is
   trickScore: number[]; // points per trick: team0 - team1
-  playerIds: string[];
+  playerIds: string[]; // playing order (counter-clockwise)
+  starterId: string; // who started this mano
+  manoNumber: number; // 1 or 2
+  firstHandHighestCard: { playerId: string; rank: number } | null; // highest card from mano 1
+  firstHandStarter: string | null; // who started mano 1
+  secondHandWinner: string | null; // winner of mano 2 (determines truco winner)
 }
 
 export interface GameEvent {
@@ -64,7 +76,6 @@ export function calculateEnvidoForHand(cards: Card[]): { score: number; suit: st
 
   for (const [suit, suitCards] of Object.entries(suitGroups)) {
     if (suitCards.length >= 2) {
-      // Sort by number descending, take top 2
       const sorted = [...suitCards].sort((a, b) => b.number - a.number);
       const score = 20 + sorted[0].number + sorted[1].number;
       if (score > bestScore) {
@@ -76,7 +87,6 @@ export function calculateEnvidoForHand(cards: Card[]): { score: number; suit: st
   }
 
   if (bestScore === 0) {
-    // No pair of same suit — take highest card number
     const topCard = [...cards].sort((a, b) => b.number - a.number)[0];
     if (topCard) {
       bestScore = topCard.number;
@@ -143,15 +153,30 @@ export class GameEngine {
 
   // ─── Initialization ────────────────────────────────────
 
+  /**
+   * Initialize the game with players.
+   * Teams alternate: player-0 → team 0, player-1 → team 1, player-2 → team 0, etc.
+   * The playerIds array defines the playing order (counter-clockwise around the circle).
+   */
   init(players: PlayerInfo[], playerCount: PlayerCount): void {
     this._players = players;
     this._playerCount = playerCount;
     this._scores = { 0: 0, 1: 0 };
 
-    // Determine teams: even-indexed players = team 0, odd-indexed = team 1
-    // player-0 → team 0, player-1 → team 0 (teammate), player-2 → team 1, etc.
+    // Assign teams: alternating (A,B,A,B) for 4p, (A,B,A,B,A,B) for 6p
     for (let i = 0; i < players.length; i++) {
       players[i].team = i % 2;
+    }
+    // For 6-player: swap teams for odd-indexed players (1,3,5) to get proper 3v3
+    // In 6p circular seating: positions alternate V,O,T,O,T,O
+    // So positions 1,3,5 are opponents (team 1), positions 2,4 are teammates (team 0)
+    if (this._playerCount === 6) {
+      for (let i = 1; i < players.length; i += 2) {
+        players[i].team = 1;
+      }
+      for (let i = 2; i < players.length; i += 2) {
+        players[i].team = 0;
+      }
     }
   }
 
@@ -175,12 +200,22 @@ export class GameEngine {
       currentTrick: 0,
       currentTurn: '',
       trickScore: [],
-      playerIds: this._players.map(p => p.id)
+      playerIds: this._players.map(p => p.id), // playing order (counter-clockwise)
+      starterId: '',
+      manoNumber: 1,
+      firstHandHighestCard: null,
+      firstHandStarter: null,
+      secondHandWinner: null
     };
 
-    // Deal cards: 3 cards per player in 2/4-player, 6 cards in 6-player
+    // Determine who starts this mano
+    const starterId = this.determineStarter();
+    this._roundState.starterId = starterId;
+    this._roundState.currentTurn = starterId;
+
+    // Deal cards
     this._deck = new Deck();
-    const cardsPerPlayer = this._playerCount >= 6 ? 6 : 3;
+    const cardsPerPlayer = 3;
     for (const player of this._players) {
       this._roundState!.hands[player.id] = [];
       for (let i = 0; i < cardsPerPlayer; i++) {
@@ -191,15 +226,70 @@ export class GameEngine {
       }
     }
 
-    // First trick: player 0 goes first (mano)
-    this._roundState!.currentTurn = this._players[0].id;
-
     this._phase = 'playing';
     this.emit('round-start', {
       playerCount: this._playerCount,
       hands: this._roundState!.hands,
-      currentTurn: this._roundState!.currentTurn
+      currentTurn: this._roundState!.currentTurn,
+      starterId: starterId,
+      manoNumber: this._roundState!.manoNumber
     });
+  }
+
+  /**
+   * Determine who starts this mano.
+   - Mano 1: player-0 always starts.
+   - Mano 2+: the player who had the highest card in the previous mano starts.
+   * If there's a tie, the previous starter starts again.
+   */
+  private determineStarter(): string {
+    if (!this._roundState) return this._players[0].id;
+
+    if (this._roundState.manoNumber === 1) {
+      // First mano: player-0 starts
+      return this._players[0].id;
+    }
+
+    // Check if we have a recorded highest card from mano 1
+    if (this._roundState.firstHandHighestCard) {
+      return this._roundState.firstHandHighestCard.playerId;
+    }
+
+    // Fallback: previous starter
+    return this._roundState.starterId;
+  }
+
+  /**
+   * After mano 1 completes, record the highest card played.
+   * This determines who starts mano 2.
+   */
+  private recordFirstHandHighestCard(): void {
+    if (!this._roundState) return;
+    if (this._roundState.manoNumber !== 1) return;
+
+    let highestRank = -1;
+    let highestPlayer = this._players[0].id;
+
+    for (const playerId of this._roundState.playerIds) {
+      const hand = this._roundState.hands[playerId] || [];
+      for (const card of hand) {
+        const rank = getCardRank(card);
+        if (rank > highestRank) {
+          highestRank = rank;
+          highestPlayer = playerId;
+        } else if (rank === highestRank) {
+          // Tie: prefer the earlier player in playing order (counter-clockwise)
+          const currentIdx = this._roundState.playerIds.indexOf(highestPlayer);
+          const newIdx = this._roundState.playerIds.indexOf(playerId);
+          if (newIdx < currentIdx) {
+            highestPlayer = playerId;
+          }
+        }
+      }
+    }
+
+    this._roundState.firstHandHighestCard = { playerId: highestPlayer, rank: highestRank };
+    this._roundState.firstHandStarter = this._roundState.starterId;
   }
 
   // ─── Card Playing ──────────────────────────────────────
@@ -242,7 +332,7 @@ export class GameEngine {
       // Resolve trick — wait for AI to respond if it's the next player's turn
       const nextPlayer = this._roundState!.currentTurn;
       const isAI = this._players.find(p => p.id === nextPlayer)?.isAI ?? false;
-      const waitTime = isAI ? 1500 : 500; // Give AI time to respond
+      const waitTime = isAI ? 1500 : 500;
       setTimeout(() => this.resolveTrick(), waitTime);
     }
 
@@ -258,8 +348,6 @@ export class GameEngine {
     if (!trick) return;
 
     // Find the winning card per team
-    // In 2-player: highest card wins
-    // In 4/6-player: each team's best card vs other team's best card
     const team0Cards: Card[] = [];
     const team1Cards: Card[] = [];
 
@@ -278,17 +366,9 @@ export class GameEngine {
       getCardRank(c) > getCardRank(best) ? c : best, team1Cards[0]);
 
     let winningTeam: number;
-    if (this._playerCount === 2) {
-      // 2-player: direct comparison
-      const r0 = getCardRank(team0Best);
-      const r1 = getCardRank(team1Best);
-      winningTeam = r0 >= r1 ? 0 : 1;
-    } else {
-      // 4/6-player: team best vs team best
-      const r0 = getCardRank(team0Best);
-      const r1 = getCardRank(team1Best);
-      winningTeam = r0 >= r1 ? 0 : 1;
-    }
+    const r0 = getCardRank(team0Best);
+    const r1 = getCardRank(team1Best);
+    winningTeam = r0 >= r1 ? 0 : 1;
 
     // Award point to winning team
     this._roundState!.trickScore.push(winningTeam);
@@ -306,9 +386,8 @@ export class GameEngine {
     if (this._roundState!.trickScore.length >= 3) {
       setTimeout(() => this.resolveRound(), 800);
     } else {
-      // Next trick
+      // Next trick: winner of previous trick goes first
       this._roundState!.currentTrick++;
-      // Winner of previous trick goes first
       this._roundState!.currentTurn = this._roundState!.trickWinners[0];
       this._phase = 'playing';
       this.emit('round-start-trick', {
@@ -337,7 +416,42 @@ export class GameEngine {
       return;
     }
 
-    // Award points
+    // Handle mano 2 logic
+    if (this._roundState.manoNumber === 2) {
+      // Winner of mano 2 wins the entire truco
+      this._roundState.secondHandWinner = this._players.find(p => p.team === winningTeam)!.id;
+      
+      // Award points (truco points)
+      const points = this._truco.roundPoints || 1;
+      this._scores[winningTeam] = (this._scores[winningTeam] || 0) + points;
+
+      this.emit('round-winner', {
+        winningTeam,
+        team0Tricks,
+        team1Tricks,
+        points,
+        scores: { ...this._scores },
+        isSecondHand: true,
+        secondHandWinner: this._roundState.secondHandWinner
+      });
+
+      // Check for game over (30 points)
+      if (this._scores[winningTeam] >= 30) {
+        this._phase = 'game-over';
+        this.emit('game-over', { winningTeam, scores: { ...this._scores } });
+        return;
+      }
+
+      this._phase = 'round-over';
+      this.emit('round-over', { winningTeam, team0Tricks, team1Tricks, points, isSecondHand: true });
+      return;
+    }
+
+    // Mano 1 logic
+    // Record highest card for mano 2 starter determination
+    this.recordFirstHandHighestCard();
+
+    // Award points for mano 1
     const points = this._truco.roundPoints || 1;
     this._scores[winningTeam] = (this._scores[winningTeam] || 0) + points;
 
@@ -346,7 +460,8 @@ export class GameEngine {
       team0Tricks,
       team1Tricks,
       points,
-      scores: { ...this._scores }
+      scores: { ...this._scores },
+      isSecondHand: false
     });
 
     // Check for game over (30 points)
@@ -356,9 +471,10 @@ export class GameEngine {
       return;
     }
 
-    // Round over — wait for player to click "SIGUIENTE MANO"
+    // After mano 1, start mano 2 automatically
+    // But first emit round-over so UI can show it
     this._phase = 'round-over';
-    this.emit('round-over', { winningTeam, team0Tricks, team1Tricks, points });
+    this.emit('round-over', { winningTeam, team0Tricks, team1Tricks, points, isSecondHand: false });
   }
 
   // ─── Truco Dynamics ────────────────────────────────────
@@ -425,7 +541,6 @@ export class GameEngine {
       this.emit('game-over', { winningTeam: opponentTeam, scores: { ...this._scores } });
     } else {
       this._phase = 'round-over';
-      setTimeout(() => this.startRound(), 2000);
     }
   }
 
@@ -441,8 +556,37 @@ export class GameEngine {
 
   // ─── Envido Dynamics ───────────────────────────────────
 
+  /**
+   * Check if a player is allowed to sing envido.
+   * Only the last player of each team in the playing order can sing envido.
+   */
+  canChallengeEnvido(playerId: string): boolean {
+    if (!this._roundState) return false;
+    if (this._envido.phase !== 'none') return false; // Already has an envido in play
+
+    const player = this._players.find(p => p.id === playerId);
+    if (!player) return false;
+
+    const playerIdx = this._roundState.playerIds.indexOf(playerId);
+    const team = player.team;
+
+    // Find the last player of this team in the playing order
+    let lastTeamPlayer = '';
+    for (const pid of this._roundState.playerIds) {
+      const p = this._players.find(pl => pl.id === pid);
+      if (p && p.team === team) {
+        lastTeamPlayer = pid;
+      }
+    }
+
+    return playerId === lastTeamPlayer;
+  }
+
   challengeEnvido(challengerId: string): void {
     if (this._phase !== 'playing') return;
+
+    // Check if player is allowed to sing envido
+    if (!this.canChallengeEnvido(challengerId)) return;
 
     // Calculate envido for both teams
     const team0Cards: Card[] = [];
@@ -493,24 +637,36 @@ export class GameEngine {
     });
   }
 
-  // ─── Turn Management ───────────────────────────────────
+  // ─── Turn Management (counter-clockwise) ───────────────
 
+  /**
+   * Advance turn counter-clockwise.
+   * In counter-clockwise order, we go BACKWARD in the playerIds array.
+   */
   private advanceTurn(): void {
     if (!this._roundState) return;
 
     const playerIds = this._roundState.playerIds;
     const currentIdx = playerIds.indexOf(this._roundState.currentTurn);
-    const nextIdx = (currentIdx + 1) % playerIds.length;
+    // Counter-clockwise: go backward (subtract 1)
+    const nextIdx = (currentIdx - 1 + playerIds.length) % playerIds.length;
     this._roundState.currentTurn = playerIds[nextIdx];
   }
 
   private getNextAIPlayer(): string {
-    // Find next AI player who hasn't played this trick yet
+    // Find next AI player who hasn't played this trick yet (counter-clockwise)
     if (!this._roundState) return '';
     const trickIdx = this._roundState.currentTrick;
-    for (const player of this._players) {
-      if (player.isAI && !this._roundState.playedCards[trickIdx]?.[player.id]) {
-        return player.id;
+    const playerIds = this._roundState.playerIds;
+    const currentIdx = playerIds.indexOf(this._roundState.currentTurn);
+
+    // Search counter-clockwise
+    for (let i = 1; i < playerIds.length; i++) {
+      const idx = (currentIdx - i + playerIds.length) % playerIds.length;
+      const pid = playerIds[idx];
+      const player = this._players.find(p => p.id === pid);
+      if (player?.isAI && !this._roundState.playedCards[trickIdx]?.[pid]) {
+        return pid;
       }
     }
     return '';
@@ -518,24 +674,24 @@ export class GameEngine {
 
   // ─── Visible Cards ─────────────────────────────────────
 
+  /**
+   * Get visible cards for a human player.
+   * Player ONLY sees their own cards. No opponent or teammate cards visible.
+   */
   getVisibleCards(humanPlayerId: string): Record<string, Card[]> {
     const visible: Record<string, Card[]> = {};
-    const humanTeam = this._players.find(p => p.id === humanPlayerId)?.team ?? 0;
+    const humanPlayer = this._players.find(p => p.id === humanPlayerId);
+    if (!humanPlayer) return visible;
 
     for (const player of this._players) {
-      if (player.isHuman) {
-        // Human players see their own cards
+      if (player.id === humanPlayerId) {
+        // Human player sees their own cards
         visible[player.id] = this._roundState?.hands[player.id] || [];
-      } else if (player.isAI && player.team === humanTeam) {
-        // AI teammates: show cards face-up (in 4/6 player mode)
-        if (this._playerCount > 2) {
-          visible[player.id] = this._roundState?.hands[player.id] || [];
-        } else {
-          // In 2-player mode, opponent is AI — show face-down
-          visible[player.id] = [];
-        }
-      } else if (player.isAI && player.team !== humanTeam) {
-        // Opponent AI: show face-down
+      } else if (player.team === humanPlayer.team && this._playerCount > 2) {
+        // In multiplayer modes (4/6), teammates' cards are also visible
+        visible[player.id] = this._roundState?.hands[player.id] || [];
+      } else {
+        // Opponents: show face-down (empty array = card backs)
         visible[player.id] = [];
       }
     }

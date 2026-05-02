@@ -50,32 +50,104 @@
     }
     .team-name { font-size: 13px; color: #ccc; }
     .team-points { font-size: 22px; font-weight: bold; color: #ffd700; }
-    .truce-level {
-      font-size: 16px; font-weight: bold; color: #ffd700;
+
+    /* Game info badges */
+    .game-info { display: flex; gap: 8px; align-items: center; }
+    .truco-badge, .envido-badge {
+      font-size: 12px; font-weight: bold; color: #ffd700;
       text-shadow: 0 0 10px rgba(255,215,0,0.6);
-      background: rgba(0,0,0,0.5); padding: 4px 14px; border-radius: 6px;
+      background: rgba(0,0,0,0.5); padding: 4px 10px; border-radius: 6px;
     }
 
-    /* Opponent area */
-    .opponent-area {
-      position: absolute; top: 50px; left: 0; right: 0;
-      display: flex; justify-content: center; gap: 10px; z-index: 5;
+    /* ─── Circular Seating ──────────────────────── */
+    .circle-seating {
+      position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+      pointer-events: none; z-index: 5;
     }
-    .opponent-cards { display: flex; gap: 8px; }
-
-    /* Teammate area */
-    .teammate-area {
-      position: absolute; top: 120px; left: 0; right: 0;
-      display: flex; flex-direction: column; align-items: center; gap: 4px; z-index: 6;
+    .circle-player {
+      position: absolute; display: flex; flex-direction: column; align-items: center; gap: 2px;
+      pointer-events: auto;
+      transition: transform 0.3s;
     }
-    .teammate-label { font-size: 12px; color: #aaa; margin-bottom: 4px; }
-    .teammate-cards { display: flex; gap: 8px; }
-    .teammate-cards .card { width: 55px; height: 80px; }
+    .circle-player.active-turn {
+      transform: scale(1.05);
+    }
+    .circle-player.active-turn::after {
+      content: '';
+      position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%);
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #ffd700; box-shadow: 0 0 8px #ffd700;
+    }
+    .player-label, .opponent-label {
+      font-size: 12px; font-weight: bold; color: #ffd700;
+      text-shadow: 0 0 6px rgba(255,215,0,0.5);
+      background: rgba(0,0,0,0.4); padding: 2px 8px; border-radius: 4px;
+      white-space: nowrap;
+    }
+    .player-label { color: #4caf50; text-shadow: 0 0 6px rgba(76,175,80,0.5); }
+    .player-cards-area {
+      display: flex; gap: 4px; margin-top: 2px;
+    }
 
-    /* Table area */
+    /* 2-player layout */
+    #circle-seating[data-count="2"] .circle-player:nth-child(1) {
+      /* player-0: bottom center */
+      bottom: 100px; left: 50%; transform: translateX(-50%);
+    }
+    #circle-seating[data-count="2"] .circle-player:nth-child(2) {
+      /* player-1: top center */
+      top: 60px; left: 50%; transform: translateX(-50%);
+    }
+
+    /* 4-player layout */
+    #circle-seating[data-count="4"] .circle-player:nth-child(1) {
+      /* player-0: bottom center */
+      bottom: 100px; left: 50%; transform: translateX(-50%);
+    }
+    #circle-seating[data-count="4"] .circle-player:nth-child(2) {
+      /* player-1: right */
+      right: 20px; top: 50%; transform: translateY(-50%);
+    }
+    #circle-seating[data-count="4"] .circle-player:nth-child(3) {
+      /* player-2: top center */
+      top: 60px; left: 50%; transform: translateX(-50%);
+    }
+    #circle-seating[data-count="4"] .circle-player:nth-child(4) {
+      /* player-3: left */
+      left: 20px; top: 50%; transform: translateY(-50%);
+    }
+
+    /* 6-player layout */
+    #circle-seating[data-count="6"] .circle-player:nth-child(1) {
+      /* player-0: bottom center */
+      bottom: 100px; left: 50%; transform: translateX(-50%);
+    }
+    #circle-seating[data-count="6"] .circle-player:nth-child(2) {
+      /* player-1: bottom-right */
+      bottom: 120px; right: 80px;
+    }
+    #circle-seating[data-count="6"] .circle-player:nth-child(3) {
+      /* player-2: top-right */
+      top: 60px; right: 80px;
+    }
+    #circle-seating[data-count="6"] .circle-player:nth-child(4) {
+      /* player-3: top center */
+      top: 60px; left: 50%; transform: translateX(-50%);
+    }
+    #circle-seating[data-count="6"] .circle-player:nth-child(5) {
+      /* player-4: top-left */
+      top: 60px; left: 80px;
+    }
+    #circle-seating[data-count="6"] .circle-player:nth-child(6) {
+      /* player-5: bottom-left */
+      bottom: 120px; left: 80px;
+    }
+
+    /* ─── Table Area ────────────────────────────── */
     .table-area {
-      position: absolute; top: 55%; left: 50%; transform: translate(-50%, -50%);
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
       width: 80%; height: 35%; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      z-index: 4;
     }
     .played-cards { display: flex; gap: 40px; justify-content: center; width: 100%; }
     .trick-slot {
@@ -88,15 +160,7 @@
       transition: opacity 0.3s; opacity: 0;
     }
 
-    /* Player area */
-    .player-area {
-      position: absolute; bottom: 80px; left: 0; right: 0;
-      display: flex; flex-direction: column; align-items: center; gap: 8px; z-index: 10;
-    }
-    .player-name { font-size: 16px; font-weight: bold; color: #ffd700; text-shadow: 0 0 8px rgba(255,215,0,0.5); }
-    .player-cards { display: flex; gap: 12px; }
-
-    /* Controls */
+    /* ─── Controls ──────────────────────────────── */
     .controls {
       position: absolute; bottom: 15px; left: 0; right: 0;
       display: flex; justify-content: center; gap: 12px; z-index: 10;
@@ -107,12 +171,20 @@
       border-radius: 8px; cursor: pointer; transition: all 0.2s;
     }
     .controls button:hover { background: #ffd700; color: #0a0a2e; }
+    .controls button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .controls button:disabled:hover { background: rgba(0,0,0,0.6); color: #ffd700; }
 
-    /* Truco response */
-    .truco-response {
+    /* ─── Response Panels ───────────────────────── */
+    .response-panel {
       position: absolute; bottom: 15px; left: 0; right: 0;
-      display: none; justify-content: center; gap: 12px; z-index: 10;
+      display: none; flex-direction: column; align-items: center; gap: 10px; z-index: 10;
     }
+    .response-label {
+      font-size: 16px; font-weight: bold; color: #ffd700;
+      text-shadow: 0 0 10px rgba(255,215,0,0.8);
+      background: rgba(0,0,0,0.7); padding: 8px 16px; border-radius: 8px;
+    }
+    .response-buttons { display: flex; gap: 12px; }
     .btn-accept {
       padding: 10px 24px; font-size: 14px; font-weight: bold;
       border: 2px solid #4caf50; background: rgba(0,0,0,0.6); color: #4caf50;
@@ -125,6 +197,33 @@
       border-radius: 8px; cursor: pointer; transition: all 0.2s;
     }
     .btn-reject:hover { background: #f44336; color: white; }
+    .btn-falta {
+      padding: 10px 24px; font-size: 14px; font-weight: bold;
+      border: 2px solid #ff9800; background: rgba(0,0,0,0.6); color: #ff9800;
+      border-radius: 8px; cursor: pointer; transition: all 0.2s;
+    }
+    .btn-falta:hover { background: #ff9800; color: white; }
+
+    /* ─── Round Over / Game Over Panels ─────────── */
+    .round-over-panel, .game-over-panel {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      display: none; flex-direction: column; align-items: center; gap: 16px; z-index: 20;
+      background: rgba(0,0,0,0.85); padding: 30px 40px; border-radius: 16px;
+      border: 2px solid #ffd700;
+    }
+    .round-over-text, .game-over-text {
+      font-size: 24px; font-weight: bold; color: #ffd700;
+      text-shadow: 0 0 15px rgba(255,215,0,0.8);
+      text-align: center;
+    }
+    .btn-new-round, .btn-new-game {
+      padding: 12px 32px; font-size: 16px; font-weight: bold;
+      border: 2px solid #ffd700; background: rgba(255,215,0,0.2); color: #ffd700;
+      border-radius: 10px; cursor: pointer; transition: all 0.2s;
+    }
+    .btn-new-round:hover, .btn-new-game:hover {
+      background: #ffd700; color: #0a0a2e;
+    }
 
     /* ─── Cards ──────────────────────────────────── */
     .card {

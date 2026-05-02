@@ -50,13 +50,12 @@ export class DecisionEngine {
     const round = this.gameEngine.roundState;
     if (!round) return { type: 'pass' };
 
-    // Check if AI has already played a card this trick (can't play again)
+    // Check if AI has already played a card this trick (can't play after)
     const currentTrick = round.playedCards[round.currentTrick];
     if (currentTrick && currentTrick[aiPlayerId]) return { type: 'pass' };
 
-    // AI does NOT proactively challenge truco or envido — human initiates via buttons
-    // AI responds to challenges through GameEngine methods (aiAcceptTruco, aiRejectTruco, etc.)
-
+    // ── No proactive challenges ────────────────────────────
+    // AI only responds to human-initiated challenges (per design)
     // Choose card to play
     const wonLastTrick = round.trickWinners.length > 0
       ? round.trickWinners[round.trickWinners.length - 1] === aiPlayerId
@@ -81,5 +80,22 @@ export class DecisionEngine {
     if (currentTrick && currentTrick[aiPlayerId]) return false;
 
     return this.ai.shouldChallengeTruco(aiHand, currentLevel);
+  }
+
+  /**
+   * Determine if AI should challenge envido based on hand strength
+   */
+  private shouldChallengeEnvido(aiHand: Card[], round: RoundState, aiPlayerId: string): boolean {
+    // Only challenge on first trick (before any cards played)
+    if (round.currentTrick !== 0) return false;
+
+    // Check if AI has already played a card this trick
+    const currentTrick = round.playedCards[round.currentTrick];
+    if (currentTrick && currentTrick[aiPlayerId]) return false;
+
+    // Check if envido hasn't been challenged yet
+    if (this.gameEngine.envidoState.phase !== 'none') return false;
+
+    return this.ai.shouldChallengeEnvido(aiHand);
   }
 }

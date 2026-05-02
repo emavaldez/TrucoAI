@@ -1,5 +1,6 @@
 // Main entry point for TrucoAI game (2D version)
-// Supports 2, 4, and 6 players with proper Truco/Envido dynamics
+// Circular seating, counter-clockwise order, alternating teams
+// Player only sees their own cards
 
 import { GameEngine, calculateEnvidoForHand } from './core/GameEngine.js';
 import { Player } from './core/Player.js';
@@ -61,23 +62,37 @@ export class App {
     this.difficulty = difficulty;
 
     // Create players
+    // In circular seating: player-0 (human) is at bottom center
+    // Others are arranged counter-clockwise around the circle
+    // Teams alternate: even index = team 0, odd index = team 1
     const players: PlayerInfo[] = [];
 
     if (count === 2) {
       players.push({ id: 'player-0', name: 'Vos', isHuman: true, isAI: false });
       players.push({ id: 'player-1', name: 'La Roca', isHuman: false, isAI: true, difficulty });
     } else if (count === 4) {
+      // Circular order (counter-clockwise from bottom):
+      // player-0 (Vos, team 0) → bottom
+      // player-1 (Compañero, team 1) → right
+      // player-2 (Contrario 1, team 0) → top
+      // player-3 (Contrario 2, team 1) → left
       players.push({ id: 'player-0', name: 'Vos', isHuman: true, isAI: false });
-      players.push({ id: 'player-1', name: 'Compañero', isHuman: false, isAI: true, difficulty: 'easy' });
-      players.push({ id: 'player-2', name: 'Contrario 1', isHuman: false, isAI: true, difficulty });
+      players.push({ id: 'player-1', name: 'Contrario 1', isHuman: false, isAI: true, difficulty: 'easy' });
+      players.push({ id: 'player-2', name: 'Compañero', isHuman: false, isAI: true, difficulty: 'easy' });
       players.push({ id: 'player-3', name: 'Contrario 2', isHuman: false, isAI: true, difficulty });
     } else {
-      // 6 players: 3v3
+      // 6 players: circular order counter-clockwise from bottom:
+      // player-0 (Vos, team 0) → bottom
+      // player-1 (Contrario 1, team 1) → bottom-right
+      // player-2 (Compañero 1, team 0) → top-right
+      // player-3 (Contrario 2, team 1) → top
+      // player-4 (Compañero 2, team 0) → top-left
+      // player-5 (Contrario 3, team 1) → bottom-left
       players.push({ id: 'player-0', name: 'Vos', isHuman: true, isAI: false });
-      players.push({ id: 'player-1', name: 'Compañero 1', isHuman: false, isAI: true, difficulty: 'easy' });
-      players.push({ id: 'player-2', name: 'Compañero 2', isHuman: false, isAI: true, difficulty: 'easy' });
-      players.push({ id: 'player-3', name: 'Contrario 1', isHuman: false, isAI: true, difficulty });
-      players.push({ id: 'player-4', name: 'Contrario 2', isHuman: false, isAI: true, difficulty });
+      players.push({ id: 'player-1', name: 'Contrario 1', isHuman: false, isAI: true, difficulty });
+      players.push({ id: 'player-2', name: 'Compañero 1', isHuman: false, isAI: true, difficulty: 'easy' });
+      players.push({ id: 'player-3', name: 'Contrario 2', isHuman: false, isAI: true, difficulty });
+      players.push({ id: 'player-4', name: 'Compañero 2', isHuman: false, isAI: true, difficulty: 'easy' });
       players.push({ id: 'player-5', name: 'Contrario 3', isHuman: false, isAI: true, difficulty });
     }
 
@@ -164,7 +179,8 @@ export class App {
 
   private handleRoundStart(data: any): void {
     this.renderGameState();
-    this.uiManager.showMessage('¡Mano nueva!', 1500);
+    const manoMsg = data.manoNumber === 2 ? '¡Segunda mano!' : '¡Mano nueva!';
+    this.uiManager.showMessage(manoMsg, 1500);
 
     // If first player is AI, trigger AI play
     if (data.currentTurn !== this.myPlayerId) {
@@ -209,9 +225,13 @@ export class App {
     this.renderGameState();
     if (data.winningTeam === -1) {
       this.uiManager.showRoundOver('¡Empate! Nadie gana puntos.');
+    } else if (data.isSecondHand) {
+      this.uiManager.showRoundOver(
+        `¡Equipo ${data.winningTeam} gana la segunda mano! (+${data.points} pt)`
+      );
     } else {
       this.uiManager.showRoundOver(
-        `¡Equipo ${data.winningTeam} gana la mano! (+${data.points} pt)`
+        `¡Equipo ${data.winningTeam} gana la primera mano! (+${data.points} pt)`
       );
     }
   }
@@ -254,9 +274,9 @@ export class App {
     this.uiManager.showTrucoResponse(false);
     this.renderGameState();
 
-    // Show round over panel
+    // Truco rejected ends the game — show game over
     setTimeout(() => {
-      this.uiManager.showRoundOver(
+      this.uiManager.showGameOver(
         `Equipo ${data.winner} se llevó el truco (${data.scores[0]} - ${data.scores[1]})`
       );
     }, 2500);
@@ -279,19 +299,13 @@ export class App {
   }
 
   private handleEnvidoResult(data: any): void {
-    this.gameRunning = false;
     const winner = data.winningTeam === 0 ? 'Vos' : `Equipo 1`;
     this.uiManager.showMessage(
       `¡${winner} ganó el ${data.envidoType.replace('_', ' ')}! (+${data.points} pt)`,
       2500
     );
     this.renderGameState();
-
-    setTimeout(() => {
-      this.uiManager.showRoundOver(
-        `${winner} se llevó el envido (${data.scores[0]} - ${data.scores[1]})`
-      );
-    }, 2500);
+    // Envido does NOT end the round — just update scores and let card play continue
   }
 
   // ─── Envido Response UI ────────────────────────────────
@@ -354,9 +368,7 @@ export class App {
       // Call falta envido
       this.gameEngine.resolveEnvido();
     } else {
-      // Reject — but in our model, resolveEnvido is "accept and resolve"
-      // For reject, we just let the opponent win by giving them the points
-      // Actually, let's resolve it properly
+      // Resolve it
       this.gameEngine.resolveEnvido();
     }
   }
@@ -375,6 +387,11 @@ export class App {
 
   private handleEnvidoButton(): void {
     if (!this.gameRunning) return;
+    // Check if player is allowed to sing envido (only last player of team in playing order)
+    if (!this.gameEngine.canChallengeEnvido(this.myPlayerId)) {
+      this.uiManager.showMessage('No podés cantar envido todavía.', 2000);
+      return;
+    }
     this.gameEngine.challengeEnvido(this.myPlayerId);
   }
 
@@ -387,22 +404,14 @@ export class App {
   }
 
   private handleAcceptEnvido(): void {
-    // Accept envido and resolve
     this.gameEngine.resolveEnvido();
   }
 
   private handleRejectEnvido(): void {
-    // Reject envido — opponent wins
-    // In our model, we resolve envido which gives points to the higher team
-    // For a proper reject, we'd need a separate reject method
-    // For now, resolve it (the envido result will determine the winner)
     this.gameEngine.resolveEnvido();
   }
 
   private handleFaltaEnvido(): void {
-    // Call falta envido — this is a challenge for max points
-    // In our model, the envido type is already determined by the scores
-    // For falta, we just resolve with the current scores
     this.gameEngine.resolveEnvido();
   }
 
@@ -459,6 +468,7 @@ export class App {
     const visibleCards = this.gameEngine.getVisibleCards(this.myPlayerId);
     const trucoState = this.gameEngine.trucoState;
     const envidoState = this.gameEngine.envidoState;
+    const canEnvido = this.gameEngine.canChallengeEnvido(this.myPlayerId);
 
     this.uiManager.renderGame(
       round.hands,
@@ -470,7 +480,9 @@ export class App {
       visibleCards,
       round.playedCards,
       trucoState,
-      envidoState
+      envidoState,
+      this.myPlayerId,
+      canEnvido
     );
   }
 }

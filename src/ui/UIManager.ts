@@ -1,5 +1,6 @@
 // UIManager - 2D card game UI for Truco (2/4/6 players)
-// Handles card rendering, truco/envido response UI, and all game state display
+// Circular seating layout, counter-clockwise order
+// Player only sees their own cards
 
 import type { Card } from '../core/Card.js';
 import type { PlayerCount, RoundState, TrucoState, EnvidoState } from '../core/GameEngine.js';
@@ -31,10 +32,6 @@ export class UIManager {
     onFaltaEnvido: () => {},
     onNewRound: () => {},
   };
-
-  // Track which AI players need response buttons
-  private _aiResponding: Set<string> = new Set();
-  private _currentResponsePlayer: string | null = null;
 
   constructor(containerId = 'game-container') {
     const container = document.getElementById(containerId);
@@ -90,38 +87,19 @@ export class UIManager {
   // ─── Game HUD ──────────────────────────────────────────
 
   showHUD(playerIds: string[], playerNames: Record<string, string>, playerCount: PlayerCount): void {
-    // Build opponent areas dynamically based on player count
-    const myTeam = 0; // Human is always on team 0
-    const teammates: string[] = [];
-    const opponents: string[] = [];
+    // Build player areas for circular seating
+    // Player 0 (human) is always at the bottom center
+    // Other players are arranged around the circle counter-clockwise
 
-    for (const pid of playerIds) {
-      if (pid !== 'player-0') {
-        // Determine team from index
-        const idx = playerIds.indexOf(pid);
-        if (idx % 2 === 0) teammates.push(pid); // same team as player-0
-        else opponents.push(pid);
-      }
-    }
-
-    // Build teammate card areas
-    let teammateAreasHTML = '';
-    for (let i = 0; i < teammates.length; i++) {
-      teammateAreasHTML += `
-        <div class="teammate-area" id="teammate-area-${i}" style="display:none;">
-          <div class="teammate-label" id="teammate-label-${i}">Compañero</div>
-          <div class="teammate-cards" id="teammate-cards-${i}"></div>
-        </div>
-      `;
-    }
-
-    // Build opponent card areas
-    let opponentAreasHTML = '';
-    for (let i = 0; i < opponents.length; i++) {
-      opponentAreasHTML += `
-        <div class="opponent-area" id="opponent-area-${i}" style="display:none;">
-          <div class="opponent-label" id="opponent-label-${i}">Contrario</div>
-          <div class="opponent-cards" id="opponent-cards-${i}"></div>
+    let playerAreasHTML = '';
+    for (let i = 0; i < playerIds.length; i++) {
+      const pid = playerIds[i];
+      const isHuman = (pid === playerIds[0]);
+      const labelClass = isHuman ? 'player-label' : 'opponent-label';
+      playerAreasHTML += `
+        <div class="circle-player" id="circle-player-${i}" data-player-id="${pid}" data-is-human="${isHuman}">
+          <div class="${labelClass}" id="player-label-${i}">${playerNames[pid] || pid}</div>
+          <div class="player-cards-area" id="player-cards-area-${i}"></div>
         </div>
       `;
     }
@@ -141,14 +119,9 @@ export class UIManager {
           </div>
         </div>
 
-        <!-- Opponent areas (top) -->
-        <div class="opponents-container" id="opponents-container">
-          ${opponentAreasHTML}
-        </div>
-
-        <!-- Teammate areas (between opponents and table) -->
-        <div class="teammates-container" id="teammates-container">
-          ${teammateAreasHTML}
+        <!-- Circular player seating -->
+        <div class="circle-seating" id="circle-seating" data-count="${playerCount}">
+          ${playerAreasHTML}
         </div>
 
         <!-- Table / played cards area (center) -->
@@ -159,12 +132,6 @@ export class UIManager {
             <div class="trick-slot" id="trick-2"></div>
           </div>
           <div class="message-area" id="message-area"></div>
-        </div>
-
-        <!-- Player area (bottom) -->
-        <div class="player-area" id="player-area">
-          <div class="player-name" id="player-name">Vos</div>
-          <div class="player-cards" id="player-cards"></div>
         </div>
 
         <!-- Controls (bottom) -->
@@ -234,13 +201,16 @@ export class UIManager {
              currentTurn: string, playerIds: string[], playerNames: Record<string, string>,
              playerCount: PlayerCount, visibleCards: Record<string, Card[]>,
              playedCards: Record<number, Record<string, Card | null>>,
-             trucoState: TrucoState, envidoState: EnvidoState): void {
+             trucoState: TrucoState, envidoState: EnvidoState,
+             myPlayerId: string, canEnvido: boolean): void {
 
     // Hide round-over and game-over panels when playing
     const roundOver = document.getElementById('round-over-panel');
     const gameOver = document.getElementById('game-over-panel');
+    const controls = document.getElementById('controls');
     if (roundOver) roundOver.style.display = 'none';
     if (gameOver) gameOver.style.display = 'none';
+    if (controls) controls.style.display = 'flex';
 
     // Update scores
     const s0 = document.getElementById('score-0');
@@ -251,50 +221,38 @@ export class UIManager {
     // Update game info (truco level, envido info)
     this.updateGameInfo(trucoState, envidoState);
 
-    // Determine my player ID (first human player)
-    const myPlayerId = playerIds[0];
-
-    // Render opponent areas
-    this.renderOpponentAreas(hands, playerIds, myPlayerId, visibleCards, playerCount, playerNames);
-
-    // Render teammate areas
-    this.renderTeammateAreas(hands, playerIds, myPlayerId, visibleCards, playerCount, playerNames);
-
-    // Render my cards
-    this.renderMyCards(hands, myPlayerId, currentTurn);
+    // Render all player areas (circular seating)
+    this.renderCirclePlayers(hands, playerIds, myPlayerId, visibleCards, playerCount, playerNames, currentTurn);
 
     // Render played cards
     this.renderPlayedCards(playedCards, playerIds, playerNames);
 
-    // Update name display
-    const nameEl = document.getElementById('player-name');
-    if (nameEl) nameEl.textContent = playerNames[currentTurn] || currentTurn;
+    // Enable/disable envido button based on position
+    const envidoBtn = document.getElementById('btn-envido') as HTMLButtonElement | null;
+    if (envidoBtn) {
+      envidoBtn.disabled = !canEnvido;
+      envidoBtn.style.opacity = canEnvido ? '1' : '0.4';
+    }
   }
 
-  // ─── Opponent Areas ────────────────────────────────────
+  // ─── Circular Player Rendering ─────────────────────────
 
-  private renderOpponentAreas(hands: Record<string, Card[]>, playerIds: string[],
+  private renderCirclePlayers(hands: Record<string, Card[]>, playerIds: string[],
                                myPlayerId: string, visibleCards: Record<string, Card[]>,
-                               playerCount: PlayerCount, playerNames: Record<string, string>): void {
-    const myTeam = playerIds.indexOf(myPlayerId) % 2;
-    const opponentIds: string[] = [];
-
-    for (const pid of playerIds) {
-      if (pid !== myPlayerId && playerIds.indexOf(pid) % 2 !== myTeam) {
-        opponentIds.push(pid);
-      }
-    }
-
-    for (let i = 0; i < opponentIds.length; i++) {
-      const pid = opponentIds[i];
-      const area = document.getElementById(`opponent-area-${i}`);
-      const label = document.getElementById(`opponent-label-${i}`);
-      const cardsContainer = document.getElementById(`opponent-cards-${i}`);
+                               playerCount: PlayerCount, playerNames: Record<string, string>,
+                               currentTurn: string): void {
+    for (let i = 0; i < playerIds.length; i++) {
+      const pid = playerIds[i];
+      const area = document.getElementById(`circle-player-${i}`);
+      const label = document.getElementById(`player-label-${i}`);
+      const cardsContainer = document.getElementById(`player-cards-area-${i}`);
 
       if (!area || !label || !cardsContainer) continue;
 
-      area.style.display = 'flex';
-      label.textContent = this.getPlayerDisplayName(pid, playerIds, playerNames);
+      label.textContent = playerNames[pid] || pid;
+
+      // Highlight current turn
+      area.classList.toggle('active-turn', pid === currentTurn);
 
       const visible = visibleCards[pid] || [];
       const hand = hands[pid] || [];
@@ -304,7 +262,8 @@ export class UIManager {
         if (j < visible.length) {
           // Visible card
           const c = visible[j];
-          html += this.renderCardHTML(c, false, false);
+          const isClickable = (pid === myPlayerId && currentTurn === pid);
+          html += this.renderCardHTML(c, false, isClickable, j);
         } else {
           // Face-down card
           html += this.renderCardBackHTML();
@@ -314,93 +273,17 @@ export class UIManager {
         html += '<div class="card card-empty"></div>';
       }
       cardsContainer.innerHTML = html;
-    }
-  }
 
-  // ─── Teammate Areas ────────────────────────────────────
-
-  private renderTeammateAreas(hands: Record<string, Card[]>, playerIds: string[],
-                               myPlayerId: string, visibleCards: Record<string, Card[]>,
-                               playerCount: PlayerCount, playerNames: Record<string, string>): void {
-    if (playerCount <= 2) {
-      // Hide all teammate areas
-      for (let i = 0; i < 5; i++) {
-        const area = document.getElementById(`teammate-area-${i}`);
-        if (area) area.style.display = 'none';
-      }
-      return;
-    }
-
-    const myTeam = playerIds.indexOf(myPlayerId) % 2;
-    const teammateIds: string[] = [];
-    for (const pid of playerIds) {
-      if (pid !== myPlayerId && playerIds.indexOf(pid) % 2 === myTeam) {
-        teammateIds.push(pid);
-      }
-    }
-
-    for (let i = 0; i < teammateIds.length; i++) {
-      const pid = teammateIds[i];
-      const area = document.getElementById(`teammate-area-${i}`);
-      const label = document.getElementById(`teammate-label-${i}`);
-      const cardsContainer = document.getElementById(`teammate-cards-${i}`);
-
-      if (!area || !label || !cardsContainer) continue;
-
-      area.style.display = 'flex';
-      label.textContent = this.getPlayerDisplayName(pid, playerIds, playerNames);
-
-      const visible = visibleCards[pid] || [];
-      const hand = hands[pid] || [];
-
-      let html = '';
-      for (let j = 0; j < hand.length; j++) {
-        if (j < visible.length) {
-          const c = visible[j];
-          html += this.renderCardHTML(c, false, false);
-        } else {
-          html += this.renderCardBackHTML();
-        }
-      }
-      if (hand.length === 0) {
-        html += '<div class="card card-empty"></div>';
-      }
-      cardsContainer.innerHTML = html;
-    }
-  }
-
-  // ─── My Cards ──────────────────────────────────────────
-
-  private renderMyCards(hands: Record<string, Card[]>, playerId: string, currentTurn: string): void {
-    const container = document.getElementById('player-cards');
-    if (!container) return;
-
-    const myCards = hands[playerId] || [];
-    const isMyTurn = (currentTurn === playerId);
-
-    let html = '';
-    myCards.forEach((card, index) => {
-      const clickable = isMyTurn ? ' clickable' : '';
-      const dimmed = isMyTurn ? '' : ' dimmed';
-      html += `
-        <div class="card card-front${clickable}${dimmed}" data-card-index="${index}">
-          <div class="card-content">
-            <span class="card-top-left">${card.number} ${this.getSuitSymbol(card.suit)}</span>
-            <div class="card-center-suit" style="color: ${this.getSuitColor(card.suit)};">${this.getSuitSymbol(card.suit)}</div>
-          </div>
-        </div>
-      `;
-    });
-    container.innerHTML = html;
-
-    // Bind click handlers
-    if (isMyTurn) {
-      container.querySelectorAll('.card-front.clickable').forEach(el => {
-        el.addEventListener('click', () => {
-          const idx = parseInt(el.getAttribute('data-card-index') || '-1');
-          if (idx >= 0) this.callbacks.onCardPlay(idx);
+      // Bind click handlers for my cards only
+      if (pid === myPlayerId) {
+        const isMyTurn = (currentTurn === pid);
+        cardsContainer.querySelectorAll('.card-front.clickable').forEach(el => {
+          el.addEventListener('click', () => {
+            const idx = parseInt(el.getAttribute('data-card-index') || '-1');
+            if (idx >= 0) this.callbacks.onCardPlay(idx);
+          });
         });
-      });
+      }
     }
   }
 
@@ -574,11 +457,13 @@ export class UIManager {
 
   // ─── Card Rendering Helpers ────────────────────────────
 
-  private renderCardHTML(card: Card, _small: boolean, _clickable: boolean): string {
+  private renderCardHTML(card: Card, _small: boolean, clickable: boolean, cardIndex?: number): string {
     const suitSymbol = this.getSuitSymbol(card.suit);
     const suitColor = this.getSuitColor(card.suit);
+    const clickableClass = clickable ? ' clickable' : '';
+    const indexAttr = cardIndex !== undefined ? ` data-card-index="${cardIndex}"` : '';
     return `
-      <div class="card card-front">
+      <div class="card card-front${clickableClass}"${indexAttr}>
         <div class="card-content">
           <span class="card-top-left">${card.number} ${suitSymbol}</span>
           <div class="card-center-suit" style="color: ${suitColor};">${suitSymbol}</div>
@@ -609,10 +494,6 @@ export class UIManager {
       case 'copa': return '#1a3a5c';
       default: return '#333';
     }
-  }
-
-  private getPlayerDisplayName(pid: string, playerIds: string[], names: Record<string, string>): string {
-    return names[pid] || pid;
   }
 
   // ─── Event Bindings ────────────────────────────────────
