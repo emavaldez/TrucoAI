@@ -1,9 +1,9 @@
 // Deck - Card deck for Truco
 
-import type { Card } from './Card.js';
+import type { CardDef } from '../types.js';
 
 export class Deck {
-  private cards: Card[] = [];
+  private cards: CardDef[] = [];
   
   constructor() {
     this.initialize();
@@ -20,10 +20,10 @@ export class Deck {
     for (const suit of suits) {
       // 1-7 and 10-12 for each suit
       for (let i = 1; i <= 7; i++) {
-        this.cards.push({ suit, number: i });
+        this.cards.push({ suit, number: i as CardDef['number'] });
       }
       for (let i = 10; i <= 12; i++) {
-        this.cards.push({ suit, number: i });
+        this.cards.push({ suit, number: i as CardDef['number'] });
       }
     }
     
@@ -44,7 +44,7 @@ export class Deck {
   /**
    * Draw a card from the deck
    */
-  draw(): Card | null {
+  draw(): CardDef | null {
     if (this.cards.length === 0) return null;
     return this.cards.pop()!;
   }

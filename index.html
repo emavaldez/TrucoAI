@@ -6,7 +6,7 @@
   <title>Truco AI</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; overflow: hidden; background: #1a472a; font-family: Arial, sans-serif; }
+    html, body { width: 100%; min-height: 100%; overflow: auto; background: #1a472a; font-family: Arial, sans-serif; }
     #game-container { width: 100%; height: 100%; position: relative; }
 
     /* ─── Menu ──────────────────────────────────── */
@@ -89,57 +89,53 @@
       display: flex; gap: 4px; margin-top: 2px; position: relative;
     }
 
+    /* Badge styles */
+    .badge { font-size: 9px; padding: 1px 4px; border-radius: 3px; }
+    .badge-ai { background: rgba(0,0,0,0.5); color: #aaa; }
+    .badge-team { background: rgba(0,0,0,0.5); color: #ffd700; }
+    .badge-dealer { background: rgba(255,165,0,0.3); color: #ffa500; }
+    .badge-starter { background: rgba(255,215,0,0.3); color: #ffd700; }
+    .badge-human { background: rgba(76,175,80,0.3); color: #4caf50; }
+
     /* 2-player layout */
     #circle-seating[data-count="2"] .circle-player:nth-child(1) {
-      /* player-0: bottom center */
       bottom: 100px; left: 50%; transform: translateX(-50%);
     }
     #circle-seating[data-count="2"] .circle-player:nth-child(2) {
-      /* player-1: top center */
       top: 60px; left: 50%; transform: translateX(-50%);
     }
 
     /* 4-player layout */
     #circle-seating[data-count="4"] .circle-player:nth-child(1) {
-      /* player-0: bottom center */
       bottom: 100px; left: 50%; transform: translateX(-50%);
     }
     #circle-seating[data-count="4"] .circle-player:nth-child(2) {
-      /* player-1: right */
       right: 20px; top: 50%; transform: translateY(-50%);
     }
     #circle-seating[data-count="4"] .circle-player:nth-child(3) {
-      /* player-2: top center */
       top: 60px; left: 50%; transform: translateX(-50%);
     }
     #circle-seating[data-count="4"] .circle-player:nth-child(4) {
-      /* player-3: left */
       left: 20px; top: 50%; transform: translateY(-50%);
     }
 
     /* 6-player layout */
     #circle-seating[data-count="6"] .circle-player:nth-child(1) {
-      /* player-0: bottom center */
       bottom: 100px; left: 50%; transform: translateX(-50%);
     }
     #circle-seating[data-count="6"] .circle-player:nth-child(2) {
-      /* player-1: bottom-right */
       bottom: 120px; right: 80px;
     }
     #circle-seating[data-count="6"] .circle-player:nth-child(3) {
-      /* player-2: top-right */
       top: 60px; right: 80px;
     }
     #circle-seating[data-count="6"] .circle-player:nth-child(4) {
-      /* player-3: top center */
       top: 60px; left: 50%; transform: translateX(-50%);
     }
     #circle-seating[data-count="6"] .circle-player:nth-child(5) {
-      /* player-4: top-left */
       top: 60px; left: 80px;
     }
     #circle-seating[data-count="6"] .circle-player:nth-child(6) {
-      /* player-5: bottom-left */
       bottom: 120px; left: 80px;
     }
 
@@ -154,21 +150,51 @@
       display: flex; flex-direction: column; align-items: center; gap: 4px;
       min-width: 100px; min-height: 80px;
     }
-    /* Played cards displayed near each player */
-    .played-card {
-      display: flex; flex-direction: column; align-items: center; gap: 2px;
-    }
     .played-card-name { font-size: 10px; color: #ffd700; font-weight: bold; }
-    /* Overlay for played cards near player */
+    /* Overlay for played cards near player — positioned toward center of table */
     .played-card-overlay {
       position: absolute;
-      bottom: -60px;
-      left: 50%;
-      transform: translateX(-50%);
       z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      transition: all 0.3s ease;
     }
     .played-card-overlay .card {
-      transform: scale(0.7);
+      transform: scale(0.8);
+    }
+    /* Position overlays toward center of table based on player position */
+    .circle-player[data-position="0"] .played-card-overlay {
+      /* Bottom player — cards go up (toward center) */
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      margin-bottom: 8px;
+    }
+    .circle-player[data-position="1"] .played-card-overlay {
+      /* Top player — cards go down (toward center) */
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      margin-top: 8px;
+    }
+    .circle-player[data-position="2"] .played-card-overlay {
+      /* Top-right player — cards go left-down (toward center) */
+      top: 50%;
+      right: 100%;
+      transform: translateY(-50%);
+      margin-right: 8px;
+    }
+    .circle-player[data-position="3"] .played-card-overlay {
+      /* Bottom-right player — cards go left-up (toward center) */
+      bottom: 50%;
+      left: 100%;
+      transform: translateY(50%);
+      margin-left: 8px;
+    }
+    .played-card-historical {
+      opacity: 0.4;
     }
     /* Deck display */
     .deck-display {
@@ -266,6 +292,9 @@
       text-shadow: 0 0 15px rgba(255,215,0,0.8);
       text-align: center;
     }
+    .round-over-scores { font-size: 16px; color: #ccc; }
+    .round-over-results { font-size: 14px; color: #aaa; text-align: center; }
+    .round-result-line { margin: 2px 0; }
     .btn-new-round, .btn-new-game {
       padding: 12px 32px; font-size: 16px; font-weight: bold;
       border: 2px solid #ffd700; background: rgba(255,215,0,0.2); color: #ffd700;
@@ -322,17 +351,6 @@
     .card-top-left { font-size: 12px; font-weight: bold; color: #333; line-height: 1; }
     .card-center-suit { font-size: 28px; line-height: 1; margin: 2px 0; }
     .card-name { font-size: 8px; color: #666; margin-top: 2px; }
-
-    .card-empty {
-      border: 2px dashed #2a6b3a; background: rgba(0,0,0,0.1);
-    }
-    .card-empty::after { content: ''; }
-
-    /* Played card */
-    .played-card {
-      display: flex; flex-direction: column; align-items: center; gap: 2px;
-    }
-    .played-card-name { font-size: 10px; color: #ffd700; font-weight: bold; }
 
     /* Responsive */
     @media (max-width: 600px) {
