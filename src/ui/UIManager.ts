@@ -80,8 +80,20 @@ export class UIManager {
     const existingMenu = this.container.querySelector('.menu-container');
 
     if (params.players.length === 0) {
+      // Show menu, hide board
       if (!existingMenu) this.renderMenu();
+      if (existingBoard) {
+        (existingBoard as HTMLElement).style.display = 'none';
+      }
       return;
+    }
+
+    // Game is running — show board, hide menu
+    if (existingBoard) {
+      (existingBoard as HTMLElement).style.display = 'block';
+    }
+    if (existingMenu) {
+      (existingMenu as HTMLElement).style.display = 'none';
     }
 
     if (!existingBoard) {
@@ -205,7 +217,7 @@ export class UIManager {
       if (player.id === params.starterId) badges.innerHTML += '<span style="font-size:9px;padding:1px 4px;background:rgba(255,215,0,0.3);color:#ffd700;border-radius:3px;">👑</span>';
       playerEl.appendChild(badges);
 
-      const cardsArea = playerEl.querySelector('.player-cards-area') as HTMLElement;
+      const cardsArea = playerEl.querySelector('.player-cards') as HTMLElement;
       for (let i = 0; i < hand.length; i++) {
         const cardEl = this.createCardElement(hand[i], isHuman);
         if (isHuman) {
