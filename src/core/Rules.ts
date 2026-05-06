@@ -10,8 +10,8 @@ import type { Card } from './Card.js';
  * 4.  7 Oro       (11)
  * 5.  Any 3       (10)
  * 6.  Any 2       (9)
- * 7.  1 Copa      (8)  (remaining 1s: Copa, Oro)
- * 8.  1 Oro       (7)
+ * 7.  1 Oro       (8)  (remaining 1s: Oro, Copa)
+ * 8.  1 Copa      (7)
  * 9.  12 Any      (6)
  * 10. 11 Any      (5)
  * 11. 10 Any      (4)
@@ -28,8 +28,8 @@ const SPECIAL_RANKS: Record<string, number> = {
   'oro-7':    11,
   'any-3':    10,
   'any-2':     9,
-  'copa-1':    8,
-  'oro-1':     7,
+  'oro-1':     8,
+  'copa-1':    7,
   'any-12':    6,
   'any-11':    5,
   'any-10':    4,

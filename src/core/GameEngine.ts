@@ -160,7 +160,8 @@ export class GameEngine {
    - If it's the first round of a hand, starter is the mano (right of dealer).
    - If it's a subsequent round, starter is the player who played the highest card
      in the previous round.
-   - If tie in first round, starter is the same as the previous round's starter.
+   - If tie in first round (no clear highest card), starter is the same as the
+     previous round's starter.
    */
   private determineStarterForRound(roundNumber: number): string {
     if (roundNumber === 0) {
@@ -171,9 +172,11 @@ export class GameEngine {
       return order[starterIdx];
     }
 
-    // Subsequent round: starter is player with highest card in previous round
-    if (this.trickWinnerId) {
-      return this.trickWinnerId;
+    // Subsequent round: starter is the player who played the highest card
+    // in the previous round (not the trick winner)
+    const prevRoundResult = this.roundResults[roundNumber - 1];
+    if (prevRoundResult && prevRoundResult.highestCardPlayerId) {
+      return prevRoundResult.highestCardPlayerId;
     }
 
     // Tie in previous round: same starter as this hand
@@ -198,6 +201,13 @@ export class GameEngine {
   }
 
   private startNormalHand(): void {
+    // Save the highest card player from the last round before resetting
+    let lastRoundHighestCardPlayerId: string = '';
+    if (this.roundResults.length > 0) {
+      const lastRound = this.roundResults[this.roundResults.length - 1];
+      lastRoundHighestCardPlayerId = lastRound.highestCardPlayerId || '';
+    }
+
     // Rotate dealer counter-clockwise
     this.rotateDealer();
 
@@ -206,7 +216,17 @@ export class GameEngine {
     this.currentHand = this.firstHandCompleted ? 1 : 0;
     this.currentRound = 0;
     this.roundResults = [];
-    this.previousStarterId = this.determineStarterForFirstRound();
+
+    // Set starter before startRound so it can use it
+    if (this.firstHandCompleted) {
+      // 2da mano: starter = player who played highest card in last round of 1ra mano
+      if (lastRoundHighestCardPlayerId) {
+        this.starterId = lastRoundHighestCardPlayerId;
+      } else {
+        this.starterId = this.determineStarterForFirstRound();
+      }
+    }
+
     this.startRound();
   }
 
@@ -237,7 +257,10 @@ export class GameEngine {
     }
 
     // Determine starter
-    this.starterId = this.determineStarterForRound(this.currentRound);
+    // If starterId was pre-set (e.g., 2da mano), use it; otherwise calculate
+    if (!this.starterId) {
+      this.starterId = this.determineStarterForRound(this.currentRound);
+    }
     this.currentTurnPlayerId = this.starterId;
     this.trickWinnerId = '';
     this.trickWinnerTeam = -1;

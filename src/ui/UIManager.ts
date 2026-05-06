@@ -88,7 +88,7 @@ export class UIManager {
       this.renderGameBoard(params.players.length);
     }
 
-    const existingPlayers = this.container.querySelectorAll('.circle-player');
+    const existingPlayers = this.container.querySelectorAll('.player-area');
     if (existingPlayers.length === 0) {
       this.renderPlayers(params);
     } else {
@@ -183,17 +183,17 @@ export class UIManager {
     for (const player of params.players) {
       const hand = params.hands[player.id] || [];
       const playerEl = document.createElement('div');
-      playerEl.className = 'circle-player';
+      playerEl.className = 'player-area';
       playerEl.dataset.playerId = player.id;
       playerEl.dataset.position = String(player.position);
 
       const isHuman = player.isHuman;
-      const labelClass = isHuman ? 'player-label' : 'opponent-label';
+      const labelClass = isHuman ? 'player-name human' : 'player-name';
       const labelName = isHuman ? 'VOS' : player.name;
 
       playerEl.innerHTML = `
         <div class="${labelClass}">${labelName}</div>
-        <div class="player-cards-area" data-player-id="${player.id}"></div>
+        <div class="player-cards" data-player-id="${player.id}"></div>
       `;
 
       const badges = document.createElement('div');
@@ -242,7 +242,7 @@ export class UIManager {
 
       playerEl.classList.toggle('active-turn', player.id === params.currentTurnPlayerId);
 
-      const cardsArea = playerEl.querySelector('.player-cards-area') as HTMLElement;
+      const cardsArea = playerEl.querySelector('.player-cards') as HTMLElement;
       if (!cardsArea) continue;
       cardsArea.innerHTML = '';
 
@@ -313,7 +313,7 @@ export class UIManager {
     document.querySelectorAll('.played-card-overlay').forEach(el => el.remove());
 
     for (const played of params.currentTrick) {
-      const playerEl = this.container.querySelector(`.circle-player[data-player-id="${played.playerId}"]`);
+      const playerEl = this.container.querySelector(`.player-area[data-player-id="${played.playerId}"]`);
       if (playerEl) {
         const overlay = document.createElement('div');
         overlay.className = 'played-card-overlay';
@@ -333,7 +333,7 @@ export class UIManager {
 
     for (const result of params.roundResults) {
       for (const played of result.cards) {
-        const playerEl = this.container.querySelector(`.circle-player[data-player-id="${played.playerId}"]`);
+        const playerEl = this.container.querySelector(`.player-area[data-player-id="${played.playerId}"]`);
         if (playerEl) {
           const overlay = document.createElement('div');
           overlay.className = 'played-card-overlay played-card-historical';
@@ -358,7 +358,7 @@ export class UIManager {
     const deckDisplay = this.container.querySelector('.deck-display');
     if (!deckDisplay) return;
 
-    const dealerEl = this.container.querySelector(`.circle-player[data-player-id="${params.dealerId}"]`);
+    const dealerEl = this.container.querySelector(`.player-area[data-player-id="${params.dealerId}"]`);
     if (!dealerEl) return;
 
     (deckDisplay as HTMLElement).style.display = 'flex';
