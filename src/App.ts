@@ -11,9 +11,9 @@ export class App {
   private selectedPlayerCount: number = 4;
   private selectedDifficulty: 'easy' | 'normal' | 'hard' = 'normal';
 
-  constructor(containerId: string) {
-    const el = document.getElementById(containerId);
-    if (!el) throw new Error(`Container #${containerId} not found`);
+  constructor() {
+    const el = document.getElementById('game-container');
+    if (!el) throw new Error('Container #game-container not found');
     this.container = el;
     this.gameEngine = new GameEngine();
     this.uiManager = new UIManager('game-container', {
