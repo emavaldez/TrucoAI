@@ -1,20 +1,20 @@
-// App.ts — Main application entry point
-
 import { GameEngine } from './core/GameEngine.js';
 import { UIManager } from './ui/UIManager.js';
-import type { PlayerConfig, GameConfig } from './types.js';
+import type { GameConfig, PlayerConfig } from './types.js';
 
 export class App {
+  private container: HTMLElement;
   private gameEngine: GameEngine;
   private uiManager: UIManager;
-  private gameRunning: boolean = false;
   private players: PlayerConfig[] = [];
+  private gameRunning: boolean = false;
   private selectedPlayerCount: number = 4;
   private selectedDifficulty: 'easy' | 'normal' | 'hard' = 'normal';
-  private container: HTMLElement;
 
-  constructor() {
-    this.container = document.getElementById('game-container')!;
+  constructor(containerId: string) {
+    const el = document.getElementById(containerId);
+    if (!el) throw new Error(`Container #${containerId} not found`);
+    this.container = el;
     this.gameEngine = new GameEngine();
     this.uiManager = new UIManager('game-container', {
       onCardPlayed: this.handleCardPlayed.bind(this),
@@ -36,20 +36,46 @@ export class App {
   }
 
   private setupEventListeners(): void {
-    const handlers = [
+    const renderHandlers = [
       'round-start', 'card-played', 'trick-resolved',
       'hand-resolved', 'round-over', 'game-over',
-      'envido-opened', 'envido-raised', 'envido-resolved',
-      'truco-challenged', 'truco-accepted', 'truco-resolved',
+      'envido-raised', 'envido-resolved',
+      'truco-accepted', 'truco-resolved',
     ];
-    for (const event of handlers) {
+    for (const event of renderHandlers) {
       this.gameEngine.on(event, () => this.renderGameState());
     }
+
+    // When human calls envido → AI responds after a delay
+    this.gameEngine.on('envido-opened', (data: any) => {
+      this.renderGameState();
+      const humanTeam = this.players[0]?.team ?? 0;
+      // If human's team called, AI (opponent team) must respond
+      if (data.team === humanTeam) {
+        setTimeout(() => {
+          const aiDecision = Math.random() < 0.6; // 60% quiere
+          this.handleAiEnvidoResponse(aiDecision);
+        }, 900);
+      }
+    });
+
+    // When human calls truco → AI responds after a delay
+    this.gameEngine.on('truco-challenged', (data: any) => {
+      this.renderGameState();
+      const humanTeam = this.players[0]?.team ?? 0;
+      // If human's team challenged, AI (opponent team) must respond
+      if (data.challengerTeam === humanTeam) {
+        setTimeout(() => {
+          const aiWants = Math.random() < 0.65; // 65% quiere
+          this.handleAiTrucoResponse(aiWants);
+        }, 900);
+      }
+    });
+
     this.gameEngine.on('ai-turn', (data: any) => this.handleAiTurn(data));
   }
 
   private renderInitialMenu(): void {
-    // Clear everything and render menu
     this.container.innerHTML = '';
     this.uiManager.renderGame({
       players: [],
@@ -114,45 +140,35 @@ export class App {
   private handleAiTurn(data: any): void {
     if (!this.gameRunning) return;
 
-    // Find the AI player and their hand
     const aiPlayer = this.players.find(p => p.id === data.playerId);
     if (!aiPlayer) return;
 
     const hand = this.gameEngine.getHands()[data.playerId] || [];
     if (hand.length === 0) return;
 
-    // Use AI difficulty to select card
     let cardIndex: number;
     const diff = aiPlayer.difficulty || 'normal';
 
     if (diff === 'easy') {
       cardIndex = Math.floor(Math.random() * hand.length);
     } else {
-      // AI ranking (high to low): 1esp > 1bas > 7esp > 7oro > any3 > any2 > oro-1 > copa-1 > any12 > any11 > any10 > 7bast > 7copa > any6 > any5 > any4
       const cardRank = (card: any): number => {
         if (card.suit === 'espada' && card.number === 1) return 14;
         if (card.suit === 'basto' && card.number === 1) return 13;
         if (card.suit === 'espada' && card.number === 7) return 12;
         if (card.suit === 'oro' && card.number === 7) return 11;
-        if (card.suit === 'copa' && card.number === 3) return 10;
-        if (card.suit === 'oro' && card.number === 3) return 10;
-        if (card.suit === 'espada' && card.number === 3) return 10;
-        if (card.suit === 'basto' && card.number === 3) return 10;
-        if (card.suit === 'copa' && card.number === 2) return 9;
-        if (card.suit === 'oro' && card.number === 2) return 9;
-        if (card.suit === 'espada' && card.number === 2) return 9;
-        if (card.suit === 'basto' && card.number === 2) return 9;
+        if (card.number === 3) return 10;
+        if (card.number === 2) return 9;
         if (card.suit === 'oro' && card.number === 1) return 8;
         if (card.suit === 'copa' && card.number === 1) return 7;
-        if (card.suit === 'copa' && card.number === 12) return 6;
-        if (card.suit === 'copa' && card.number === 11) return 5;
-        if (card.suit === 'copa' && card.number === 10) return 4;
+        if (card.number === 12) return 6;
+        if (card.number === 11) return 5;
+        if (card.number === 10) return 4;
         if (card.suit === 'basto' && card.number === 7) return 3;
-        if (card.suit === 'copa' && card.number === 7) return 3;
-        if (card.suit === 'copa' && card.number === 6) return 2;
-        if (card.suit === 'copa' && card.number === 5) return 2;
-        if (card.suit === 'copa' && card.number === 4) return 2;
-        return 1;
+        if (card.suit === 'copa' && card.number === 7) return 2;
+        if (card.number === 6) return 1;
+        if (card.number === 5) return 0;
+        return -1;
       };
 
       const sortedIndices = hand
@@ -160,25 +176,51 @@ export class App {
         .sort((a: any, b: any) => cardRank(b.card) - cardRank(a.card));
 
       if (diff === 'hard') {
-        // Hard AI: always play highest card
         cardIndex = sortedIndices[0].index;
       } else {
-        // Normal AI: play highest card 70% of the time, random otherwise
-        cardIndex = Math.random() < 0.7 ? sortedIndices[0].index : sortedIndices[Math.floor(Math.random() * sortedIndices.length)].index;
+        cardIndex = Math.random() < 0.7
+          ? sortedIndices[0].index
+          : sortedIndices[Math.floor(Math.random() * sortedIndices.length)].index;
+      }
+    }
+
+    // AI may decide to call truco before playing (only if not already called, and in first round)
+    const trucoState = this.gameEngine.getTrucoState();
+    const envState = this.gameEngine.getEnvidoState();
+    const currentRound = this.gameEngine.getCurrentRound();
+
+    // AI calls truco sometimes (round 0 or 1, not yet called)
+    if (trucoState.level === 0 && envState.phase === 'none' && Math.random() < 0.25) {
+      setTimeout(() => {
+        this.gameEngine['challengeTruco'](data.playerId);
+        // After calling truco, wait for human response — don't play card yet
+        // Card will be played after truco resolves via ai-turn event re-emission
+      }, 500);
+      return;
+    }
+
+    // AI calls envido sometimes (only first round, before playing any card, and before truco)
+    if (currentRound === 0 && envState.phase === 'none' && trucoState.level === 0 && Math.random() < 0.3) {
+      // Check canOpenEnvido equivalent: currentTrick length must be 0
+      const currentTrick = this.gameEngine.getCurrentTrick();
+      if (currentTrick.length === 0) {
+        setTimeout(() => {
+          this.gameEngine['openEnvido'](data.playerId);
+        }, 500);
+        // After calling envido wait for human response — card plays after resolution
+        return;
       }
     }
 
     setTimeout(() => {
       this.gameEngine.playCard(data.playerId, cardIndex);
-    }, 600);
+    }, 700);
   }
 
   private handleNewRound(): void {
-    // This is called from menu to start, or after first hand
     if (this.players.length === 0) {
       this.startGame(this.selectedPlayerCount, this.selectedDifficulty);
     } else {
-      // Start second hand
       this.gameEngine['startNewHand']();
       this.renderGameState();
     }
@@ -197,6 +239,8 @@ export class App {
   // ---- Envido Handlers ----
 
   private handleEnvidoOpen(): void {
+    // Only allow in round 0 (primera ronda)
+    if (this.gameEngine.getCurrentRound() !== 0) return;
     const piePlayer = this.findPiePlayer(0);
     if (piePlayer) {
       this.gameEngine['openEnvido'](piePlayer);
@@ -215,9 +259,8 @@ export class App {
     this.gameEngine['respondEnvido'](this.players[0].id, true, level);
   }
 
-  // AI auto-responds to Envido when opponent calls
+  // AI auto-responds to Envido when human calls
   private handleAiEnvidoResponse(wants: boolean, raiseLevel?: 'envido' | 'real-envido' | 'falta-envido'): void {
-    // Find the AI player on the opposing team
     const humanTeam = this.players[0]?.team;
     const aiPlayers = this.players.filter(p => p.isAI && p.team !== humanTeam);
     if (aiPlayers.length === 0) return;
@@ -225,7 +268,7 @@ export class App {
     this.gameEngine['respondEnvido'](aiPlayer.id, wants, raiseLevel);
   }
 
-  // AI auto-responds to Truco when opponent calls
+  // AI auto-responds to Truco when human calls
   private handleAiTrucoResponse(accept: boolean, raise: boolean = false): void {
     const humanTeam = this.players[0]?.team;
     const aiPlayers = this.players.filter(p => p.isAI && p.team !== humanTeam);
@@ -252,6 +295,8 @@ export class App {
 
   private handleTrucoAccept(): void {
     this.gameEngine['respondTruco'](this.players[0].id, true);
+    // After acceptance, AI needs to keep playing — re-trigger if it's AI's turn
+    setTimeout(() => this.checkAndTriggerAiTurn(), 200);
   }
 
   private handleTrucoDecline(): void {
@@ -260,6 +305,15 @@ export class App {
 
   private handleTrucoRaise(): void {
     this.gameEngine['respondTruco'](this.players[0].id, true);
+  }
+
+  // Safety: if after responding it's AI's turn and no ai-turn fired, trigger manually
+  private checkAndTriggerAiTurn(): void {
+    const currentTurnId = this.gameEngine.getCurrentTurnPlayerId();
+    const aiPlayer = this.players.find(p => p.id === currentTurnId && p.isAI);
+    if (aiPlayer) {
+      this.handleAiTurn({ playerId: currentTurnId });
+    }
   }
 
   // ---- Render ----

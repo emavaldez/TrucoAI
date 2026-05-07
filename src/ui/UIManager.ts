@@ -1,11 +1,11 @@
-// UIManager.ts — Complete UI rendering for TrucoAI
+// UIManager.ts — Truco UI renderer (corrected player positioning + card sizing)
 
 import type {
   CardDef, PlayerConfig, PlayedCard, RoundResult,
-  EnvidoState, TrucoState, PicaPicaSubmanoResult
+  PicaPicaSubmanoResult, EnvidoState, TrucoState
 } from '../types.js';
 
-export interface UIManagerCallbacks {
+interface UICallbacks {
   onCardPlayed: (playerId: string, cardIndex: number) => void;
   onNewRound: () => void;
   onNewGame: () => void;
@@ -20,140 +20,137 @@ export interface UIManagerCallbacks {
   onTrucoRaise: () => void;
 }
 
+interface RenderParams {
+  players: PlayerConfig[];
+  hands: { [playerId: string]: CardDef[] };
+  currentTrick: PlayedCard[];
+  currentTrickNumber: number;
+  currentRound: number;
+  dealerId: string;
+  starterId: string;
+  currentTurnPlayerId: string;
+  deckRemaining: number;
+  scores: { team0: number; team1: number };
+  envido: EnvidoState;
+  truco: TrucoState;
+  roundResults: RoundResult[];
+  isPicaPica: boolean;
+  picaPicaSubmano: number;
+  picapicaResults: PicaPicaSubmanoResult[];
+  firstHandCompleted: boolean;
+  isSecondHand: boolean;
+  handWinnerTeam: number;
+  isGameOver: boolean;
+  gameOverWinner: number | null;
+  gameOverScores: { team0: number; team1: number };
+}
+
 export class UIManager {
   private container: HTMLElement;
-  private callbacks: UIManagerCallbacks;
+  private callbacks: UICallbacks;
+  private boardRendered: boolean = false;
+  private lastPlayerCount: number = 0;
 
-  constructor(containerId: string, callbacks: UIManagerCallbacks) {
-    this.container = document.getElementById(containerId)!;
+  constructor(containerId: string, callbacks: UICallbacks) {
+    const el = document.getElementById(containerId);
+    if (!el) throw new Error(`#${containerId} not found`);
+    this.container = el;
     this.callbacks = callbacks;
+
+    // Expose callbacks for inline onclick handlers
+    (window as any)._uiCallbacks = callbacks;
   }
 
-  // ---- Render Game Table ----
+  renderGame(params: RenderParams): void {
+    const playerCount = params.players.length;
 
-  renderGame(params: {
-    players: PlayerConfig[];
-    hands: { [playerId: string]: CardDef[] };
-    currentTrick: PlayedCard[];
-    currentTrickNumber: number;
-    currentRound: number;
-    dealerId: string;
-    starterId: string;
-    currentTurnPlayerId: string;
-    deckRemaining: number;
-    scores: { team0: number; team1: number };
-    envido: EnvidoState;
-    truco: TrucoState;
-    roundResults: RoundResult[];
-    isPicaPica: boolean;
-    picaPicaSubmano: number;
-    picapicaResults: PicaPicaSubmanoResult[];
-    firstHandCompleted: boolean;
-    isSecondHand: boolean;
-    handWinnerTeam: number;
-    isGameOver: boolean;
-    gameOverWinner: number | null;
-    gameOverScores: { team0: number; team1: number };
-  }): void {
-    this.renderMenuOrGame(params);
-    this.renderScores(params.scores, params.isPicaPica);
-    this.renderRoundInfo(params);
-    this.renderPlayedCards(params);
-    this.renderDeck(params);
-    this.renderEnvidoPanel(params.envido, params.players);
-    this.renderTrucoPanel(params.truco, params.players);
-    this.renderRoundOverPanel(params);
-    this.renderGameOverPanel(params);
-    this.updateControls(params);
-  }
-
-  // ---- Menu or Game ----
-
-  private renderMenuOrGame(params: {
-    players: PlayerConfig[];
-    hands: { [playerId: string]: CardDef[] };
-    currentTurnPlayerId: string;
-    dealerId: string;
-    starterId: string;
-  }): void {
-    const existingBoard = this.container.querySelector('.game-board');
-    const existingMenu = this.container.querySelector('.menu-container');
-
-    if (params.players.length === 0) {
-      // Show menu, hide board
-      if (!existingMenu) this.renderMenu();
-      if (existingBoard) {
-        (existingBoard as HTMLElement).style.display = 'none';
-      }
+    if (playerCount === 0) {
+      this.boardRendered = false;
+      this.lastPlayerCount = 0;
+      this.renderMenu();
       return;
     }
 
-    // Game is running — show board, hide menu
-    if (existingBoard) {
-      (existingBoard as HTMLElement).style.display = 'block';
-    }
-    if (existingMenu) {
-      (existingMenu as HTMLElement).style.display = 'none';
-    }
-
-    if (!existingBoard) {
-      this.renderGameBoard(params.players.length);
+    if (!this.boardRendered || this.lastPlayerCount !== playerCount) {
+      this.container.innerHTML = '';
+      this.renderGameBoard(playerCount);
+      this.boardRendered = true;
+      this.lastPlayerCount = playerCount;
     }
 
-    const existingPlayers = this.container.querySelectorAll('.player-area');
-    if (existingPlayers.length === 0) {
-      this.renderPlayers(params);
-    } else {
-      this.updatePlayers(params);
-    }
+    this.updateScoreboard(params.scores);
+    this.renderPlayers(params);
+    this.renderPlayedCards(params);
+    this.updateMessage(params);
+    this.updateControls(params);
+    this.renderRoundOverPanel(params);
   }
+
+  // ---- Scoreboard ----
+
+  private updateScoreboard(scores: { team0: number; team1: number }): void {
+    const sb = this.container.querySelector('.scoreboard');
+    if (!sb) return;
+    sb.innerHTML = `
+      <div class="team-score">
+        <span class="team-label">EQUIPO 1</span>
+        <span class="team-points">${scores.team0}</span>
+      </div>
+      <div class="team-score">
+        <span class="team-label">EQUIPO 2</span>
+        <span class="team-points">${scores.team1}</span>
+      </div>
+    `;
+  }
+
+  // ---- Menu ----
 
   private renderMenu(): void {
     const menu = document.createElement('div');
     menu.className = 'menu-container';
     menu.innerHTML = `
-      <h1>🃏 Truco AI</h1>
-      <p class="subtitle">Truco Argentino con IA</p>
-      <div class="player-count-select">
-        <p>Jugadores:</p>
-        <div class="count-buttons">
-          <button class="btn-count" data-count="2">2 Jugadores</button>
-          <button class="btn-count" data-count="4">4 Jugadores</button>
-          <button class="btn-count" data-count="6">6 Jugadores</button>
+      <h1>🃏 Truco</h1>
+      <div class="menu-options">
+        <div class="menu-section">
+          <label>Jugadores</label>
+          <div class="count-buttons">
+            <button class="count-btn active" data-count="2">2</button>
+            <button class="count-btn" data-count="4">4</button>
+            <button class="count-btn" data-count="6">6</button>
+          </div>
         </div>
-      </div>
-      <div class="difficulty-select">
-        <p>Dificultad:</p>
-        <div class="difficulty-buttons">
-          <button class="btn-diff" data-diff="easy">Fácil</button>
-          <button class="btn-diff selected" data-diff="normal">Normal</button>
-          <button class="btn-diff" data-diff="hard">Difícil</button>
+        <div class="menu-section">
+          <label>Dificultad</label>
+          <div class="diff-buttons">
+            <button class="diff-btn" data-diff="easy">Fácil</button>
+            <button class="diff-btn active" data-diff="normal">Normal</button>
+            <button class="diff-btn" data-diff="hard">Difícil</button>
+          </div>
         </div>
+        <button class="btn-start">¡Jugar!</button>
       </div>
-      <button class="btn-start" style="display:none;">JUGAR</button>
     `;
 
-    menu.querySelectorAll('.btn-count').forEach(btn => {
+    menu.querySelectorAll('.count-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        menu.querySelectorAll('.btn-count').forEach(b => b.classList.remove('selected'));
-        (btn as HTMLElement).classList.add('selected');
-        const startBtn = menu.querySelector('.btn-start') as HTMLElement;
-        if (startBtn) startBtn.style.display = 'inline-block';
+        menu.querySelectorAll('.count-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        (btn as HTMLElement).dataset.selected = 'true';
       });
     });
 
-    menu.querySelectorAll('.btn-diff').forEach(btn => {
+    menu.querySelectorAll('.diff-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        menu.querySelectorAll('.btn-diff').forEach(b => b.classList.remove('selected'));
-        (btn as HTMLElement).classList.add('selected');
+        menu.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
       });
     });
 
-    const startBtn = menu.querySelector('.btn-start') as HTMLElement;
+    const startBtn = menu.querySelector('.btn-start');
     if (startBtn) {
       startBtn.addEventListener('click', () => {
-        const countEl = menu.querySelector('.btn-count.selected');
-        const diffEl = menu.querySelector('.btn-diff.selected');
+        const countEl = menu.querySelector('.count-btn.active');
+        const diffEl = menu.querySelector('.diff-btn.active');
         const count = countEl ? parseInt((countEl as HTMLElement).dataset.count || '4') : 4;
         const diff = diffEl ? ((diffEl as HTMLElement).dataset.diff || 'normal') : 'normal';
         this.callbacks.onStartGame(count, diff as 'easy' | 'normal' | 'hard');
@@ -162,6 +159,8 @@ export class UIManager {
 
     this.container.appendChild(menu);
   }
+
+  // ---- Game Board ----
 
   private renderGameBoard(playerCount: number): void {
     const board = document.createElement('div');
@@ -180,7 +179,6 @@ export class UIManager {
         </div>
         <div class="human-area"></div>
       </div>
-      <div class="deck-display" style="display:none;"></div>
       <div class="controls"></div>
       <div class="response-panel"></div>
     `;
@@ -189,6 +187,16 @@ export class UIManager {
 
   // ---- Render Players ----
 
+  /**
+   * Player positioning rules:
+   * 2 players: human bottom, opponent top center
+   * 4 players: human bottom, opponent top center, teammate left, opponent right
+   *   (positions: 0=human bottom, 1=teammate left, 2=opponent top, 3=opponent right)
+   * 6 players: human bottom-center + 2 teammates bottom-left/right,
+   *   3 opponents top-left/center/right
+   *   (positions: 0=human, 1=teammate left, 2=teammate right,
+   *               3=opponent top-left, 4=opponent top-center, 5=opponent top-right)
+   */
   private renderPlayers(params: {
     players: PlayerConfig[];
     hands: { [playerId: string]: CardDef[] };
@@ -206,6 +214,8 @@ export class UIManager {
 
     // Clear existing players
     seating.querySelectorAll('.player-area').forEach(el => el.remove());
+
+    const playerCount = params.players.length;
 
     for (const player of params.players) {
       const hand = params.hands[player.id] || [];
@@ -237,9 +247,11 @@ export class UIManager {
         if (isHuman) {
           cardEl.classList.add('clickable');
           cardEl.style.cursor = player.id === params.currentTurnPlayerId ? 'pointer' : 'default';
-          cardEl.style.opacity = player.id === params.currentTurnPlayerId ? '1' : '0.6';
+          cardEl.style.opacity = player.id === params.currentTurnPlayerId ? '1' : '0.75';
           cardEl.addEventListener('click', () => {
-            this.callbacks.onCardPlayed(player.id, i);
+            if (player.id === params.currentTurnPlayerId) {
+              this.callbacks.onCardPlayed(player.id, i);
+            }
           });
         } else {
           cardEl.classList.add('card-back');
@@ -247,19 +259,52 @@ export class UIManager {
         cardsArea.appendChild(cardEl);
       }
 
-      // Place player in the correct area based on team and position
-      if (isHuman) {
-        humanArea.appendChild(playerEl);
-      } else if (player.team === 1) {
-        // Opponent team — go to top area
-        opponentsArea.appendChild(playerEl);
-      } else if (player.team === 0 && !isHuman) {
-        // Teammate (same team as human but not human) — side areas
-        (player.position % 2 === 1 ? sideLeft : sideRight).appendChild(playerEl);
+      playerEl.classList.toggle('active-turn', player.id === params.currentTurnPlayerId);
+
+      // ── PLACEMENT LOGIC ──────────────────────────────────────────────────
+      if (playerCount === 2) {
+        // 0 = human bottom, 1 = opponent top
+        if (isHuman) {
+          humanArea.appendChild(playerEl);
+        } else {
+          opponentsArea.appendChild(playerEl);
+        }
+
+      } else if (playerCount === 4) {
+        // Positions: 0=human(bottom), 1=teammate(left), 2=opponent(top), 3=opponent(right)
+        // Teams: 0→players 0,1 | 1→players 2,3
+        // player 0: human, team 0, bottom
+        // player 1: AI, team 0, LEFT
+        // player 2: AI, team 1, TOP (across from human)
+        // player 3: AI, team 1, RIGHT
+        const pos = player.position;
+        if (pos === 0) {
+          humanArea.appendChild(playerEl);
+        } else if (pos === 1) {
+          sideLeft.appendChild(playerEl);
+        } else if (pos === 2) {
+          opponentsArea.appendChild(playerEl);
+        } else if (pos === 3) {
+          sideRight.appendChild(playerEl);
+        }
+
+      } else if (playerCount === 6) {
+        // Teams: team0=[0,1,2], team1=[3,4,5]
+        // Positions:
+        //   0 = human (bottom center)
+        //   1 = teammate (bottom left) → humanArea
+        //   2 = teammate (bottom right) → humanArea
+        //   3 = opponent top-left → opponentsArea
+        //   4 = opponent top-center → opponentsArea
+        //   5 = opponent top-right → opponentsArea
+        const pos = player.position;
+        if (pos === 0 || pos === 1 || pos === 2) {
+          humanArea.appendChild(playerEl);
+        } else {
+          opponentsArea.appendChild(playerEl);
+        }
       }
     }
-
-    this.updatePlayers(params);
   }
 
   private updatePlayers(params: {
@@ -288,9 +333,11 @@ export class UIManager {
         if (player.isHuman) {
           cardEl.classList.add('clickable');
           cardEl.style.cursor = player.id === params.currentTurnPlayerId ? 'pointer' : 'default';
-          cardEl.style.opacity = player.id === params.currentTurnPlayerId ? '1' : '0.6';
+          cardEl.style.opacity = player.id === params.currentTurnPlayerId ? '1' : '0.75';
           cardEl.addEventListener('click', () => {
-            this.callbacks.onCardPlayed(player.id, i);
+            if (player.id === params.currentTurnPlayerId) {
+              this.callbacks.onCardPlayed(player.id, i);
+            }
           });
         } else {
           cardEl.classList.add('card-back');
@@ -349,13 +396,14 @@ export class UIManager {
   }): void {
     document.querySelectorAll('.played-card-overlay').forEach(el => el.remove());
 
+    // Current trick cards — full opacity, clearly visible
     for (const played of params.currentTrick) {
       const playerEl = this.container.querySelector(`.player-area[data-player-id="${played.playerId}"]`);
       if (playerEl) {
         const overlay = document.createElement('div');
         overlay.className = 'played-card-overlay';
         const cardEl = this.createCardElement(played.card, true);
-        cardEl.classList.add('small');
+        cardEl.classList.add('played-small');
         overlay.appendChild(cardEl);
 
         const nameEl = document.createElement('div');
@@ -368,15 +416,15 @@ export class UIManager {
       }
     }
 
+    // Historical cards (previous rounds) — dimmed but still readable
     for (const result of params.roundResults) {
       for (const played of result.cards) {
         const playerEl = this.container.querySelector(`.player-area[data-player-id="${played.playerId}"]`);
         if (playerEl) {
           const overlay = document.createElement('div');
           overlay.className = 'played-card-overlay played-card-historical';
-          (overlay as HTMLElement).style.opacity = '0.5';
           const cardEl = this.createCardElement(played.card, true);
-          cardEl.classList.add('small');
+          cardEl.classList.add('played-small');
           overlay.appendChild(cardEl);
           playerEl.appendChild(overlay);
         }
@@ -384,85 +432,22 @@ export class UIManager {
     }
   }
 
-  // ---- Render Deck ----
+  // ---- Update Message ----
 
-  private renderDeck(params: {
-    dealerId: string;
-    deckRemaining: number;
-    isPicaPica: boolean;
-    picaPicaSubmano: number;
-  }): void {
-    const deckDisplay = this.container.querySelector('.deck-display');
-    if (!deckDisplay) return;
-
-    const dealerEl = this.container.querySelector(`.player-area[data-player-id="${params.dealerId}"]`);
-    if (!dealerEl) return;
-
-    (deckDisplay as HTMLElement).style.display = 'flex';
-
-    // Position deck to the right of the dealer, vertically centered
-    const board = this.container.querySelector('.game-board');
-    if (!board) return;
-
-    const dealerRect = dealerEl.getBoundingClientRect();
-    const boardRect = board.getBoundingClientRect();
-
-    // Position relative to the board
-    const deckX = dealerRect.right - boardRect.left + 15;
-    const deckY = dealerRect.top - boardRect.top + dealerRect.height / 2 - 35;
-
-    (deckDisplay as HTMLElement).style.position = 'absolute';
-    (deckDisplay as HTMLElement).style.left = `${deckX}px`;
-    (deckDisplay as HTMLElement).style.top = `${deckY}px`;
-
-    deckDisplay.innerHTML = `
-      <div class="deck-pile">
-        ${Array.from({ length: Math.min(params.deckRemaining, 3) }, (_, i) =>
-          `<div class="card card-back"></div>`
-        ).join('')}
-      </div>
-      <div class="deck-count">${params.deckRemaining} cartas</div>
-      <div class="deck-label">mazo</div>
-    `;
-  }
-
-  // ---- Render Scores ----
-
-  private renderScores(scores: { team0: number; team1: number }, isPicaPica: boolean = false): void {
-    const scoreboard = this.container.querySelector('.scoreboard');
-    if (!scoreboard) return;
-
-    scoreboard.innerHTML = `
-      <div class="team-score">
-        <span class="team-name">Equipo 1</span>
-        <span class="team-points">${scores.team0}</span>
-      </div>
-      <div class="game-info">
-        ${isPicaPica ? '<span class="truco-badge">⚡ PICA-PICA</span>' : ''}
-      </div>
-      <div class="team-score">
-        <span class="team-name">Equipo 2</span>
-        <span class="team-points">${scores.team1}</span>
-      </div>
-    `;
-  }
-
-  // ---- Render Round Info ----
-
-  private renderRoundInfo(params: {
+  private updateMessage(params: {
     currentRound: number;
-    currentTrickNumber: number;
-    starterId: string;
+    firstHandCompleted: boolean;
+    isSecondHand: boolean;
     isPicaPica: boolean;
     picaPicaSubmano: number;
-    isSecondHand: boolean;
-    firstHandCompleted: boolean;
   }): void {
     const messageArea = this.container.querySelector('.message-area');
     if (!messageArea) return;
 
-    const handLabel = params.isSecondHand || params.firstHandCompleted ? '2da Mano' : '1ra Mano';
-    const roundLabel = params.isPicaPica ? `Submano ${params.picaPicaSubmano + 1}/3` : `Ronda ${params.currentRound + 1}/3`;
+    const handLabel = params.isSecondHand ? '2da Mano' : '1ra Mano';
+    const roundLabel = params.isPicaPica
+      ? `Submano ${params.picaPicaSubmano + 1}/3`
+      : `Ronda ${params.currentRound + 1}/3`;
 
     messageArea.textContent = `${handLabel} — ${roundLabel}`;
     (messageArea as HTMLElement).style.opacity = '1';
@@ -482,7 +467,6 @@ export class UIManager {
 
     (responsePanel as HTMLElement).style.display = 'flex';
 
-    // Find human player to determine who needs to respond
     const humanPlayer = players.find(p => p.isHuman);
     const humanTeam = humanPlayer ? humanPlayer.team : -1;
     const opponentCalled = envido.callerTeam !== humanTeam;
@@ -492,13 +476,11 @@ export class UIManager {
     if (envido.phase === 'opening') {
       html += `<div class="response-label">Equipo ${envido.callerTeam! + 1} cantó Envido</div>`;
       if (opponentCalled) {
-        // Opponent called — human needs to respond
         html += `<div class="response-buttons">
           <button class="btn-accept" onclick="window._uiCallbacks?.onEnvidoWant()">Quiero</button>
           <button class="btn-reject" onclick="window._uiCallbacks?.onEnvidoNoWant()">No quiero</button>
         </div>`;
       } else {
-        // Human called — AI will auto-respond
         html += `<div class="response-label">Esperando respuesta del equipo contrario...</div>`;
       }
     } else if (envido.phase === 'response') {
@@ -525,16 +507,13 @@ export class UIManager {
     const responsePanel = this.container.querySelector('.response-panel');
     if (!responsePanel) return;
 
-    if (truco.level === 0) {
-      return;
-    }
+    if (truco.level === 0) return;
 
     (responsePanel as HTMLElement).style.display = 'flex';
 
     const levelNames: { [level: number]: string } = { 1: 'Truco', 2: 'Retruco', 3: 'Vale 4' };
     const levelPoints: { [level: number]: number } = { 1: 1, 2: 2, 3: 3 };
 
-    // Find human player to determine who needs to respond
     const humanPlayer = players.find(p => p.isHuman);
     const humanTeam = humanPlayer ? humanPlayer.team : -1;
     const opponentCalled = truco.lastChallengerTeam !== humanTeam;
@@ -544,14 +523,12 @@ export class UIManager {
     if (!truco.accepted) {
       html += `<div class="response-label">Equipo ${truco.lastChallengerTeam! + 1} cantó ${levelNames[truco.level]}</div>`;
       if (opponentCalled) {
-        // Opponent called — human needs to respond
         html += `<div class="response-buttons">
           <button class="btn-accept" onclick="window._uiCallbacks?.onTrucoAccept()">Quiero</button>
           <button class="btn-reject" onclick="window._uiCallbacks?.onTrucoDecline()">No quiero</button>
           ${truco.level < 3 ? `<button class="btn-falta" onclick="window._uiCallbacks?.onTrucoRaise()">Subir a ${levelNames[truco.level + 1]}</button>` : ''}
         </div>`;
       } else {
-        // Human called — AI will auto-respond
         html += `<div class="response-label">Esperando respuesta del equipo contrario...</div>`;
       }
     } else {
@@ -586,7 +563,6 @@ export class UIManager {
       return;
     }
 
-    // Show round over only when first hand completed and we're between hands
     if (params.firstHandCompleted && params.isSecondHand && params.currentRound === 0) {
       this.showRoundOverPanel({
         handWinnerTeam: params.handWinnerTeam,
@@ -669,6 +645,7 @@ export class UIManager {
     firstHandCompleted: boolean;
     isSecondHand: boolean;
     isGameOver: boolean;
+    players: PlayerConfig[];
   }): void {
     const controls = this.container.querySelector('.controls');
     if (!controls) return;
@@ -677,20 +654,53 @@ export class UIManager {
 
     if (params.isGameOver) return;
 
-    const isHumanTurn = params.currentRound < 3 && params.currentTrickNumber < 3;
-    if (!isHumanTurn) return;
+    const humanPlayer = params.players.find(p => p.isHuman);
+    if (!humanPlayer) return;
 
-    if (params.currentTrickNumber === 0 && params.envido.phase === 'none') {
+    const isHumanTurn = params.currentTurnPlayerId === humanPlayer.id;
+
+    // Envido: ONLY in round 0 (primera ronda), before any card played, and envido not started
+    // Also hide if truco already called
+    const canCallEnvido = isHumanTurn
+      && params.currentRound === 0          // ← RESTRICCIÓN: solo primera ronda
+      && params.envido.phase === 'none'
+      && params.truco.level === 0;
+
+    if (canCallEnvido) {
       const btnEnvido = document.createElement('button');
       btnEnvido.textContent = '🎯 Envido';
       btnEnvido.addEventListener('click', () => this.callbacks.onEnvidoOpen());
       controls.appendChild(btnEnvido);
     }
 
-    const btnTruco = document.createElement('button');
-    btnTruco.textContent = params.truco.level === 0 ? '🔥 Truco' : `Subir a ${['', 'Retruco', 'Vale 4'][params.truco.level] || ''}`;
-    btnTruco.disabled = params.truco.level >= 3;
-    btnTruco.addEventListener('click', () => this.callbacks.onTrucoChallenge());
-    controls.appendChild(btnTruco);
+    // Truco: can be called if truco not already at max and envido not pending
+    const canCallTruco = params.envido.phase === 'none'
+      && params.truco.level < 3
+      && !params.isGameOver;
+
+    if (canCallTruco) {
+      const btnTruco = document.createElement('button');
+      const trucoLabels: { [level: number]: string } = {
+        0: '🔥 Truco',
+        1: '🔥 Retruco',
+        2: '🔥 Vale 4',
+      };
+      btnTruco.textContent = trucoLabels[params.truco.level] || '🔥 Truco';
+      btnTruco.addEventListener('click', () => this.callbacks.onTrucoChallenge());
+      controls.appendChild(btnTruco);
+    }
+
+    // Response panels (envido/truco pending from opponent)
+    if (params.envido.phase !== 'none') {
+      this.renderEnvidoPanel(params.envido, params.players);
+    } else if (params.truco.level > 0 && !params.truco.accepted) {
+      this.renderTrucoPanel(params.truco, params.players);
+    } else {
+      const responsePanel = this.container.querySelector('.response-panel');
+      if (responsePanel) {
+        (responsePanel as HTMLElement).style.display = 'none';
+        responsePanel.innerHTML = '';
+      }
+    }
   }
 }
