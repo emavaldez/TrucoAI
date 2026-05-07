@@ -60,8 +60,8 @@ export class UIManager {
     this.renderRoundInfo(params);
     this.renderPlayedCards(params);
     this.renderDeck(params);
-    this.renderEnvidoPanel(params.envido);
-    this.renderTrucoPanel(params.truco);
+    this.renderEnvidoPanel(params.envido, params.players);
+    this.renderTrucoPanel(params.truco, params.players);
     this.renderRoundOverPanel(params);
     this.renderGameOverPanel(params);
     this.updateControls(params);
@@ -168,10 +168,17 @@ export class UIManager {
     board.className = 'game-board';
     board.innerHTML = `
       <div class="scoreboard"></div>
-      <div class="circle-seating" id="circle-seating" data-count="${playerCount}"></div>
-      <div class="table-area">
-        <div class="played-cards"></div>
-        <div class="message-area"></div>
+      <div class="circle-seating" id="circle-seating" data-count="${playerCount}">
+        <div class="opponents-area"></div>
+        <div class="middle-area">
+          <div class="side-player-area side-left"></div>
+          <div class="table-area">
+            <div class="played-cards"></div>
+            <div class="message-area"></div>
+          </div>
+          <div class="side-player-area side-right"></div>
+        </div>
+        <div class="human-area"></div>
       </div>
       <div class="deck-display" style="display:none;"></div>
       <div class="controls"></div>
@@ -192,6 +199,14 @@ export class UIManager {
     const seating = this.container.querySelector('#circle-seating') as HTMLElement;
     if (!seating) return;
 
+    const opponentsArea = seating.querySelector('.opponents-area') as HTMLElement;
+    const sideLeft = seating.querySelector('.side-left') as HTMLElement;
+    const sideRight = seating.querySelector('.side-right') as HTMLElement;
+    const humanArea = seating.querySelector('.human-area') as HTMLElement;
+
+    // Clear existing players
+    seating.querySelectorAll('.player-area').forEach(el => el.remove());
+
     for (const player of params.players) {
       const hand = params.hands[player.id] || [];
       const playerEl = document.createElement('div');
@@ -209,7 +224,6 @@ export class UIManager {
       `;
 
       const badges = document.createElement('div');
-      badges.className = 'player-badges';
       badges.style.cssText = 'display:flex;gap:4px;margin-top:2px;flex-wrap:wrap;justify-content:center;';
       if (player.isAI) badges.innerHTML += '<span style="font-size:9px;padding:1px 4px;background:rgba(0,0,0,0.5);color:#aaa;border-radius:3px;">IA</span>';
       badges.innerHTML += `<span style="font-size:9px;padding:1px 4px;background:rgba(0,0,0,0.5);color:#ffd700;border-radius:3px;">Eq ${player.team + 1}</span>`;
@@ -233,8 +247,19 @@ export class UIManager {
         cardsArea.appendChild(cardEl);
       }
 
-      seating.appendChild(playerEl);
+      // Place player in the correct area based on team and position
+      if (isHuman) {
+        humanArea.appendChild(playerEl);
+      } else if (player.team === 1) {
+        // Opponent team — go to top area
+        opponentsArea.appendChild(playerEl);
+      } else if (player.team === 0 && !isHuman) {
+        // Teammate (same team as human but not human) — side areas
+        (player.position % 2 === 1 ? sideLeft : sideRight).appendChild(playerEl);
+      }
     }
+
+    this.updatePlayers(params);
   }
 
   private updatePlayers(params: {
@@ -445,7 +470,7 @@ export class UIManager {
 
   // ---- Render Envido Panel ----
 
-  private renderEnvidoPanel(envido: EnvidoState): void {
+  private renderEnvidoPanel(envido: EnvidoState, players: PlayerConfig[]): void {
     const responsePanel = this.container.querySelector('.response-panel');
     if (!responsePanel) return;
 
@@ -457,21 +482,36 @@ export class UIManager {
 
     (responsePanel as HTMLElement).style.display = 'flex';
 
+    // Find human player to determine who needs to respond
+    const humanPlayer = players.find(p => p.isHuman);
+    const humanTeam = humanPlayer ? humanPlayer.team : -1;
+    const opponentCalled = envido.callerTeam !== humanTeam;
+
     let html = `<div class="response-label">Envido</div>`;
 
     if (envido.phase === 'opening') {
       html += `<div class="response-label">Equipo ${envido.callerTeam! + 1} cantó Envido</div>`;
-      html += `<div class="response-buttons">
-        <button class="btn-accept" onclick="window._uiCallbacks?.onEnvidoWant()">Quiero</button>
-        <button class="btn-reject" onclick="window._uiCallbacks?.onEnvidoNoWant()">No quiero</button>
-      </div>`;
+      if (opponentCalled) {
+        // Opponent called — human needs to respond
+        html += `<div class="response-buttons">
+          <button class="btn-accept" onclick="window._uiCallbacks?.onEnvidoWant()">Quiero</button>
+          <button class="btn-reject" onclick="window._uiCallbacks?.onEnvidoNoWant()">No quiero</button>
+        </div>`;
+      } else {
+        // Human called — AI will auto-respond
+        html += `<div class="response-label">Esperando respuesta del equipo contrario...</div>`;
+      }
     } else if (envido.phase === 'response') {
       html += `<div class="response-label">Equipo ${envido.callerTeam! + 1} subió a ${envido.level === 'real-envido' ? 'Real Envido' : 'Envido'}</div>`;
-      html += `<div class="response-buttons">
-        <button class="btn-falta" onclick="window._uiCallbacks?.onEnvidoRaise('real-envido')">Subir a Real Envido</button>
-        <button class="btn-accept" onclick="window._uiCallbacks?.onEnvidoWant()">Quiero</button>
-        <button class="btn-reject" onclick="window._uiCallbacks?.onEnvidoNoWant()">No quiero</button>
-      </div>`;
+      if (opponentCalled) {
+        html += `<div class="response-buttons">
+          <button class="btn-falta" onclick="window._uiCallbacks?.onEnvidoRaise('real-envido')">Subir a Real Envido</button>
+          <button class="btn-accept" onclick="window._uiCallbacks?.onEnvidoWant()">Quiero</button>
+          <button class="btn-reject" onclick="window._uiCallbacks?.onEnvidoNoWant()">No quiero</button>
+        </div>`;
+      } else {
+        html += `<div class="response-label">Esperando respuesta del equipo contrario...</div>`;
+      }
     } else if (envido.phase === 'resolution') {
       html += `<div class="response-label">Envido resuelto: ${envido.pointsAwarded} pts</div>`;
     }
@@ -481,7 +521,7 @@ export class UIManager {
 
   // ---- Render Truco Panel ----
 
-  private renderTrucoPanel(truco: TrucoState): void {
+  private renderTrucoPanel(truco: TrucoState, players: PlayerConfig[]): void {
     const responsePanel = this.container.querySelector('.response-panel');
     if (!responsePanel) return;
 
@@ -494,15 +534,26 @@ export class UIManager {
     const levelNames: { [level: number]: string } = { 1: 'Truco', 2: 'Retruco', 3: 'Vale 4' };
     const levelPoints: { [level: number]: number } = { 1: 1, 2: 2, 3: 3 };
 
+    // Find human player to determine who needs to respond
+    const humanPlayer = players.find(p => p.isHuman);
+    const humanTeam = humanPlayer ? humanPlayer.team : -1;
+    const opponentCalled = truco.lastChallengerTeam !== humanTeam;
+
     let html = `<div class="response-label">${levelNames[truco.level]} — ${levelPoints[truco.level]} pts</div>`;
 
     if (!truco.accepted) {
       html += `<div class="response-label">Equipo ${truco.lastChallengerTeam! + 1} cantó ${levelNames[truco.level]}</div>`;
-      html += `<div class="response-buttons">
-        <button class="btn-accept" onclick="window._uiCallbacks?.onTrucoAccept()">Quiero</button>
-        <button class="btn-reject" onclick="window._uiCallbacks?.onTrucoDecline()">No quiero</button>
-        ${truco.level < 3 ? `<button class="btn-falta" onclick="window._uiCallbacks?.onTrucoRaise()">Subir a ${levelNames[truco.level + 1]}</button>` : ''}
-      </div>`;
+      if (opponentCalled) {
+        // Opponent called — human needs to respond
+        html += `<div class="response-buttons">
+          <button class="btn-accept" onclick="window._uiCallbacks?.onTrucoAccept()">Quiero</button>
+          <button class="btn-reject" onclick="window._uiCallbacks?.onTrucoDecline()">No quiero</button>
+          ${truco.level < 3 ? `<button class="btn-falta" onclick="window._uiCallbacks?.onTrucoRaise()">Subir a ${levelNames[truco.level + 1]}</button>` : ''}
+        </div>`;
+      } else {
+        // Human called — AI will auto-respond
+        html += `<div class="response-label">Esperando respuesta del equipo contrario...</div>`;
+      }
     } else {
       html += `<div class="response-label">${levelNames[truco.level]} aceptado</div>`;
     }

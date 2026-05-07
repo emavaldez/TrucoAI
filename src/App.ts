@@ -113,10 +113,64 @@ export class App {
 
   private handleAiTurn(data: any): void {
     if (!this.gameRunning) return;
+
+    // Find the AI player and their hand
+    const aiPlayer = this.players.find(p => p.id === data.playerId);
+    if (!aiPlayer) return;
+
+    const hand = this.gameEngine.getHands()[data.playerId] || [];
+    if (hand.length === 0) return;
+
+    // Use AI difficulty to select card
+    let cardIndex: number;
+    const diff = aiPlayer.difficulty || 'normal';
+
+    if (diff === 'easy') {
+      cardIndex = Math.floor(Math.random() * hand.length);
+    } else {
+      // AI ranking (high to low): 1esp > 1bas > 7esp > 7oro > any3 > any2 > oro-1 > copa-1 > any12 > any11 > any10 > 7bast > 7copa > any6 > any5 > any4
+      const cardRank = (card: any): number => {
+        if (card.suit === 'espada' && card.number === 1) return 14;
+        if (card.suit === 'basto' && card.number === 1) return 13;
+        if (card.suit === 'espada' && card.number === 7) return 12;
+        if (card.suit === 'oro' && card.number === 7) return 11;
+        if (card.suit === 'copa' && card.number === 3) return 10;
+        if (card.suit === 'oro' && card.number === 3) return 10;
+        if (card.suit === 'espada' && card.number === 3) return 10;
+        if (card.suit === 'basto' && card.number === 3) return 10;
+        if (card.suit === 'copa' && card.number === 2) return 9;
+        if (card.suit === 'oro' && card.number === 2) return 9;
+        if (card.suit === 'espada' && card.number === 2) return 9;
+        if (card.suit === 'basto' && card.number === 2) return 9;
+        if (card.suit === 'oro' && card.number === 1) return 8;
+        if (card.suit === 'copa' && card.number === 1) return 7;
+        if (card.suit === 'copa' && card.number === 12) return 6;
+        if (card.suit === 'copa' && card.number === 11) return 5;
+        if (card.suit === 'copa' && card.number === 10) return 4;
+        if (card.suit === 'basto' && card.number === 7) return 3;
+        if (card.suit === 'copa' && card.number === 7) return 3;
+        if (card.suit === 'copa' && card.number === 6) return 2;
+        if (card.suit === 'copa' && card.number === 5) return 2;
+        if (card.suit === 'copa' && card.number === 4) return 2;
+        return 1;
+      };
+
+      const sortedIndices = hand
+        .map((card: any, index: number) => ({ card, index }))
+        .sort((a: any, b: any) => cardRank(b.card) - cardRank(a.card));
+
+      if (diff === 'hard') {
+        // Hard AI: always play highest card
+        cardIndex = sortedIndices[0].index;
+      } else {
+        // Normal AI: play highest card 70% of the time, random otherwise
+        cardIndex = Math.random() < 0.7 ? sortedIndices[0].index : sortedIndices[Math.floor(Math.random() * sortedIndices.length)].index;
+      }
+    }
+
     setTimeout(() => {
-      const randomIndex = Math.floor(Math.random() * 3);
-      this.gameEngine.playCard(data.playerId, randomIndex);
-    }, 800);
+      this.gameEngine.playCard(data.playerId, cardIndex);
+    }, 600);
   }
 
   private handleNewRound(): void {
@@ -159,6 +213,29 @@ export class App {
 
   private handleEnvidoRaise(level: 'envido' | 'real-envido' | 'falta-envido'): void {
     this.gameEngine['respondEnvido'](this.players[0].id, true, level);
+  }
+
+  // AI auto-responds to Envido when opponent calls
+  private handleAiEnvidoResponse(wants: boolean, raiseLevel?: 'envido' | 'real-envido' | 'falta-envido'): void {
+    // Find the AI player on the opposing team
+    const humanTeam = this.players[0]?.team;
+    const aiPlayers = this.players.filter(p => p.isAI && p.team !== humanTeam);
+    if (aiPlayers.length === 0) return;
+    const aiPlayer = aiPlayers[0];
+    this.gameEngine['respondEnvido'](aiPlayer.id, wants, raiseLevel);
+  }
+
+  // AI auto-responds to Truco when opponent calls
+  private handleAiTrucoResponse(accept: boolean, raise: boolean = false): void {
+    const humanTeam = this.players[0]?.team;
+    const aiPlayers = this.players.filter(p => p.isAI && p.team !== humanTeam);
+    if (aiPlayers.length === 0) return;
+    const aiPlayer = aiPlayers[0];
+    if (raise) {
+      this.gameEngine['respondTruco'](aiPlayer.id, true);
+    } else {
+      this.gameEngine['respondTruco'](aiPlayer.id, accept);
+    }
   }
 
   private findPiePlayer(team: number): string | null {

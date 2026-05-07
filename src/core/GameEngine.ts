@@ -710,7 +710,8 @@ export class GameEngine {
   private nextTurn(): void {
     const order = this.getPlayingOrder();
     const currentIdx = order.indexOf(this.currentTurnPlayerId);
-    const nextIdx = (currentIdx + 1) % order.length;
+    // Counter-clockwise: go backwards in position order (position 0 → n-1 → n-2 → ...)
+    const nextIdx = (currentIdx - 1 + order.length) % order.length;
     this.currentTurnPlayerId = order[nextIdx];
 
     // Check if it's AI's turn
