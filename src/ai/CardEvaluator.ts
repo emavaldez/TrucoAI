@@ -112,7 +112,7 @@ export class CardEvaluator {
 
     // Simple probability model based on card ranking
     // Higher ranking = higher win probability
-    const probabilities: Record<number, number> = {
+    const probMap: { [key: number]: number } = {
       0: 0.05,   // 4 (ancho falso) - almost always loses
       1: 0.15,   // 5
       2: 0.25,   // 6
@@ -121,15 +121,19 @@ export class CardEvaluator {
       5: 0.45,   // 11
       6: 0.50,   // 12
       7: 0.55,   // 1 oro/copa
-      8: 0.60,   // 3 (any) - actually this should be higher
-      9: 0.65,   // 2 (any) - actually this should be higher
-      10: 0.75,  // 7 oro
-      11: 0.82,  // 7 espada
-      12: 0.93,  // 1 basto
-      13: 1.0,   // 1 espada (ancho) - always wins
+      8: 0.60,   // 1 copa/1 oro
+      9: 0.65,   // 2 (any)
+      10: 0.75,  // 3 (any)
+      11: 0.82,  // 7 oro
+      12: 0.93,  // 7 espada
+      13: 1.0,   // 1 basto
+      14: 1.0,   // 1 espada (ancho de espada) - always wins
     };
 
-    return probabilities[ranking] || 0.5;
+    if (probMap[ranking] !== undefined) return probMap[ranking];
+    // Very weak cards (ranking <= -1, e.g. 4 = -1)
+    if (ranking <= -1) return 0.02;
+    return 0.5;
   }
 
   /** Get probability of winning envido with current hand */
