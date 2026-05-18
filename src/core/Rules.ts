@@ -4,40 +4,38 @@ import type { Card } from './Card.js';
 
 /**
  * Custom Argentine Truco card ranking (highest to lowest):
- * 1.  1 Espada    (14) — strongest
- * 2.  1 Basto     (13)
- * 3.  7 Espada    (12)
- * 4.  7 Oro       (11)
- * 5.  Any 3       (10)
- * 6.  Any 2       (9)
- * 7.  1 Oro       (8)  (remaining 1s: Oro, Copa)
- * 8.  1 Copa      (7)
- * 9.  12 Any      (6)
- * 10. 11 Any      (5)
- * 11. 10 Any      (4)
- * 12. 7 Basto     (3)  (remaining 7s: Basto, Copa)
- * 13. 7 Copa      (2)
- * 14. Any 6       (1)
- * 15. Any 5       (0)
- * 16. Any 4       (-1) — weakest
+ * 1.  1 Espada    (13) — strongest
+ * 2.  1 Basto     (12)
+ * 3.  7 Espada    (11)
+ * 4.  7 Oro       (10)
+ * 5.  Any 3       (9)
+ * 6.  Any 2       (8)
+ * 7.  1 Oro/Copa  (7)  — equal, no suit precedence
+ * 8.  Any 12      (6)
+ * 9.  Any 11      (5)
+ * 10. Any 10      (4)
+ * 11. 7 Basto/Copa(3)  — equal, no suit precedence
+ * 12. Any 6       (2)
+ * 13. Any 5       (1)
+ * 14. Any 4       (0)  — weakest
  */
 const SPECIAL_RANKS: Record<string, number> = {
-  'espada-1': 14,
-  'basto-1':  13,
-  'espada-7': 12,
-  'oro-7':    11,
-  'any-3':    10,
-  'any-2':     9,
-  'oro-1':     8,
+  'espada-1': 13,
+  'basto-1':  12,
+  'espada-7': 11,
+  'oro-7':    10,
+  'any-3':     9,
+  'any-2':     8,
+  'oro-1':     7,
   'copa-1':    7,
   'any-12':    6,
   'any-11':    5,
   'any-10':    4,
   'basto-7':   3,
-  'copa-7':    2,
-  'any-6':     1,
-  'any-5':     0,
-  'any-4':    -1,
+  'copa-7':    3,
+  'any-6':     2,
+  'any-5':     1,
+  'any-4':     0,
 };
 
 /**
@@ -51,14 +49,14 @@ export function getCardRank(card: Card): number {
 
   // Generic ranks (same across all suits)
   const genericRanks: Record<number, number> = {
-    3:  10,
-    2:   9,
+    3:   9,
+    2:   8,
     12:  6,
     11:  5,
     10:  4,
-    6:   1,
-    5:   0,
-    4:  -1,
+    6:   2,
+    5:   1,
+    4:   0,
   };
 
   if (genericRanks[card.number] !== undefined) {

@@ -68,22 +68,22 @@ section('card-ranking', () => {
   }
 
   // Specific rankings
-  assert('1 espada = 14 (strongest)', getCardRank({ suit: 'espada', number: 1 }) === 14);
-  assert('1 basto = 13', getCardRank({ suit: 'basto', number: 1 }) === 13);
-  assert('7 espada = 12', getCardRank({ suit: 'espada', number: 7 }) === 12);
-  assert('7 oro = 11', getCardRank({ suit: 'oro', number: 7 }) === 11);
-  assert('Any 3 = 10', getCardRank({ suit: 'copa', number: 3 }) === 10);
-  assert('Any 2 = 9', getCardRank({ suit: 'basto', number: 2 }) === 9);
-  assert('1 oro = 8', getCardRank({ suit: 'oro', number: 1 }) === 8);
-  assert('1 copa = 7', getCardRank({ suit: 'copa', number: 1 }) === 7);
+  assert('1 espada = 13 (strongest)', getCardRank({ suit: 'espada', number: 1 }) === 13);
+  assert('1 basto = 12', getCardRank({ suit: 'basto', number: 1 }) === 12);
+  assert('7 espada = 11', getCardRank({ suit: 'espada', number: 7 }) === 11);
+  assert('7 oro = 10', getCardRank({ suit: 'oro', number: 7 }) === 10);
+  assert('Any 3 = 9', getCardRank({ suit: 'copa', number: 3 }) === 9);
+  assert('Any 2 = 8', getCardRank({ suit: 'basto', number: 2 }) === 8);
+  assert('1 oro = 7', getCardRank({ suit: 'oro', number: 1 }) === 7);
+  assert('1 copa = 7 (same as 1 oro)', getCardRank({ suit: 'copa', number: 1 }) === 7);
   assert('Any 12 = 6', getCardRank({ suit: 'espada', number: 12 }) === 6);
   assert('Any 11 = 5', getCardRank({ suit: 'oro', number: 11 }) === 5);
   assert('Any 10 = 4', getCardRank({ suit: 'basto', number: 10 }) === 4);
   assert('7 basto = 3', getCardRank({ suit: 'basto', number: 7 }) === 3);
-  assert('7 copa = 2', getCardRank({ suit: 'copa', number: 7 }) === 2);
-  assert('Any 6 = 1', getCardRank({ suit: 'espada', number: 6 }) === 1);
-  assert('Any 5 = 0', getCardRank({ suit: 'copa', number: 5 }) === 0);
-  assert('Any 4 = -1 (weakest)', getCardRank({ suit: 'oro', number: 4 }) === -1);
+  assert('7 copa = 3 (same as 7 basto)', getCardRank({ suit: 'copa', number: 7 }) === 3);
+  assert('Any 6 = 2', getCardRank({ suit: 'espada', number: 6 }) === 2);
+  assert('Any 5 = 1', getCardRank({ suit: 'copa', number: 5 }) === 1);
+  assert('Any 4 = 0 (weakest)', getCardRank({ suit: 'oro', number: 4 }) === 0);
 
   // CompareCards tests
   const strongCard: CardDef = { suit: 'espada', number: 1 };
@@ -91,6 +91,14 @@ section('card-ranking', () => {
   assert('1 espada beats 4 oro', compareCards(strongCard, weakCard) === 1);
   assert('4 oro loses to 1 espada', compareCards(weakCard, strongCard) === -1);
   assert('Equal cards tie', compareCards(weakCard, { ...weakCard }) === 0);
+  assert('1 oro ties 1 copa (equal rank)', compareCards(
+    { suit: 'oro', number: 1 },
+    { suit: 'copa', number: 1 }
+  ) === 0);
+  assert('7 basto ties 7 copa (equal rank)', compareCards(
+    { suit: 'basto', number: 7 },
+    { suit: 'copa', number: 7 }
+  ) === 0);
 
   // Edge: different suits same number
   assert('7 espada beats 7 basto', compareCards(
@@ -427,17 +435,22 @@ section('card-evaluator', () => {
 
   // Mid-range card
   const midProb = (evaluator as any).getWinProbability({ suit: 'copa', number: 10 });
-  assert('10 copa win prob = 0.40', midProb === 0.40, `got ${midProb}`);
+  assert('10 copa win prob = 0.35', midProb === 0.35, `got ${midProb}`);
 
   // getWinProbability uses ranking from getCardRank, not the number
   // Verify ranking-to-probability mapping
   const rank7e = getCardRank({ suit: 'espada', number: 7 });
   const prob7e = (evaluator as any).getWinProbability({ suit: 'espada', number: 7 });
-  assert(`7 espada (rank ${rank7e}) win prob > 0.7`, prob7e > 0.7, `got ${prob7e}`);
+  assert(`7 espada (rank ${rank7e}) win prob = 0.90`, prob7e === 0.90, `got ${prob7e}`);
 
   const rank1b = getCardRank({ suit: 'basto', number: 1 });
   const prob1b = (evaluator as any).getWinProbability({ suit: 'basto', number: 1 });
-  assert(`1 basto (rank ${rank1b}) win prob > 0.9`, prob1b > 0.9, `got ${prob1b}`);
+  assert(`1 basto (rank ${rank1b}) win prob = 0.97`, prob1b === 0.97, `got ${prob1b}`);
+
+  // Equal rank cards have same probability
+  const prob1o = (evaluator as any).getWinProbability({ suit: 'oro', number: 1 });
+  const prob1c = (evaluator as any).getWinProbability({ suit: 'copa', number: 1 });
+  assert('1 oro and 1 copa same win prob', prob1o === prob1c, `oro:${prob1o} copa:${prob1c}`);
 });
 
 // ─── Pica-Pica Tests ─────────────────────────────────────────────────────
