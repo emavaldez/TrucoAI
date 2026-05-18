@@ -126,7 +126,7 @@ export class GameEngine {
    * Get players in playing order (counter-clockwise).
    * Position 0 is the dealer. Playing order goes counter-clockwise.
    */
-  private getPlayingOrder(): string[] {
+  getPlayingOrder(): string[] {
     // Players are already ordered counter-clockwise by position
     const sorted = [...this.players].sort((a, b) => a.position - b.position);
     return sorted.map(p => p.id);

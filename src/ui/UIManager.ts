@@ -43,6 +43,7 @@ interface RenderParams {
   isGameOver: boolean;
   gameOverWinner: number | null;
   gameOverScores: { team0: number; team1: number };
+  piePlayerId: string;
 }
 
 export class UIManager {
@@ -646,6 +647,7 @@ export class UIManager {
     isSecondHand: boolean;
     isGameOver: boolean;
     players: PlayerConfig[];
+    piePlayerId: string;
   }): void {
     const controls = this.container.querySelector('.controls');
     if (!controls) return;
@@ -659,10 +661,12 @@ export class UIManager {
 
     const isHumanTurn = params.currentTurnPlayerId === humanPlayer.id;
 
-    // Envido: ONLY in round 0 (primera ronda), before any card played, and envido not started
-    // Also hide if truco already called
+    // Envido: ONLY in round 0, before any card played, before truco
+    // Only the "pie" (last player of team in playing order) can sing envido
+    const isHumanPie = humanPlayer && humanPlayer.id === params.piePlayerId;
     const canCallEnvido = isHumanTurn
-      && params.currentRound === 0          // ← RESTRICCIÓN: solo primera ronda
+      && isHumanPie
+      && params.currentRound === 0
       && params.envido.phase === 'none'
       && params.truco.level === 0;
 

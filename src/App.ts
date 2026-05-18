@@ -46,27 +46,25 @@ export class App {
       this.gameEngine.on(event, () => this.renderGameState());
     }
 
-    // When human calls envido → AI responds after a delay
+    // When envido is opened, AI responds
     this.gameEngine.on('envido-opened', (data: any) => {
       this.renderGameState();
       const humanTeam = this.players[0]?.team ?? 0;
-      // If human's team called, AI (opponent team) must respond
       if (data.team === humanTeam) {
         setTimeout(() => {
-          const aiDecision = Math.random() < 0.6; // 60% quiere
+          const aiDecision = Math.random() < 0.6;
           this.handleAiEnvidoResponse(aiDecision);
         }, 900);
       }
     });
 
-    // When human calls truco → AI responds after a delay
+    // When truco is challenged, AI responds if human challenged
     this.gameEngine.on('truco-challenged', (data: any) => {
       this.renderGameState();
       const humanTeam = this.players[0]?.team ?? 0;
-      // If human's team challenged, AI (opponent team) must respond
       if (data.challengerTeam === humanTeam) {
         setTimeout(() => {
-          const aiWants = Math.random() < 0.65; // 65% quiere
+          const aiWants = Math.random() < 0.65;
           this.handleAiTrucoResponse(aiWants);
         }, 900);
       }
@@ -100,6 +98,7 @@ export class App {
       isGameOver: false,
       gameOverWinner: null,
       gameOverScores: { team0: 0, team1: 0 },
+      piePlayerId: '',
     });
   }
 
@@ -113,10 +112,22 @@ export class App {
     this.players = [];
     for (let i = 0; i < playerCount; i++) {
       const isHuman = (i === 0);
-      const team = Math.floor(i / (playerCount / 2));
+      const team = i % 2; // Alternating: 0,1,0,1,...
+      let name: string;
+      if (isHuman) {
+        name = 'Vos';
+      } else if (playerCount === 2) {
+        name = `Jugador ${i + 1}`;
+      } else if (playerCount === 4) {
+        const labels = ['Contrario 1', 'Compañero', 'Contrario 2'];
+        name = labels[i - 1] || `Jugador ${i + 1}`;
+      } else {
+        const labels = ['Contrario 1', 'Compañero 1', 'Contrario 2', 'Compañero 2', 'Contrario 3'];
+        name = labels[i - 1] || `Jugador ${i + 1}`;
+      }
       this.players.push({
         id: `player-${i}`,
-        name: isHuman ? 'Vos' : `Jugador ${i + 1}`,
+        name,
         isHuman,
         isAI: !isHuman,
         difficulty,
@@ -152,69 +163,42 @@ export class App {
     if (diff === 'easy') {
       cardIndex = Math.floor(Math.random() * hand.length);
     } else {
-      const cardRank = (card: any): number => {
-        if (card.suit === 'espada' && card.number === 1) return 14;
-        if (card.suit === 'basto' && card.number === 1) return 13;
-        if (card.suit === 'espada' && card.number === 7) return 12;
-        if (card.suit === 'oro' && card.number === 7) return 11;
-        if (card.number === 3) return 10;
-        if (card.number === 2) return 9;
-        if (card.suit === 'oro' && card.number === 1) return 8;
-        if (card.suit === 'copa' && card.number === 1) return 7;
-        if (card.number === 12) return 6;
-        if (card.number === 11) return 5;
-        if (card.number === 10) return 4;
-        if (card.suit === 'basto' && card.number === 7) return 3;
-        if (card.suit === 'copa' && card.number === 7) return 2;
-        if (card.number === 6) return 1;
-        if (card.number === 5) return 0;
-        return -1;
-      };
-
-      const sortedIndices = hand
-        .map((card: any, index: number) => ({ card, index }))
-        .sort((a: any, b: any) => cardRank(b.card) - cardRank(a.card));
-
-      if (diff === 'hard') {
-        cardIndex = sortedIndices[0].index;
-      } else {
-        cardIndex = Math.random() < 0.7
-          ? sortedIndices[0].index
-          : sortedIndices[Math.floor(Math.random() * sortedIndices.length)].index;
-      }
+      import('./core/Rules.js').then(({ getCardRank }) => {
+        const sorted = hand
+          .map((card: any, idx: number) => ({ card, idx }))
+          .sort((a: any, b: any) => getCardRank(b.card) - getCardRank(a.card));
+        const chosenIdx = diff === 'hard'
+          ? sorted[0].idx
+          : Math.random() < 0.7 ? sorted[0].idx : sorted[Math.floor(Math.random() * sorted.length)].idx;
+        this.executeAiAction(data.playerId, chosenIdx);
+      });
+      return;
     }
 
-    // AI may decide to call truco before playing (only if not already called, and in first round)
+    this.executeAiAction(data.playerId, cardIndex);
+  }
+
+  private executeAiAction(playerId: string, cardIndex: number): void {
     const trucoState = this.gameEngine.getTrucoState();
     const envState = this.gameEngine.getEnvidoState();
     const currentRound = this.gameEngine.getCurrentRound();
 
-    // AI calls truco sometimes (round 0 or 1, not yet called)
+    // AI calls truco sometimes
     if (trucoState.level === 0 && envState.phase === 'none' && Math.random() < 0.25) {
-      setTimeout(() => {
-        this.gameEngine['challengeTruco'](data.playerId);
-        // After calling truco, wait for human response — don't play card yet
-        // Card will be played after truco resolves via ai-turn event re-emission
-      }, 500);
+      this.gameEngine['challengeTruco'](playerId);
       return;
     }
 
-    // AI calls envido sometimes (only first round, before playing any card, and before truco)
+    // AI calls envido if it's the pie
     if (currentRound === 0 && envState.phase === 'none' && trucoState.level === 0 && Math.random() < 0.3) {
-      // Check canOpenEnvido equivalent: currentTrick length must be 0
       const currentTrick = this.gameEngine.getCurrentTrick();
-      if (currentTrick.length === 0) {
-        setTimeout(() => {
-          this.gameEngine['openEnvido'](data.playerId);
-        }, 500);
-        // After calling envido wait for human response — card plays after resolution
+      if (currentTrick.length === 0 && this.isAIPiePlayer(playerId)) {
+        setTimeout(() => { this.gameEngine['openEnvido'](playerId); }, 500);
         return;
       }
     }
 
-    setTimeout(() => {
-      this.gameEngine.playCard(data.playerId, cardIndex);
-    }, 700);
+    setTimeout(() => { this.gameEngine.playCard(playerId, cardIndex); }, 700);
   }
 
   private handleNewRound(): void {
@@ -239,10 +223,12 @@ export class App {
   // ---- Envido Handlers ----
 
   private handleEnvidoOpen(): void {
-    // Only allow in round 0 (primera ronda)
     if (this.gameEngine.getCurrentRound() !== 0) return;
-    const piePlayer = this.findPiePlayer(0);
-    if (piePlayer) {
+    const humanPlayer = this.players[0];
+    if (!humanPlayer) return;
+    const piePlayer = this.findPiePlayer(humanPlayer.team);
+    // Only allow envido if human IS the pie
+    if (piePlayer && piePlayer === humanPlayer.id) {
       this.gameEngine['openEnvido'](piePlayer);
     }
   }
@@ -259,16 +245,16 @@ export class App {
     this.gameEngine['respondEnvido'](this.players[0].id, true, level);
   }
 
-  // AI auto-responds to Envido when human calls
   private handleAiEnvidoResponse(wants: boolean, raiseLevel?: 'envido' | 'real-envido' | 'falta-envido'): void {
     const humanTeam = this.players[0]?.team;
     const aiPlayers = this.players.filter(p => p.isAI && p.team !== humanTeam);
     if (aiPlayers.length === 0) return;
-    const aiPlayer = aiPlayers[0];
-    this.gameEngine['respondEnvido'](aiPlayer.id, wants, raiseLevel);
+    const opponentPie = this.findPiePlayer(humanTeam === 0 ? 1 : 0);
+    const responder = opponentPie ? this.players.find(p => p.id === opponentPie) : aiPlayers[0];
+    if (!responder) return;
+    this.gameEngine['respondEnvido'](responder.id, wants, raiseLevel);
   }
 
-  // AI auto-responds to Truco when human calls
   private handleAiTrucoResponse(accept: boolean, raise: boolean = false): void {
     const humanTeam = this.players[0]?.team;
     const aiPlayers = this.players.filter(p => p.isAI && p.team !== humanTeam);
@@ -282,9 +268,26 @@ export class App {
   }
 
   private findPiePlayer(team: number): string | null {
-    const order = [...this.players].sort((a, b) => a.position - b.position);
-    const teamPlayers = order.filter(p => p.team === team);
-    return teamPlayers.length > 0 ? teamPlayers[teamPlayers.length - 1].id : null;
+    const order = this.gameEngine.getPlayingOrder();
+    const teamPlayers = order.filter((id: string) => {
+      const p = this.players.find(pl => pl.id === id);
+      return p && p.team === team;
+    });
+    return teamPlayers.length > 0 ? teamPlayers[teamPlayers.length - 1] : null;
+  }
+
+  private isAIPiePlayer(playerId: string): boolean {
+    const player = this.players.find(p => p.id === playerId);
+    if (!player || !player.isAI) return false;
+    const pie = this.findPiePlayer(player.team);
+    return pie === playerId;
+  }
+
+  private getHumanPiePlayerId(): string {
+    const human = this.players[0];
+    if (!human) return '';
+    if (this.players.length === 2) return human.id;
+    return this.findPiePlayer(human.team) || '';
   }
 
   // ---- Truco Handlers ----
@@ -295,8 +298,7 @@ export class App {
 
   private handleTrucoAccept(): void {
     this.gameEngine['respondTruco'](this.players[0].id, true);
-    // After acceptance, AI needs to keep playing — re-trigger if it's AI's turn
-    setTimeout(() => this.checkAndTriggerAiTurn(), 200);
+    setTimeout(() => this.resumeAfterTrucoAccept(), 200);
   }
 
   private handleTrucoDecline(): void {
@@ -307,12 +309,19 @@ export class App {
     this.gameEngine['respondTruco'](this.players[0].id, true);
   }
 
-  // Safety: if after responding it's AI's turn and no ai-turn fired, trigger manually
-  private checkAndTriggerAiTurn(): void {
+  /**
+   * After truco is accepted, check whose turn it is.
+   * If the AI called truco and hasn't played yet, re-trigger AI.
+   * If it's the human's turn, the UI shows clickable cards.
+   */
+  private resumeAfterTrucoAccept(): void {
     const currentTurnId = this.gameEngine.getCurrentTurnPlayerId();
-    const aiPlayer = this.players.find(p => p.id === currentTurnId && p.isAI);
-    if (aiPlayer) {
+    if (!currentTurnId) return;
+    const player = this.players.find(p => p.id === currentTurnId);
+    if (player && player.isAI) {
       this.handleAiTurn({ playerId: currentTurnId });
+    } else {
+      this.renderGameState();
     }
   }
 
@@ -342,6 +351,7 @@ export class App {
       isGameOver: false,
       gameOverWinner: null,
       gameOverScores: this.gameEngine.getScores(),
+      piePlayerId: this.getHumanPiePlayerId(),
     });
   }
 }

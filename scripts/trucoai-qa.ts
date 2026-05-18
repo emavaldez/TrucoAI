@@ -527,6 +527,103 @@ section('edge-cases', () => {
   );
 });
 
+// ─── Team Assignment Tests ──────────────────────────────────────────────
+
+section('team-assignment', () => {
+  function checkTeams(count: 2 | 4 | 6) {
+    const { engine, players } = createTestGame(count);
+
+    // Teams must alternate: 0,1,0,1,...
+    for (let i = 0; i < players.length; i++) {
+      assert(`${count}-player: player-${i} team = ${i % 2}`,
+        players[i].team === i % 2,
+        `got team ${players[i].team}`
+      );
+    }
+
+    // Names check uses createTestGame helper (which uses generic names)
+    if (count === 4) {
+      assert('4-player: human name = Vos', players[0].name === 'Vos');
+      assert('4-player: player-1 name set', players[1].name.length > 0);
+      assert('4-player: player-2 name set', players[2].name.length > 0);
+    }
+    // Verify no two players have the same name
+    const names = players.map(p => p.name);
+    const uniqueNames = new Set(names);
+    assert(`${count}-player: names are unique`, uniqueNames.size === players.length,
+      `got names: ${names.join(', ')}`
+    );
+  }
+
+  checkTeams(2);
+  checkTeams(4);
+  checkTeams(6);
+});
+
+// ─── Envido Pie Check Tests ─────────────────────────────────────────────
+
+section('envido-pie', () => {
+  const { engine, players } = createTestGame(4);
+
+  const playingOrder = engine.getPlayingOrder();
+  // With alternating teams: team0=[0,2], team1=[1,3]
+  // Order: position 0, 1, 2, 3 -> [player-0, player-1, player-2, player-3]
+  // Pie of team 0 (players 0,2): last in order = player-2
+  // Pie of team 1 (players 1,3): last in order = player-3
+
+  const team0Players = playingOrder.filter((id: string) => {
+    const p = players.find((pl: any) => pl.id === id);
+    return p && p.team === 0;
+  });
+  assert('Team 0 (Vos+Comp) has 2 players', team0Players.length === 2);
+  assert('Pie of team 0 is player-2', team0Players[team0Players.length - 1] === 'player-2');
+
+  const team1Players = playingOrder.filter((id: string) => {
+    const p = players.find((pl: any) => pl.id === id);
+    return p && p.team === 1;
+  });
+  assert('Team 1 has 2 players', team1Players.length === 2);
+  assert('Pie of team 1 is player-3', team1Players[team1Players.length - 1] === 'player-3');
+});
+
+// ─── Truco Acceptance Flow Tests ────────────────────────────────────────
+
+section('truco-flow', () => {
+  const { engine, players } = createTestGame(2);
+  const engineAny = engine as any;
+
+  engineAny.challengeTruco(players[0].id);
+  assert('Truco level = 1 after challenge', engine.getTrucoState().level === 1);
+
+  // Accept truco from opponent side
+  engineAny.respondTruco(players[1].id, true);
+  assert('Truco accepted', engine.getTrucoState().accepted === true);
+  assert('Truco points still available', engine.getTrucoState().level === 1);
+
+  // After acceptance, the turn should remain set
+  const turnAfterAccept = engine.getCurrentTurnPlayerId();
+  assert('Turn still set after truco accept', turnAfterAccept !== '');
+});
+
+// ─── Turn Order Tests ──────────────────────────────────────────────────
+
+section('turn-order', () => {
+  const { engine, players } = createTestGame(4);
+
+  const order = engine.getPlayingOrder();
+  assert('Playing order has 4 players', order.length === 4);
+  assert('Order starts with player-0', order[0] === 'player-0');
+
+  // Verify counter-clockwise: play one card to advance turn
+  const currentTurn = engine.getCurrentTurnPlayerId();
+  const hands = engine.getHands();
+  if (currentTurn && hands[currentTurn]?.length > 0) {
+    engine.playCard(currentTurn, 0);
+    const nextTurn = engine.getCurrentTurnPlayerId();
+    assert('Turn advanced to next player', nextTurn !== currentTurn);
+  }
+});
+
 // ─── Results ─────────────────────────────────────────────────────────────
 
 console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
