@@ -578,6 +578,18 @@ export class GameEngine {
     };
   }
 
+  private canOpenEnvido(playerId: string): boolean {
+    if (this.currentTrick.length > 0) return false;
+    if (this.truco.level > 0) return false;
+    // Only the dealer and the pie (left of dealer) can call envido
+    const order = this.getPlayingOrder();
+    const dealerIdx = order.indexOf(this.dealerId);
+    const pieIdx = (dealerIdx - 1 + order.length) % order.length;
+    const pieId = order[pieIdx];
+    if (playerId !== this.dealerId && playerId !== pieId) return false;
+    return true;
+  }
+
   private canChallengeTruco(): boolean {
     return true; // Can challenge at any time
   }

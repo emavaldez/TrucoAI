@@ -66,6 +66,23 @@ export class App {
       this.renderGameState();
     });
 
+    // When envido is raised, AI responds when it's their turn
+    this.gameEngine.on('envido-raised', (data: any) => {
+      this.renderGameState();
+      const humanTeam = this.players[0]?.team ?? 0;
+      if (data.team !== humanTeam) {
+        setTimeout(() => {
+          const aiWants = Math.random() < 0.6;
+          if (data.level !== 'falta-envido' && Math.random() < 0.25) {
+            const next = data.level === 'envido' ? 'real-envido' as const : 'falta-envido' as const;
+            this.handleAiEnvidoResponse(true, next);
+          } else {
+            this.handleAiEnvidoResponse(aiWants);
+          }
+        }, 1200);
+      }
+    });
+
     // After envido resolves, resume the turn
     this.gameEngine.on('envido-resolved', () => {
       setTimeout(() => this.resumeCurrentTurn(), 300);
@@ -91,6 +108,31 @@ export class App {
     // After truco accepted, resume the turn
     this.gameEngine.on('truco-accepted', () => {
       setTimeout(() => this.resumeCurrentTurn(), 300);
+    });
+
+    // When truco is raised by the human, AI must respond
+    this.gameEngine.on('truco-raised', (data: any) => {
+      const humanTeam = this.players[0]?.team ?? 0;
+      // If AI team raised (opponent called originally, now it's back to human)
+      if (data.challengerTeam !== undefined && data.challengerTeam !== humanTeam) {
+        setTimeout(() => {
+          const aiWants = Math.random() < 0.65;
+          this.handleAiTrucoResponse(aiWants);
+        }, 900);
+      }
+      // If human raised (data.team !== humanTeam = opponent must respond)
+      if (data.team !== undefined && data.team !== humanTeam) {
+        // The opponent's turn: AI responds automatically
+        setTimeout(() => {
+          const aiWants = Math.random() < 0.65;
+          const aiRaises = Math.random() < 0.3 && data.level < 3;
+          if (aiRaises) {
+            this.handleAiTrucoResponse(true, true);
+          } else {
+            this.handleAiTrucoResponse(aiWants);
+          }
+        }, 1200);
+      }
     });
 
     this.gameEngine.on('ai-turn', (data: any) => this.handleAiTurn(data));

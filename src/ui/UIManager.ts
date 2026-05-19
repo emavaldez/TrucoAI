@@ -503,23 +503,14 @@ export class UIManager {
 
   // ---- Update Message ----
 
-  private updateMessage(params: {
+  private updateMessage(_params: {
     currentRound: number;
     firstHandCompleted: boolean;
     isSecondHand: boolean;
     isPicaPica: boolean;
     picaPicaSubmano: number;
   }): void {
-    const messageArea = this.container.querySelector('.message-area');
-    if (!messageArea) return;
-
-    const handLabel = params.isSecondHand ? '2da Mano' : '1ra Mano';
-    const roundLabel = params.isPicaPica
-      ? `Submano ${params.picaPicaSubmano + 1}/3`
-      : `Ronda ${params.currentRound + 1}/3`;
-
-    messageArea.textContent = `${handLabel} — ${roundLabel}`;
-    (messageArea as HTMLElement).style.opacity = '1';
+    // Message area kept empty per user request
   }
 
   // ---- Render Envido Panel ----
@@ -581,7 +572,7 @@ export class UIManager {
     (responsePanel as HTMLElement).style.display = 'flex';
 
     const levelNames: { [level: number]: string } = { 1: 'Truco', 2: 'Retruco', 3: 'Vale 4' };
-    const levelPoints: { [level: number]: number } = { 1: 1, 2: 2, 3: 3 };
+    const levelPoints: { [level: number]: number } = { 1: 2, 2: 3, 3: 4 };
 
     const humanPlayer = players.find(p => p.isHuman);
     const humanTeam = humanPlayer ? humanPlayer.team : -1;
