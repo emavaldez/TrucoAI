@@ -294,7 +294,7 @@ export class App {
     if (aiPlayers.length === 0) return;
     const aiPlayer = aiPlayers[0];
     if (raise) {
-      this.gameEngine['respondTruco'](aiPlayer.id, true);
+      this.gameEngine['respondTruco'](aiPlayer.id, true, true);
       return;
     }
     // Store pending action, show notification first
@@ -379,7 +379,7 @@ export class App {
   }
 
   private handleTrucoRaise(): void {
-    this.gameEngine['respondTruco'](this.players[0].id, true);
+    this.gameEngine['respondTruco'](this.players[0].id, true, true);
   }
 
   /**

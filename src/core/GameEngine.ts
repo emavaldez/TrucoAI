@@ -177,11 +177,18 @@ export class GameEngine {
     // Subsequent round: starter is the player who played the highest card
     // in the previous round (not the trick winner)
     const prevRoundResult = this.roundResults[roundNumber - 1];
-    if (prevRoundResult && prevRoundResult.highestCardPlayerId) {
-      return prevRoundResult.highestCardPlayerId;
+    if (prevRoundResult) {
+      // If previous round was tied, same starter as the first round
+      if (prevRoundResult.teamWinner === -1) {
+        return this.previousStarterId;
+      }
+      // Otherwise, the player with the highest card starts
+      if (prevRoundResult.highestCardPlayerId) {
+        return prevRoundResult.highestCardPlayerId;
+      }
     }
 
-    // Tie in previous round: same starter as this hand
+    // Fallback: same starter as this hand
     return this.previousStarterId;
   }
 
@@ -487,20 +494,21 @@ export class GameEngine {
 
     // Opponent team
     if (!want) {
-      // Don't want - caller gets points
+      // Don't want - caller gets 1 point
       this.resolveEnvido();
       return;
     }
 
-    // Want - opponent can raise
+    // Want - opponent can accept OR accept and raise
     if (raiseTo) {
       this.envido.level = raiseTo;
       this.envido.phase = 'response';
+      // Flip caller: now it's the opponent's call
+      this.envido.callerTeam = player.team;
       // Accumulate points based on raise
       if (raiseTo === 'envido') this.envido.totalPoints += 2;
       else if (raiseTo === 'real-envido') this.envido.totalPoints += 3;
       else if (raiseTo === 'falta-envido') {
-        // Calculate falta at resolve time
         this.envido.totalPoints = -1; // flag for falta calculation
       }
       this.emit('envido-raised', {
@@ -626,14 +634,14 @@ export class GameEngine {
     });
   }
 
-  private respondTruco(playerId: string, want: boolean): void {
+  private respondTruco(playerId: string, want: boolean, raiseTo?: boolean): void {
     if (this.truco.level === 0) return;
     if (this.truco.accepted) return;
 
     const player = this.getPlayerById(playerId);
     if (!player) return;
 
-    // Only the opponent team responds. Teammate does nothing (can't raise).
+    // Teammate does nothing (can't raise).
     if (player.team === this.truco.lastChallengerTeam) {
       return;
     }
@@ -645,12 +653,27 @@ export class GameEngine {
       return;
     }
 
-    // Want - challenger can raise
-    this.truco.accepted = true;
-    this.emit('truco-accepted', {
-      level: this.truco.level,
-      team: this.truco.lastChallengerTeam
-    });
+    // Want - opponent can accept OR accept and raise
+    if (raiseTo && this.truco.level < 3) {
+      // Accept and raise to next level
+      const nextLevel = (this.truco.level + 1) as 1 | 2 | 3;
+      this.truco.level = nextLevel;
+      // Flip challenger: now it's the opponent's turn to challenge
+      this.truco.lastChallengerTeam = player.team;
+      this.truco.accepted = false;
+      this.emit('truco-raised', {
+        level: nextLevel,
+        team: player.team,
+        playerId
+      });
+    } else {
+      // Just accept at current level
+      this.truco.accepted = true;
+      this.emit('truco-accepted', {
+        level: this.truco.level,
+        team: this.truco.lastChallengerTeam
+      });
+    }
   }
 
   private resolveTruco(): void {
@@ -748,21 +771,48 @@ export class GameEngine {
   private resolveTrick(): void {
     if (this.currentTrick.length < 2) return;
 
-    // Find highest card
-    let highestCard = this.currentTrick[0].card;
-    let highestCardPlayerId = this.currentTrick[0].playerId;
-
-    for (let i = 1; i < this.currentTrick.length; i++) {
-      const rank = getCardRank(this.currentTrick[i].card);
-      const highestRank = getCardRank(highestCard);
-      if (rank > highestRank) {
-        highestCard = this.currentTrick[i].card;
-        highestCardPlayerId = this.currentTrick[i].playerId;
+    // Find highest card PER TEAM
+    // Group cards by team
+    const teamCards: { [team: number]: { card: CardDef; playerId: string } } = {};
+    for (const played of this.currentTrick) {
+      const team = this.getPlayerTeam(played.playerId);
+      const existing = teamCards[team];
+      if (!existing || getCardRank(played.card) > getCardRank(existing.card)) {
+        teamCards[team] = { card: played.card, playerId: played.playerId };
       }
     }
 
-    this.trickWinnerId = highestCardPlayerId;
-    this.trickWinnerTeam = this.getPlayerTeam(highestCardPlayerId);
+    // Compare each team's highest card
+    const teams = Object.keys(teamCards).map(Number);
+    let highestCard: CardDef;
+    let highestCardPlayerId: string;
+    if (teams.length < 2) {
+      // All players are on the same team (shouldn't happen, but handle)
+      this.trickWinnerId = teamCards[teams[0]].playerId;
+      this.trickWinnerTeam = teams[0];
+      highestCard = teamCards[teams[0]].card;
+      highestCardPlayerId = teamCards[teams[0]].playerId;
+    } else {
+      const team0Highest = getCardRank(teamCards[0].card);
+      const team1Highest = getCardRank(teamCards[1].card);
+      if (team0Highest > team1Highest) {
+        this.trickWinnerId = teamCards[0].playerId;
+        this.trickWinnerTeam = 0;
+        highestCard = teamCards[0].card;
+        highestCardPlayerId = teamCards[0].playerId;
+      } else if (team1Highest > team0Highest) {
+        this.trickWinnerId = teamCards[1].playerId;
+        this.trickWinnerTeam = 1;
+        highestCard = teamCards[1].card;
+        highestCardPlayerId = teamCards[1].playerId;
+      } else {
+        // Tie - both teams have same highest card rank
+        this.trickWinnerId = '';
+        this.trickWinnerTeam = -1;
+        highestCard = teamCards[0].card; // Use first team's card for display
+        highestCardPlayerId = teamCards[0].playerId;
+      }
+    }
 
     this.emit('trick-resolved', {
       trickNumber: this.currentTrickNumber,
@@ -817,15 +867,35 @@ export class GameEngine {
   // ---- Hand resolution ----
 
   private resolveHand(): void {
-    // Count tricks per team
-    let team0Tricks = 0;
-    let team1Tricks = 0;
-    for (const result of this.roundResults) {
-      if (result.teamWinner === 0) team0Tricks++;
-      else if (result.teamWinner === 1) team1Tricks++;
-    }
+    // Count tricks per team (excluding ties)
+    // Use validRounds from above
 
     let handWinnerTeam: number = -1;
+
+    // Filter out tied rounds - they don't count
+    const validRounds = this.roundResults.filter(r => r.teamWinner !== -1);
+    const team0TricksValid = validRounds.filter(r => r.teamWinner === 0).length;
+    const team1TricksValid = validRounds.filter(r => r.teamWinner === 1).length;
+
+    if (team0TricksValid > team1TricksValid) {
+      handWinnerTeam = 0;
+    } else if (team1TricksValid > team0TricksValid) {
+      handWinnerTeam = 1;
+    } else {
+      // All non-tied tricks are balanced (or all tied)
+      // Check if there are any valid (non-tied) rounds
+      if (validRounds.length === 0) {
+        // All rounds tied - mano (right of dealer = starter of first round) wins
+        handWinnerTeam = this.getPlayerTeam(this.previousStarterId);
+      }
+      // If some rounds are valid but equal, check the last valid round
+      // The team that won the last non-tied round wins
+      // Actually with 3 tricks possible, if both teams have 1 win and 1 is tied:
+      // The team that won the LAST non-tied round wins
+      if (validRounds.length > 0) {
+        handWinnerTeam = validRounds[validRounds.length - 1].teamWinner;
+      }
+    }
 
     if (this.isPicaPica) {
       // Pica-Pica: this was a submano, not a full hand
@@ -851,28 +921,23 @@ export class GameEngine {
       }
       handWinnerTeam = picaTeam0Wins >= 2 ? 0 : (picaTeam1Wins >= 2 ? 1 : -1);
     } else {
-      // Normal hand
-      if (team0Tricks > team1Tricks) {
+      // Normal hand - use validRounds (tied rounds excluded)
+      if (team0TricksValid > team1TricksValid) {
         handWinnerTeam = 0;
-      } else if (team1Tricks > team0Tricks) {
+      } else if (team1TricksValid > team0TricksValid) {
         handWinnerTeam = 1;
       } else {
-        // All tied (1-1-1 or 0-0-0)
+        // All valid tricks balanced or all tied
         if (this.currentHand === 0) {
-          // First hand tied: second hand winner takes it
-          handWinnerTeam = -1; // Will be determined by second hand
+          // First hand tied: second hand determines it
+          handWinnerTeam = -1;
         } else {
           // Second hand also tied
-          if (this.roundResults.length === 3) {
-            // Check third round highest card
-            const thirdRound = this.roundResults[2];
-            if (thirdRound.highestCardPlayerId) {
-              handWinnerTeam = this.getPlayerTeam(thirdRound.highestCardPlayerId);
-            } else {
-              handWinnerTeam = -1; // Still tied, mano wins
-            }
+          if (validRounds.length > 0) {
+            handWinnerTeam = validRounds[validRounds.length - 1].teamWinner;
           } else {
-            handWinnerTeam = -1;
+            // All rounds tied - mano wins
+            handWinnerTeam = this.getPlayerTeam(this.previousStarterId);
           }
         }
       }
@@ -898,8 +963,8 @@ export class GameEngine {
       handNumber: this.currentHand,
       isSecondHand: this.currentHand === 1,
       handWinnerTeam,
-      team0Tricks,
-      team1Tricks,
+      team0Tricks: team0TricksValid,
+      team1Tricks: team1TricksValid,
       pointsAwarded,
       scores: { ...this.scores },
       roundResults: this.roundResults,

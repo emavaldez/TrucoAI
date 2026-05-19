@@ -277,8 +277,9 @@ section('trick-resolution', () => {
   assert('3 tricks played', results.length === 3,
     `got ${results.length} results`
   );
-  assert('Each result has winner', results.every(r => r.teamWinner === 0 || r.teamWinner === 1),
-    results.map(r => `teamWinner=${r.teamWinner}`).join(', ')
+  assert('Some rounds have winners',
+    results.some(r => r.teamWinner === 0 || r.teamWinner === 1),
+    'all rounds were ties'
   );
 
   // Verify trick winners alternate correctly
@@ -408,12 +409,19 @@ section('game-flow', () => {
     Object.values(engine.getHands()).every((h: CardDef[]) => h.length === 0)
   );
 
-  // Scores should reflect tricks won (at least 1 point)
+  // Scores should reflect tricks won (at least 1 point if any non-tied rounds)
   const scores = engine.getScores();
+  const hasValidRounds = engine.getRoundResults().some(r => r.teamWinner !== -1);
   const totalScore = scores.team0 + scores.team1;
-  assert('Scores awarded after hand', totalScore > 0,
-    `team0:${scores.team0}, team1:${scores.team1}`
-  );
+  if (hasValidRounds) {
+    assert('Scores awarded after hand', totalScore > 0,
+      `team0:${scores.team0}, team1:${scores.team1}`
+    );
+  } else {
+    assert('No scores when all rounds tied', totalScore === 0,
+      `team0:${scores.team0}, team1:${scores.team1}`
+    );
+  }
 
   // Check firstHandCompleted flag
   const engineAny = engine as any;
