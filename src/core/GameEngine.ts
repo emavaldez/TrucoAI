@@ -151,7 +151,8 @@ export class GameEngine {
     const order = this.getPlayingOrder();
     const dealerIdx = order.indexOf(this.dealerId);
     // Counter-clockwise: next player after dealer
-    const starterIdx = (dealerIdx + 1) % order.length;
+    // Counter-clockwise: right of dealer is previous index
+    const starterIdx = (dealerIdx - 1 + order.length) % order.length;
     return order[starterIdx];
   }
 
@@ -234,7 +235,7 @@ export class GameEngine {
     const order = this.getPlayingOrder();
     const dealerIdx = order.indexOf(this.dealerId);
     // Counter-clockwise rotation
-    const nextIdx = (dealerIdx + 1) % order.length;
+    const nextIdx = (dealerIdx - 1 + order.length) % order.length;
     this.dealerId = order[nextIdx];
   }
 
@@ -317,7 +318,7 @@ export class GameEngine {
     // Determine starter (mano = right of dealer)
     const order = this.getPlayingOrder();
     const dealerIdx = order.indexOf(this.dealerId);
-    const starterIdx = (dealerIdx + 1) % order.length;
+    const starterIdx = (dealerIdx - 1 + order.length) % order.length;
     this.starterId = order[starterIdx];
     this.previousStarterId = this.starterId;
 
