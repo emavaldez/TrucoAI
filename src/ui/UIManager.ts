@@ -250,9 +250,7 @@ export class UIManager {
           cardEl.style.cursor = player.id === params.currentTurnPlayerId ? 'pointer' : 'default';
           cardEl.style.opacity = player.id === params.currentTurnPlayerId ? '1' : '0.75';
           cardEl.addEventListener('click', () => {
-            if (player.id === params.currentTurnPlayerId) {
               this.callbacks.onCardPlayed(player.id, i);
-            }
           });
         } else {
           cardEl.classList.add('card-back');
@@ -336,9 +334,7 @@ export class UIManager {
           cardEl.style.cursor = player.id === params.currentTurnPlayerId ? 'pointer' : 'default';
           cardEl.style.opacity = player.id === params.currentTurnPlayerId ? '1' : '0.75';
           cardEl.addEventListener('click', () => {
-            if (player.id === params.currentTurnPlayerId) {
               this.callbacks.onCardPlayed(player.id, i);
-            }
           });
         } else {
           cardEl.classList.add('card-back');
@@ -564,7 +560,7 @@ export class UIManager {
       return;
     }
 
-    if (params.firstHandCompleted && params.isSecondHand && params.currentRound === 0) {
+    if (params.firstHandCompleted && params.currentRound >= 3) {
       this.showRoundOverPanel({
         handWinnerTeam: params.handWinnerTeam,
         scores: params.scores,
@@ -655,6 +651,9 @@ export class UIManager {
     controls.innerHTML = '';
 
     if (params.isGameOver) return;
+
+    // Hide controls when showing round-over panel (all 3 tricks done)
+    if (params.firstHandCompleted && params.currentRound >= 3) return;
 
     const humanPlayer = params.players.find(p => p.isHuman);
     if (!humanPlayer) return;

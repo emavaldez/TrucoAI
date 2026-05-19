@@ -1,5 +1,6 @@
 import { GameEngine } from './core/GameEngine.js';
 import { UIManager } from './ui/UIManager.js';
+import { getCardRank } from './core/Rules.js';
 import type { GameConfig, PlayerConfig } from './types.js';
 
 export class App {
@@ -58,6 +59,11 @@ export class App {
       }
     });
 
+    // After envido resolves, resume the turn
+    this.gameEngine.on('envido-resolved', () => {
+      setTimeout(() => this.resumeCurrentTurn(), 300);
+    });
+
     // When truco is challenged, AI responds if human challenged
     this.gameEngine.on('truco-challenged', (data: any) => {
       this.renderGameState();
@@ -68,6 +74,16 @@ export class App {
           this.handleAiTrucoResponse(aiWants);
         }, 900);
       }
+    });
+
+    // After truco resolves (rejected), end the hand and start a new one
+    this.gameEngine.on('truco-resolved', () => {
+      setTimeout(() => this.handleTrucoRejected(), 500);
+    });
+
+    // After truco accepted, resume the turn
+    this.gameEngine.on('truco-accepted', () => {
+      setTimeout(() => this.resumeCurrentTurn(), 300);
     });
 
     this.gameEngine.on('ai-turn', (data: any) => this.handleAiTurn(data));
@@ -163,16 +179,12 @@ export class App {
     if (diff === 'easy') {
       cardIndex = Math.floor(Math.random() * hand.length);
     } else {
-      import('./core/Rules.js').then(({ getCardRank }) => {
-        const sorted = hand
-          .map((card: any, idx: number) => ({ card, idx }))
-          .sort((a: any, b: any) => getCardRank(b.card) - getCardRank(a.card));
-        const chosenIdx = diff === 'hard'
-          ? sorted[0].idx
-          : Math.random() < 0.7 ? sorted[0].idx : sorted[Math.floor(Math.random() * sorted.length)].idx;
-        this.executeAiAction(data.playerId, chosenIdx);
-      });
-      return;
+      const sorted = hand
+        .map((card: any, idx: number) => ({ card, idx }))
+        .sort((a: any, b: any) => getCardRank(b.card) - getCardRank(a.card));
+      cardIndex = diff === 'hard'
+        ? sorted[0].idx
+        : Math.random() < 0.7 ? sorted[0].idx : sorted[Math.floor(Math.random() * sorted.length)].idx;
     }
 
     this.executeAiAction(data.playerId, cardIndex);
@@ -298,7 +310,6 @@ export class App {
 
   private handleTrucoAccept(): void {
     this.gameEngine['respondTruco'](this.players[0].id, true);
-    setTimeout(() => this.resumeAfterTrucoAccept(), 200);
   }
 
   private handleTrucoDecline(): void {
@@ -310,19 +321,31 @@ export class App {
   }
 
   /**
-   * After truco is accepted, check whose turn it is.
-   * If the AI called truco and hasn't played yet, re-trigger AI.
-   * If it's the human's turn, the UI shows clickable cards.
+   * Resume the current turn after envido/truco resolution.
+   * If it's an AI's turn, trigger AI. If human, update UI.
    */
-  private resumeAfterTrucoAccept(): void {
+  private resumeCurrentTurn(): void {
+    if (!this.gameRunning) return;
     const currentTurnId = this.gameEngine.getCurrentTurnPlayerId();
     if (!currentTurnId) return;
     const player = this.players.find(p => p.id === currentTurnId);
     if (player && player.isAI) {
-      this.handleAiTurn({ playerId: currentTurnId });
+      const hand = this.gameEngine.getHands()[currentTurnId] || [];
+      if (hand.length > 0) {
+        this.handleAiTurn({ playerId: currentTurnId });
+      }
     } else {
       this.renderGameState();
     }
+  }
+
+  /**
+   * When truco is rejected, start a new hand.
+   */
+  private handleTrucoRejected(): void {
+    if (!this.gameRunning) return;
+    this.gameEngine['startNewHand']();
+    this.renderGameState();
   }
 
   // ---- Render ----

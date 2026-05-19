@@ -773,6 +773,16 @@ export class GameEngine {
       // Next round
       this.starterId = this.determineStarterForRound(this.currentRound);
       this.currentTurnPlayerId = this.starterId;
+      // Trigger AI turn if starter is AI
+      const nextStarter = this.getPlayerById(this.starterId);
+      if (nextStarter && nextStarter.isAI) {
+        this.emit('ai-turn', {
+          playerId: this.starterId,
+          trickNumber: this.currentTrickNumber + 1,
+          roundNumber: this.currentRound,
+          handNumber: this.currentHand
+        });
+      }
       this.emit('round-start', {
         roundNumber: this.currentRound,
         handNumber: this.currentHand,
