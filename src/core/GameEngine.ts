@@ -195,6 +195,9 @@ export class GameEngine {
   // ---- Hand management ----
 
   private startNewHand(): void {
+    // Reset first trick tracker for parda
+    this.firstTrickWinnerTeam = -1;
+
     // Check if we need Pica-Pica
     if (this.isPicaPica) {
       if (this.picaPicaHandAlternation) {
@@ -366,13 +369,138 @@ export class GameEngine {
     };
   }
 
+  /** Each player can call envido only before they play their first card in the first trick */
+  private canCallEnvido(playerId: string): boolean {
+    if (this.currentRound !== 0) return false;      // only before first card of 1st trick
+    if (this.currentTrick.length >= 2) return false; // 2+ cards played → phase over
+    // Player hasn't played a card yet in this first trick
+    const alreadyPlayed = this.currentTrick.some(p => p.playerId === playerId);
+    return !alreadyPlayed;
+  }
+
+  private canRespondEnvido(): boolean {
+    return this.envido.phase === 'opening' && !this.envido.accepted;
+  }
+
+  private canRaiseEnvido(): boolean {
+    return this.envido.phase === 'opening' && !this.envido.accepted;
+  }
+
+  /** Calculate Falta Envido value: points the losing team needs to reach target */
+  private getFaltaEnvidoValue(): number {
+    const lowest = Math.min(this.scores.team0, this.scores.team1);
+    return this.targetScore - lowest;
+  }
+
+  private openEnvido(playerId: string): void {
+    if (!this.canCallEnvido(playerId)) return;
+    const player = this.getPlayerById(playerId);
+    if (!player) return;
+
+    this.envido.phase = 'opening';
+    this.envido.callerTeam = player.team;
+    this.envido.level = 'envido';
+    this.envido.totalPoints = 2;
+    this.emit('envido-opened', {
+      team: player.team,
+      playerId,
+      scores: this.getEnvidoPlayerScores()
+    });
+  }
+
+  private respondEnvido(playerId: string, want: boolean, raiseTo?: 'envido' | 'envido-envido' | 'real-envido' | 'falta-envido'): void {
+    if (!this.canRespondEnvido()) return;
+    const player = this.getPlayerById(playerId);
+    if (!player) return;
+
+    // Only the opponent team responds. Teammate does nothing (can't raise).
+    if (player.team === this.envido.callerTeam) return;
+
+    if (!want) {
+      // No quiero — caller gets 1 point
+      this.resolveEnvido(1);
+      return;
+    }
+
+    if (raiseTo) {
+      // Accept and raise
+      const raiseValues: Record<string, number> = {
+        'envido': 2,
+        'envido-envido': 2,
+        'real-envido': 3,
+        'falta-envido': this.getFaltaEnvidoValue(),
+      };
+      this.envido.level = raiseTo;
+      // Accumulate — if the new level has its own value, add it on top
+      if (raiseTo === 'falta-envido') {
+        this.envido.totalPoints = this.getFaltaEnvidoValue();
+      } else {
+        this.envido.totalPoints += raiseValues[raiseTo];
+      }
+      // Flip caller: now the raiser's team is the one waiting for an answer
+      this.envido.callerTeam = player.team;
+      this.emit('envido-raised', {
+        team: player.team,
+        level: raiseTo,
+        playerId
+      });
+    } else {
+      // Accept at current level
+      this.envido.accepted = true;
+      this.resolveEnvido(this.envido.totalPoints);
+    }
+  }
+
+  private resolveEnvido(points: number): void {
+    this.envido.phase = 'resolution';
+
+    const scores = this.getEnvidoPlayerScores();
+
+    // Each team's best individual envido (not summed!)
+    let team0Best = 0, team1Best = 0;
+    for (const player of this.players) {
+      const s = scores[player.id] || 0;
+      if (player.team === 0) team0Best = Math.max(team0Best, s);
+      else team1Best = Math.max(team1Best, s);
+    }
+
+    let winnerTeam: number;
+    if (team0Best > team1Best) {
+      winnerTeam = 0;
+    } else if (team1Best > team0Best) {
+      winnerTeam = 1;
+    } else {
+      // Tie: caller's team wins (they called first)
+      winnerTeam = this.envido.callerTeam ?? 0;
+    }
+
+    if (winnerTeam === 0) this.scores.team0 += points;
+    else this.scores.team1 += points;
+
+    this.envido.pointsAwarded = points;
+    this.envido.team0Scored = this.scores.team0;
+    this.envido.team1Scored = this.scores.team1;
+
+    this.emit('envido-resolved', {
+      winnerTeam,
+      points,
+      scores,
+      team0Best,
+      team1Best,
+      team0Scored: this.scores.team0,
+      team1Scored: this.scores.team1,
+      level: this.envido.level
+    });
+  }
+
+  // ---- Envido utility methods ----
+
   private getEnvidoScore(cards: CardDef[]): number {
     if (cards.length === 0) return 0;
     const suitCounts: { [suit: string]: number } = {};
     for (const card of cards) {
       suitCounts[card.suit] = (suitCounts[card.suit] || 0) + 1;
     }
-
     let maxScore = 0;
     for (const [suit, count] of Object.entries(suitCounts)) {
       if (count >= 2) {
@@ -381,11 +509,9 @@ export class GameEngine {
         maxScore = Math.max(maxScore, 20 + this.getEnvidoCardValue(suitCards[0]) + this.getEnvidoCardValue(suitCards[1]));
       }
     }
-
     if (maxScore === 0 && cards.length > 0) {
       maxScore = Math.max(...cards.map(c => this.getEnvidoCardValue(c)));
     }
-
     return maxScore;
   }
 
@@ -414,17 +540,14 @@ export class GameEngine {
   }
 
   /**
-   * Get the "pie" player for a team.
-   * The pie is the last player of the team in the round order (counter-clockwise).
+   * Get the "pie" player for a team (last player in counter-clockwise order).
    */
   private getPiePlayer(team: number): string | null {
     const order = this.getPlayingOrder();
-    // Find all players of this team in order
     const teamPlayers = order.filter(id => {
       const p = this.getPlayerById(id);
       return p && p.team === team;
     });
-    // Pie is the last one in counter-clockwise order
     if (teamPlayers.length === 0) return null;
     return teamPlayers[teamPlayers.length - 1];
   }
@@ -440,162 +563,6 @@ export class GameEngine {
     });
     if (teamPlayers.length === 0) return null;
     return teamPlayers[0];
-  }
-
-  private canOpenEnvido(playerId: string): boolean {
-    if (this.currentTrick.length > 0) return false;
-    if (this.truco.level > 0) return false;
-    // Only the dealer and the pie (left of dealer) can call envido
-    const order = this.getPlayingOrder();
-    const dealerIdx = order.indexOf(this.dealerId);
-    // Pie = last player in playing order = position before dealer (counter-clockwise)
-    const pieIdx = (dealerIdx - 1 + order.length) % order.length;
-    const pieId = order[pieIdx];
-    if (playerId !== this.dealerId && playerId !== pieId) return false;
-    return true;
-  }
-
-  private canRespondEnvido(): boolean {
-    if (this.envido.phase !== 'opening') return false;
-    if (this.envido.accepted) return false;
-    return true;
-  }
-
-  private canRaiseEnvido(): boolean {
-    if (this.envido.phase !== 'response') return false;
-    return true;
-  }
-
-  private openEnvido(playerId: string): void {
-    if (!this.canOpenEnvido(playerId)) return;
-    const player = this.getPlayerById(playerId);
-    if (!player) return;
-
-    this.envido.phase = 'opening';
-    this.envido.callerTeam = player.team;
-    this.envido.level = 'envido';
-    this.envido.totalPoints = 2;
-    this.emit('envido-opened', {
-      team: player.team,
-      playerId,
-      scores: this.getEnvidoPlayerScores()
-    });
-  }
-
-  private respondEnvido(playerId: string, want: boolean, raiseTo?: 'envido' | 'real-envido' | 'falta-envido'): void {
-    if (!this.canRespondEnvido()) return;
-    const player = this.getPlayerById(playerId);
-    if (!player) return;
-
-    // Only the opponent team responds. Teammate does nothing (can't raise).
-    if (player.team === this.envido.callerTeam) {
-      return;
-    }
-
-    // Opponent team
-    if (!want) {
-      // Don't want - caller gets 1 point
-      this.resolveEnvido();
-      return;
-    }
-
-    // Want - opponent can accept OR accept and raise
-    if (raiseTo) {
-      this.envido.level = raiseTo;
-      this.envido.phase = 'response';
-      // Flip caller: now it's the opponent's call
-      this.envido.callerTeam = player.team;
-      // Accumulate points based on raise
-      if (raiseTo === 'envido') this.envido.totalPoints += 2;
-      else if (raiseTo === 'real-envido') this.envido.totalPoints += 3;
-      else if (raiseTo === 'falta-envido') {
-        this.envido.totalPoints = -1; // flag for falta calculation
-      }
-      this.emit('envido-raised', {
-        team: player.team,
-        level: raiseTo,
-        playerId
-      });
-    } else {
-      // Accept
-      this.envido.accepted = true;
-      this.resolveEnvido();
-    }
-  }
-
-  private resolveEnvido(): void {
-    this.envido.phase = 'resolution';
-
-    // Calculate envido scores for all players
-    const scores = this.getEnvidoPlayerScores();
-
-    // Team scores = sum of their two players' envido scores
-    let team0Score = 0;
-    let team1Score = 0;
-    for (const player of this.players) {
-      const s = scores[player.id] || 0;
-      if (player.team === 0) team0Score += s;
-      else team1Score += s;
-    }
-
-    let points = this.envido.totalPoints || 2; // Default 2 if no raises
-
-    // If opponent didn't want, caller gets 1 point (envido sung = 1)
-    if (!this.envido.accepted) {
-      points = 1;
-    }
-
-    // Envido tie: if equal, the player who plays FIRST (mano) wins
-    let winnerTeam: number;
-    if (team0Score > team1Score) {
-      winnerTeam = 0;
-    } else if (team1Score > team0Score) {
-      winnerTeam = 1;
-    } else {
-      // Tie: caller's team wins on tie
-      winnerTeam = this.envido.callerTeam ?? 0;
-    }
-
-    // If opponent didn't want, caller gets points automatically
-    if (!this.envido.accepted) {
-      // Caller's team gets the points
-      if (this.envido.callerTeam === 0) this.scores.team0 += points;
-      else this.scores.team1 += points;
-    } else {
-      // Compare individual player envido scores
-      // Find each team's BEST individual envido and who has the MANO advantage
-      let team0Best = 0, team1Best = 0;
-      for (const player of this.players) {
-        const s = scores[player.id] || 0;
-        if (player.team === 0) team0Best = Math.max(team0Best, s);
-        else team1Best = Math.max(team1Best, s);
-      }
-      if (team0Best > team1Best) {
-        this.scores.team0 += points;
-      } else if (team1Best > team0Best) {
-        this.scores.team1 += points;
-      }
-      // Tie: caller's team wins (they called first / are mano-adjacent)
-      else if (this.envido.callerTeam !== null) {
-        if (this.envido.callerTeam === 0) this.scores.team0 += points;
-        else this.scores.team1 += points;
-      }
-    }
-
-    this.envido.pointsAwarded = points;
-    this.envido.team0Scored = this.scores.team0;
-    this.envido.team1Scored = this.scores.team1;
-
-    this.emit('envido-resolved', {
-      winnerTeam,
-      points,
-      scores,
-      team0Score,
-      team1Score,
-      team0Scored: this.scores.team0,
-      team1Scored: this.scores.team1,
-      level: this.envido.level
-    });
   }
 
   // ---- Truco ----
@@ -826,6 +793,11 @@ export class GameEngine {
 
     // Move to next round
     this.currentRound++;
+
+    // Track first trick winner for parda tie-break
+    if (this.currentRound === 1 && !this.isPicaPica) {
+      this.firstTrickWinnerTeam = this.trickWinnerTeam;
+    }
     this.roundResults.push({
       roundNumber: this.currentTrickNumber,
       teamWinner: this.trickWinnerTeam,
@@ -866,10 +838,10 @@ export class GameEngine {
 
   // ---- Hand resolution ----
 
-  private resolveHand(): void {
-    // Count tricks per team (excluding ties)
-    // Use validRounds from above
+  /** Track which team won the first trick, for parda tie-breaking */
+  private firstTrickWinnerTeam: number = -1;
 
+  private resolveHand(): void {
     let handWinnerTeam: number = -1;
 
     // Filter out tied rounds - they don't count
@@ -882,18 +854,12 @@ export class GameEngine {
     } else if (team1TricksValid > team0TricksValid) {
       handWinnerTeam = 1;
     } else {
-      // All non-tied tricks are balanced (or all tied)
-      // Check if there are any valid (non-tied) rounds
-      if (validRounds.length === 0) {
-        // All rounds tied - mano (right of dealer = starter of first round) wins
+      // Balanced or all tied — first trick winner breaks the tie
+      if (this.firstTrickWinnerTeam !== -1) {
+        handWinnerTeam = this.firstTrickWinnerTeam;
+      } else {
+        // All rounds tied (impossible in practice, but handle it)
         handWinnerTeam = this.getPlayerTeam(this.previousStarterId);
-      }
-      // If some rounds are valid but equal, check the last valid round
-      // The team that won the last non-tied round wins
-      // Actually with 3 tricks possible, if both teams have 1 win and 1 is tied:
-      // The team that won the LAST non-tied round wins
-      if (validRounds.length > 0) {
-        handWinnerTeam = validRounds[validRounds.length - 1].teamWinner;
       }
     }
 
@@ -921,26 +887,7 @@ export class GameEngine {
       }
       handWinnerTeam = picaTeam0Wins >= 2 ? 0 : (picaTeam1Wins >= 2 ? 1 : -1);
     } else {
-      // Normal hand - use validRounds (tied rounds excluded)
-      if (team0TricksValid > team1TricksValid) {
-        handWinnerTeam = 0;
-      } else if (team1TricksValid > team0TricksValid) {
-        handWinnerTeam = 1;
-      } else {
-        // All valid tricks balanced or all tied
-        if (this.currentHand === 0) {
-          // First hand tied: second hand determines it
-          handWinnerTeam = -1;
-        } else {
-          // Second hand also tied
-          if (validRounds.length > 0) {
-            handWinnerTeam = validRounds[validRounds.length - 1].teamWinner;
-          } else {
-            // All rounds tied - mano wins
-            handWinnerTeam = this.getPlayerTeam(this.previousStarterId);
-          }
-        }
-      }
+      // Normal hand — handWinnerTeam already determined above
     }
 
     // Award points
@@ -948,11 +895,12 @@ export class GameEngine {
     if (handWinnerTeam !== -1) {
       if (this.isPicaPica) {
         pointsAwarded = 1;
+      } else if (this.truco.accepted) {
+        // Truco accepted during play: level 1=2pts, 2=3pts, 3=4pts
+        pointsAwarded = this.truco.level + 1;
       } else {
-        // Mano base point (1), unless truco replaced it
-        if (this.truco.level === 0) {
-          pointsAwarded = 1;
-        }
+        // No truco or truco rejected (already awarded in resolveTruco) — base 1
+        pointsAwarded = 1;
       }
     }
 

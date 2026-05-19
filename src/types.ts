@@ -47,7 +47,7 @@ export interface GameConfig {
 export interface EnvidoState {
   phase: 'none' | 'opening' | 'response' | 'resolution';
   callerTeam: number | null;
-  level: 'envido' | 'real-envido' | 'falta-envido';
+  level: 'envido' | 'envido-envido' | 'real-envido' | 'falta-envido';
   accepted: boolean;
   pointsAwarded: number;
   totalPoints: number;
