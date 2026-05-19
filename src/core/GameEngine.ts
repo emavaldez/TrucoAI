@@ -470,17 +470,8 @@ export class GameEngine {
     const player = this.getPlayerById(playerId);
     if (!player) return;
 
+    // Only the opponent team responds. Teammate does nothing (can't raise).
     if (player.team === this.envido.callerTeam) {
-      // Teammate - can raise
-      if (raiseTo) {
-        this.envido.level = raiseTo;
-        this.envido.phase = 'response';
-        this.emit('envido-raised', {
-          team: player.team,
-          level: raiseTo,
-          playerId
-        });
-      }
       return;
     }
 
@@ -611,18 +602,8 @@ export class GameEngine {
     const player = this.getPlayerById(playerId);
     if (!player) return;
 
+    // Only the opponent team responds. Teammate does nothing (can't raise).
     if (player.team === this.truco.lastChallengerTeam) {
-      // Teammate - can raise
-      const nextLevel = this.truco.level + 1;
-      if (nextLevel <= 3) {
-        this.truco.level = nextLevel as 1 | 2 | 3;
-        this.truco.lastChallengerTeam = player.team;
-        this.emit('truco-raised', {
-          level: this.truco.level,
-          team: player.team,
-          playerId
-        });
-      }
       return;
     }
 
@@ -867,21 +848,9 @@ export class GameEngine {
     if (handWinnerTeam !== -1) {
       if (this.isPicaPica) {
         pointsAwarded = 1;
-      } else if (this.currentHand === 0) {
-        // First hand
-        if (this.envido.accepted || this.envido.pointsAwarded > 0) {
-          // Envido points already awarded
-        }
-        if (this.truco.level > 0 && this.truco.accepted) {
-          // Truco points already awarded
-        }
-        if (this.truco.level === 0 && !this.envido.accepted) {
-          // No truco, no envido
-          pointsAwarded = 1;
-        }
       } else {
-        // Second hand
-        if (this.truco.level === 0 && !this.envido.accepted) {
+        // Mano base point (1), unless truco replaced it
+        if (this.truco.level === 0) {
           pointsAwarded = 1;
         }
       }

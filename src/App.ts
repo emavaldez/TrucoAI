@@ -30,6 +30,7 @@ export class App {
       onTrucoAccept: this.handleTrucoAccept.bind(this),
       onTrucoDecline: this.handleTrucoDecline.bind(this),
       onTrucoRaise: this.handleTrucoRaise.bind(this),
+      onContinueAfterNotification: this.handleContinueAfterNotification.bind(this),
     });
 
     this.setupEventListeners();
@@ -47,7 +48,7 @@ export class App {
       this.gameEngine.on(event, () => this.renderGameState());
     }
 
-    // When envido is opened, AI responds
+    // When envido is opened, AI responds (only if human's team called)
     this.gameEngine.on('envido-opened', (data: any) => {
       this.renderGameState();
       const humanTeam = this.players[0]?.team ?? 0;
@@ -57,6 +58,12 @@ export class App {
           this.handleAiEnvidoResponse(aiDecision);
         }, 900);
       }
+    });
+
+    // When opponent calls envido and AI (opponent's pie) responds
+    // Actually handle in the envido-resolved which shows notification
+    this.gameEngine.on('envido-resolved', () => {
+      this.renderGameState();
     });
 
     // After envido resolves, resume the turn
@@ -264,7 +271,20 @@ export class App {
     const opponentPie = this.findPiePlayer(humanTeam === 0 ? 1 : 0);
     const responder = opponentPie ? this.players.find(p => p.id === opponentPie) : aiPlayers[0];
     if (!responder) return;
-    this.gameEngine['respondEnvido'](responder.id, wants, raiseLevel);
+    // Store the pending action and show notification
+    const wantsText = wants ? 'QUIERE' : 'NO QUIERE';
+    // Save the action to execute after user clicks OK
+    this._pendingEnvidoAction = () => {
+      this.gameEngine['respondEnvido'](responder.id, wants, raiseLevel);
+      this._pendingEnvidoAction = null;
+      this.renderGameState();
+    };
+    this.renderGameState();
+    this.uiManager.showNotification(
+      wants ? 'Envido aceptado' : 'Envido rechazado',
+      `El equipo contrario ${wantsText} envido.`,
+      wants ? 'info' : 'success'
+    );
   }
 
   private handleAiTrucoResponse(accept: boolean, raise: boolean = false): void {
@@ -274,8 +294,21 @@ export class App {
     const aiPlayer = aiPlayers[0];
     if (raise) {
       this.gameEngine['respondTruco'](aiPlayer.id, true);
-    } else {
+      return;
+    }
+    // Store pending action, show notification first
+    this._pendingTrucoAction = () => {
       this.gameEngine['respondTruco'](aiPlayer.id, accept);
+      this._pendingTrucoAction = null;
+      this.renderGameState();
+    };
+    this.renderGameState();
+    if (accept) {
+      this.uiManager.showNotification('Truco aceptado',
+        'El equipo contrario QUIERE Truco. Se juega con apuesta más alta.', 'warning');
+    } else {
+      this.uiManager.showNotification('Truco rechazado',
+        'El equipo contrario NO QUIERE Truco. Puntos para tu equipo.', 'success');
     }
   }
 
@@ -293,6 +326,24 @@ export class App {
     if (!player || !player.isAI) return false;
     const pie = this.findPiePlayer(player.team);
     return pie === playerId;
+  }
+
+  // Pending actions that wait for notification OK click
+  private _pendingEnvidoAction: (() => void) | null = null;
+  private _pendingTrucoAction: (() => void) | null = null;
+
+  /**
+   * Called after player clicks OK on a notification overlay.
+   * Executes the pending action and resumes the turn.
+   */
+  private handleContinueAfterNotification(): void {
+    if (this._pendingEnvidoAction) {
+      this._pendingEnvidoAction();
+    }
+    if (this._pendingTrucoAction) {
+      this._pendingTrucoAction();
+    }
+    this.resumeCurrentTurn();
   }
 
   private getHumanPiePlayerId(): string {

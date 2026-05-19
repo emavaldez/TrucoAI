@@ -18,6 +18,7 @@ interface UICallbacks {
   onTrucoAccept: () => void;
   onTrucoDecline: () => void;
   onTrucoRaise: () => void;
+  onContinueAfterNotification: () => void;
 }
 
 interface RenderParams {
@@ -159,6 +160,58 @@ export class UIManager {
     }
 
     this.container.appendChild(menu);
+  }
+
+  // ---- Notification Overlay ----
+
+  private pendingNotification: ((value: void) => void) | null = null;
+
+  /**
+   * Show a large notification overlay that blocks game interaction.
+   * Player must click "OK" to continue. Returns a Promise that resolves
+   * when the player clicks OK.
+   */
+  showNotification(title: string, message: string, type: 'info' | 'success' | 'warning' = 'info'): Promise<void> {
+    return new Promise((resolve) => {
+      this.pendingNotification = resolve;
+
+      const overlay = document.createElement('div');
+      overlay.className = 'notification-overlay';
+      overlay.style.cssText = `
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.7); z-index: 100;
+        display: flex; align-items: center; justify-content: center;
+      `;
+
+      const colors = { info: '#ffd700', success: '#4caf50', warning: '#ff9800' };
+      const color = colors[type];
+
+      const box = document.createElement('div');
+      box.style.cssText = `
+        background: rgba(10,20,10,0.95); border: 2px solid ${color};
+        border-radius: 20px; padding: 40px 50px; max-width: 500px;
+        text-align: center; box-shadow: 0 0 40px ${color}44;
+      `;
+      box.innerHTML = `
+        <div style="font-size: 28px; font-weight: 800; color: ${color}; margin-bottom: 12px; text-shadow: 0 0 20px ${color}66;">${title}</div>
+        <div style="font-size: 18px; color: #ddd; margin-bottom: 24px; line-height: 1.5;">${message}</div>
+        <button class="btn-notif-ok" style="
+          padding: 14px 50px; font-size: 18px; font-weight: 700;
+          border: 2px solid ${color}; background: ${color}; color: #000;
+          border-radius: 12px; cursor: pointer; transition: all 0.2s;
+        ">OK</button>
+      `;
+
+      box.querySelector('.btn-notif-ok')!.addEventListener('click', () => {
+        overlay.remove();
+        this.pendingNotification = null;
+        this.callbacks.onContinueAfterNotification();
+        resolve();
+      });
+
+      overlay.appendChild(box);
+      document.body.appendChild(overlay);
+    });
   }
 
   // ---- Game Board ----
@@ -360,7 +413,7 @@ export class UIManager {
 
     if (faceUp) {
       const suitEmojis: { [suit: string]: string } = {
-        espada: '⚔️', basto: '🪵', oro: '🪙', copa: '🏆'
+        espada: '⚔️', basto: '🪵', oro: '🪙', copa: '🍷'
       };
       const suitNames: { [suit: string]: string } = {
         espada: 'Espada', basto: 'Basto', oro: 'Oro', copa: 'Copa'
@@ -397,33 +450,52 @@ export class UIManager {
     for (const played of params.currentTrick) {
       const playerEl = this.container.querySelector(`.player-area[data-player-id="${played.playerId}"]`);
       if (playerEl) {
-        const overlay = document.createElement('div');
-        overlay.className = 'played-card-overlay';
+        // Create a row for played cards near this player
+        let playedRow = playerEl.querySelector('.played-row');
+        if (!playedRow) {
+          playedRow = document.createElement('div');
+          playedRow.className = 'played-row';
+          playerEl.appendChild(playedRow);
+        }
+        // Add this card to the row (small, side-by-side)
         const cardEl = this.createCardElement(played.card, true);
         cardEl.classList.add('played-small');
-        overlay.appendChild(cardEl);
+        cardEl.style.margin = '0 -10px 0 0'; // overlap slightly like a fan
+        cardEl.style.position = 'relative';
+        cardEl.style.zIndex = String(playedRow.children.length);
+        playedRow.appendChild(cardEl);
 
+        // Name badge
         const nameEl = document.createElement('div');
         nameEl.className = 'played-card-name';
         const suitNames: { [suit: string]: string } = { espada: 'Esp', basto: 'Bas', oro: 'Oro', copa: 'Cop' };
         nameEl.textContent = `${played.card.number} ${suitNames[played.card.suit]}`;
-        overlay.appendChild(nameEl);
-
-        playerEl.appendChild(overlay);
+        nameEl.style.cssText = 'font-size:9px;color:#ffd700;font-weight:700;background:rgba(0,0,0,0.8);padding:1px 4px;border-radius:3px;margin-top:-2px;text-align:center;';
+        playedRow.appendChild(nameEl);
       }
     }
 
-    // Historical cards (previous rounds) — dimmed but still readable
+    // Historical cards (previous rounds) — side by side, slightly dimmed
     for (const result of params.roundResults) {
       for (const played of result.cards) {
         const playerEl = this.container.querySelector(`.player-area[data-player-id="${played.playerId}"]`);
         if (playerEl) {
-          const overlay = document.createElement('div');
-          overlay.className = 'played-card-overlay played-card-historical';
+          let playedRow = playerEl.querySelector('.played-row');
+          if (!playedRow) {
+            playedRow = document.createElement('div');
+            playedRow.className = 'played-row';
+            playerEl.appendChild(playedRow);
+          }
           const cardEl = this.createCardElement(played.card, true);
           cardEl.classList.add('played-small');
-          overlay.appendChild(cardEl);
-          playerEl.appendChild(overlay);
+          cardEl.style.cssText = `margin: 0 -10px 0 0; position: relative; z-index: ${playedRow.children.length}; opacity: 0.7;`;
+          playedRow.appendChild(cardEl);
+          const nameEl = document.createElement('div');
+          nameEl.className = 'played-card-name';
+          const suitNames: { [suit: string]: string } = { espada: 'Esp', basto: 'Bas', oro: 'Oro', copa: 'Cop' };
+          nameEl.textContent = `${played.card.number} ${suitNames[played.card.suit]}`;
+          nameEl.style.cssText = 'font-size:8px;color:#aaa;font-weight:700;background:rgba(0,0,0,0.8);padding:1px 3px;border-radius:3px;margin-top:-2px;text-align:center;';
+          playedRow.appendChild(nameEl);
         }
       }
     }
