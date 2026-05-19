@@ -109,7 +109,7 @@ export class App {
       currentTurnPlayerId: '',
       deckRemaining: 40,
       scores: { team0: 0, team1: 0 },
-      envido: { phase: 'none', callerTeam: null, level: 'envido', accepted: false, pointsAwarded: 0, team0Scored: 0, team1Scored: 0, team0Player0Envido: null, team0Player1Envido: null, team1Player0Envido: null, team1Player1Envido: null, team1Player2Envido: null, team0Player2Envido: null },
+      envido: { phase: 'none', callerTeam: null, level: 'envido', accepted: false, totalPoints: 0, pointsAwarded: 0, team0Scored: 0, team1Scored: 0, team0Player0Envido: null, team0Player1Envido: null, team1Player0Envido: null, team1Player1Envido: null, team1Player2Envido: null, team0Player2Envido: null },
       truco: { level: 0, lastChallengerTeam: null, accepted: false, pointsAwarded: 0, team0Scored: 0, team1Scored: 0 },
       roundResults: [],
       isPicaPica: false,
@@ -245,10 +245,11 @@ export class App {
     if (this.gameEngine.getCurrentRound() !== 0) return;
     const humanPlayer = this.players[0];
     if (!humanPlayer) return;
-    const piePlayer = this.findPiePlayer(humanPlayer.team);
-    // Only allow envido if human IS the pie
-    if (piePlayer && piePlayer === humanPlayer.id) {
-      this.gameEngine['openEnvido'](piePlayer);
+    // Only the DEALER and the PIE can call envido
+    const dealerId = this.gameEngine.getDealerId();
+    const pieId = this.getPiePlayerId();
+    if (humanPlayer.id === dealerId || humanPlayer.id === pieId) {
+      this.gameEngine['openEnvido'](humanPlayer.id);
     }
   }
 
@@ -344,6 +345,16 @@ export class App {
       this._pendingTrucoAction();
     }
     this.resumeCurrentTurn();
+  }
+
+  /**
+   * Get the pie player (left of dealer, last in playing order).
+   */
+  private getPiePlayerId(): string {
+    const order = this.gameEngine.getPlayingOrder();
+    const dealerIdx = order.indexOf(this.gameEngine.getDealerId());
+    const pieIdx = (dealerIdx - 1 + order.length) % order.length;
+    return order[pieIdx];
   }
 
   private getHumanPiePlayerId(): string {

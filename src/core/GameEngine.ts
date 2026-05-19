@@ -54,6 +54,7 @@ export class GameEngine {
     level: 'envido',
     accepted: false,
     pointsAwarded: 0,
+    totalPoints: 0,
     team0Scored: 0,
     team1Scored: 0,
     team0Player0Envido: null,
@@ -344,6 +345,7 @@ export class GameEngine {
       phase: 'none',
       callerTeam: null,
       level: 'envido',
+      totalPoints: 0,
       accepted: false,
       pointsAwarded: 0,
       team0Scored: 0,
@@ -433,9 +435,16 @@ export class GameEngine {
     return teamPlayers[0];
   }
 
-  private canOpenEnvido(): boolean {
+  private canOpenEnvido(playerId: string): boolean {
     if (this.currentTrick.length > 0) return false;
     if (this.truco.level > 0) return false;
+    // Only the dealer and the pie (left of dealer) can call envido
+    const order = this.getPlayingOrder();
+    const dealerIdx = order.indexOf(this.dealerId);
+    // Pie = last player in playing order = position before dealer (counter-clockwise)
+    const pieIdx = (dealerIdx - 1 + order.length) % order.length;
+    const pieId = order[pieIdx];
+    if (playerId !== this.dealerId && playerId !== pieId) return false;
     return true;
   }
 
@@ -451,13 +460,14 @@ export class GameEngine {
   }
 
   private openEnvido(playerId: string): void {
-    if (!this.canOpenEnvido()) return;
+    if (!this.canOpenEnvido(playerId)) return;
     const player = this.getPlayerById(playerId);
     if (!player) return;
 
     this.envido.phase = 'opening';
     this.envido.callerTeam = player.team;
     this.envido.level = 'envido';
+    this.envido.totalPoints = 2;
     this.emit('envido-opened', {
       team: player.team,
       playerId,
@@ -486,6 +496,13 @@ export class GameEngine {
     if (raiseTo) {
       this.envido.level = raiseTo;
       this.envido.phase = 'response';
+      // Accumulate points based on raise
+      if (raiseTo === 'envido') this.envido.totalPoints += 2;
+      else if (raiseTo === 'real-envido') this.envido.totalPoints += 3;
+      else if (raiseTo === 'falta-envido') {
+        // Calculate falta at resolve time
+        this.envido.totalPoints = -1; // flag for falta calculation
+      }
       this.emit('envido-raised', {
         team: player.team,
         level: raiseTo,
@@ -513,20 +530,23 @@ export class GameEngine {
       else team1Score += s;
     }
 
-    let points = 0;
-    switch (this.envido.level) {
-      case 'envido': points = 1; break;
-      case 'real-envido': points = 2; break;
-      case 'falta-envido':
-        // Falta Envido = points needed by the other team to reach target
-        const otherTeam = this.envido.callerTeam === 0 ? 1 : 0;
-        points = this.targetScore - this.scores[otherTeam === 0 ? 'team0' : 'team1'];
-        // Cap at 7 for Pica-Pica
-        if (this.isPicaPica) points = Math.min(points, 7);
-        break;
+    let points = this.envido.totalPoints || 2; // Default 2 if no raises
+
+    // If opponent didn't want, caller gets 1 point (envido sung = 1)
+    if (!this.envido.accepted) {
+      points = 1;
     }
 
-    const winnerTeam = team0Score >= team1Score ? this.envido.callerTeam : (this.envido.callerTeam === 0 ? 1 : 0);
+    // Envido tie: if equal, the player who plays FIRST (mano) wins
+    let winnerTeam: number;
+    if (team0Score > team1Score) {
+      winnerTeam = 0;
+    } else if (team1Score > team0Score) {
+      winnerTeam = 1;
+    } else {
+      // Tie: caller's team wins on tie
+      winnerTeam = this.envido.callerTeam ?? 0;
+    }
 
     // If opponent didn't want, caller gets points automatically
     if (!this.envido.accepted) {
@@ -534,13 +554,24 @@ export class GameEngine {
       if (this.envido.callerTeam === 0) this.scores.team0 += points;
       else this.scores.team1 += points;
     } else {
-      // Compare scores
-      if (team0Score > team1Score) {
+      // Compare individual player envido scores
+      // Find each team's BEST individual envido and who has the MANO advantage
+      let team0Best = 0, team1Best = 0;
+      for (const player of this.players) {
+        const s = scores[player.id] || 0;
+        if (player.team === 0) team0Best = Math.max(team0Best, s);
+        else team1Best = Math.max(team1Best, s);
+      }
+      if (team0Best > team1Best) {
         this.scores.team0 += points;
-      } else if (team1Score > team0Score) {
+      } else if (team1Best > team0Best) {
         this.scores.team1 += points;
       }
-      // Tie in envido = no points
+      // Tie: caller's team wins (they called first / are mano-adjacent)
+      else if (this.envido.callerTeam !== null) {
+        if (this.envido.callerTeam === 0) this.scores.team0 += points;
+        else this.scores.team1 += points;
+      }
     }
 
     this.envido.pointsAwarded = points;
@@ -623,8 +654,12 @@ export class GameEngine {
   }
 
   private resolveTruco(): void {
-    const pointsMap: { [level: number]: number } = { 1: 1, 2: 2, 3: 3 };
-    const points = pointsMap[this.truco.level] || 1;
+    const pointsMap: { [level: number]: number } = { 1: 2, 2: 3, 3: 4 };
+    // When rejected, award the PREVIOUS level's points (base hand value)
+    const rejectMap: { [level: number]: number } = { 1: 1, 2: 2, 3: 3 };
+    const points = this.truco.accepted
+      ? (pointsMap[this.truco.level] || 2)
+      : (rejectMap[this.truco.level] || 1);
 
     let winnerTeam: number;
     if (this.truco.lastChallengerTeam !== null && this.truco.accepted) {

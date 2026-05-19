@@ -50,6 +50,7 @@ export interface EnvidoState {
   level: 'envido' | 'real-envido' | 'falta-envido';
   accepted: boolean;
   pointsAwarded: number;
+  totalPoints: number;
   team0Scored: number;
   team1Scored: number;
   // For showing envido scores

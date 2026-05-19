@@ -717,6 +717,7 @@ export class UIManager {
     players: PlayerConfig[];
     piePlayerId: string;
     starterId: string;
+    dealerId: string;
   }): void {
     const controls = this.container.querySelector('.controls');
     if (!controls) return;
@@ -735,11 +736,11 @@ export class UIManager {
 
     // Envido: ONLY in round 0, before any card played, before truco
     // Only the "pie" (last player of team in playing order) can sing envido
-    // The mano (first player/right of dealer) or the pie can sing envido
-    const isHumanMano = humanPlayer && humanPlayer.id === params.starterId;
+    // Only the dealer and the pie (left of dealer) can sing envido
+    const isHumanDealer = humanPlayer && humanPlayer.id === params.dealerId;
     const isHumanPie = humanPlayer && humanPlayer.id === params.piePlayerId;
     const canCallEnvido = isHumanTurn
-      && (isHumanMano || isHumanPie)
+      && (isHumanDealer || isHumanPie)
       && params.currentRound === 0
       && params.envido.phase === 'none'
       && params.truco.level === 0;
