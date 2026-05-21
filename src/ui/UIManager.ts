@@ -11,6 +11,7 @@ interface UICallbacks {
   onNewGame: () => void;
   onStartGame: (playerCount: number, difficulty: 'easy' | 'normal' | 'hard') => void;
   onEnvidoOpen: () => void;
+  onEnvidoOpenType: (level: 'envido' | 'real-envido' | 'falta-envido') => void;
   onEnvidoWant: () => void;
   onEnvidoNoWant: () => void;
   onEnvidoRaise: (level: 'envido' | 'real-envido' | 'falta-envido') => void;
@@ -737,10 +738,23 @@ export class UIManager {
       && params.truco.level === 0;
 
     if (canCallEnvido) {
+      const envidoGroup = document.createElement('div');
+      envidoGroup.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;';
       const btnEnvido = document.createElement('button');
       btnEnvido.textContent = '🎯 Envido';
       btnEnvido.addEventListener('click', () => this.callbacks.onEnvidoOpen());
-      controls.appendChild(btnEnvido);
+      envidoGroup.appendChild(btnEnvido);
+      const btnReal = document.createElement('button');
+      btnReal.textContent = '🎯 Real Envido';
+      btnReal.style.fontSize = '12px'; btnReal.style.padding = '6px 10px';
+      btnReal.addEventListener('click', () => this.callbacks.onEnvidoOpenType('real-envido'));
+      envidoGroup.appendChild(btnReal);
+      const btnFalta = document.createElement('button');
+      btnFalta.textContent = '🎯 Falta Envido';
+      btnFalta.style.fontSize = '12px'; btnFalta.style.padding = '6px 10px';
+      btnFalta.addEventListener('click', () => this.callbacks.onEnvidoOpenType('falta-envido'));
+      envidoGroup.appendChild(btnFalta);
+      controls.appendChild(envidoGroup);
     }
 
     // Truco: can be called if truco not already at max and envido not pending

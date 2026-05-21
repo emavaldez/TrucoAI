@@ -23,6 +23,7 @@ export class App {
       onNewGame: this.handleNewGame.bind(this),
       onStartGame: this.handleStartGame.bind(this),
       onEnvidoOpen: this.handleEnvidoOpen.bind(this),
+      onEnvidoOpenType: this.handleEnvidoOpenType.bind(this),
       onEnvidoWant: this.handleEnvidoWant.bind(this),
       onEnvidoNoWant: this.handleEnvidoNoWant.bind(this),
       onEnvidoRaise: this.handleEnvidoRaise.bind(this),
@@ -118,19 +119,12 @@ export class App {
       setTimeout(() => this.resumeCurrentTurn(), 300);
     });
 
-    // When truco is raised by the human, AI must respond
+    // When truco is raised, the OTHER team must respond
     this.gameEngine.on('truco-raised', (data: any) => {
+      this.renderGameState();
       const humanTeam = this.players[0]?.team ?? 0;
-      // If AI team raised (opponent called originally, now it's back to human)
-      if (data.challengerTeam !== undefined && data.challengerTeam !== humanTeam) {
-        setTimeout(() => {
-          const aiWants = Math.random() < 0.65;
-          this.handleAiTrucoResponse(aiWants);
-        }, 900);
-      }
-      // If human raised (data.team !== humanTeam = opponent must respond)
-      if (data.team !== undefined && data.team !== humanTeam) {
-        // The opponent's turn: AI responds automatically
+      // If the HUMAN raised (data.team === humanTeam), AI (original caller) must respond
+      if (data.team === humanTeam) {
         setTimeout(() => {
           const aiWants = Math.random() < 0.65;
           const aiRaises = Math.random() < 0.3 && data.level < 3;
@@ -141,6 +135,7 @@ export class App {
           }
         }, 1200);
       }
+      // If AI raised (data.team !== humanTeam), human sees response panel via renderGameState
     });
 
     this.gameEngine.on('ai-turn', (data: any) => this.handleAiTurn(data));
@@ -305,6 +300,24 @@ export class App {
 
   private handleEnvidoWant(): void {
     this.gameEngine['respondEnvido'](this.players[0].id, true);
+  }
+
+  private handleEnvidoOpenType(level: 'envido' | 'real-envido' | 'falta-envido'): void {
+    if (this.gameEngine.getCurrentRound() !== 0) return;
+    const humanPlayer = this.players[0];
+    if (!humanPlayer) return;
+    const dealerId = this.gameEngine.getDealerId();
+    const pieId = this.getPiePlayerId();
+    if (humanPlayer.id !== dealerId && humanPlayer.id !== pieId) return;
+    this.gameEngine['openEnvido'](humanPlayer.id);
+    const eng = this.gameEngine as any;
+    if (level === 'real-envido') {
+      eng.envido.level = 'real-envido';
+      eng.envido.totalPoints = 3;
+    } else if (level === 'falta-envido') {
+      eng.envido.level = 'falta-envido';
+      eng.envido.totalPoints = eng.getFaltaEnvidoValue?.() || 0;
+    }
   }
 
   private handleEnvidoNoWant(): void {
