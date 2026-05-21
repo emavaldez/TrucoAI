@@ -368,6 +368,9 @@ export class GameEngine {
   /** Only the DEALER and the PIE (left of dealer) can call envido, on their turn before playing */
   private canCallEnvido(playerId: string): boolean {
     if (this.currentRound !== 0) return false;
+    if (this.envido.phase !== 'none') return false;
+    if (this.envido.pointsAwarded > 0) return false; // Already resolved this round
+    if (this.truco.level > 0) return false; // Can't envido after truco
     const alreadyPlayed = this.currentTrick.some(p => p.playerId === playerId);
     if (alreadyPlayed) return false;
     // Only dealer or pie can call
@@ -736,6 +739,16 @@ export class GameEngine {
         trickNumber: this.currentTrickNumber + 1,
         roundNumber: this.currentRound,
         handNumber: this.currentHand
+      });
+    } else {
+      // Human turn: emit event to update UI (envido buttons, etc.)
+      this.emit('round-start', {
+        roundNumber: this.currentRound,
+        handNumber: this.currentHand,
+        dealerId: this.dealerId,
+        starterId: this.starterId,
+        deckRemaining: this.deck.remaining,
+        scores: { ...this.scores }
       });
     }
   }

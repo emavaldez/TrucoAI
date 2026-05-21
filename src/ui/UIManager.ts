@@ -714,13 +714,14 @@ export class UIManager {
     // Show envido options when applicable (round 0, no truco called yet)
     const showEnvido = params.currentRound === 0
       && params.envido.phase === 'none'
-      && params.truco.level === 0;
+      && params.truco.level === 0
+      && params.envido.pointsAwarded === 0;
 
     if (showEnvido && isHumanTurn) {
       const isDealerOrPie = humanPlayer && (
         humanPlayer.id === params.dealerId || humanPlayer.id === params.piePlayerId
       );
-      
+
       const envidoGroup = document.createElement('div');
       envidoGroup.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;';
       
