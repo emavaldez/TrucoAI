@@ -155,7 +155,7 @@ export class GameEngine {
     const dealerIdx = order.indexOf(this.dealerId);
     // Counter-clockwise: next player after dealer
     // Counter-clockwise: right of dealer is previous index
-    const starterIdx = (dealerIdx - 1 + order.length) % order.length;
+    const starterIdx = (dealerIdx + 1) % order.length;
     return order[starterIdx];
   }
 
@@ -169,7 +169,7 @@ export class GameEngine {
    */
   private determineStarterForRound(roundNumber: number): string {
     if (roundNumber === 0) {
-      // First round of hand: starter is right of dealer
+      // First round of hand: starter is right of dealer (counter-clockwise)
       const order = this.getPlayingOrder();
       const dealerIdx = order.indexOf(this.dealerId);
       const starterIdx = (dealerIdx + 1) % order.length;
@@ -242,7 +242,7 @@ export class GameEngine {
     const order = this.getPlayingOrder();
     const dealerIdx = order.indexOf(this.dealerId);
     // Counter-clockwise rotation
-    const nextIdx = (dealerIdx - 1 + order.length) % order.length;
+    const nextIdx = (dealerIdx + 1) % order.length;
     this.dealerId = order[nextIdx];
   }
 
@@ -325,7 +325,7 @@ export class GameEngine {
     // Determine starter (mano = right of dealer)
     const order = this.getPlayingOrder();
     const dealerIdx = order.indexOf(this.dealerId);
-    const starterIdx = (dealerIdx - 1 + order.length) % order.length;
+    const starterIdx = (dealerIdx + 1) % order.length;
     this.starterId = order[starterIdx];
     this.previousStarterId = this.starterId;
 
@@ -365,13 +365,18 @@ export class GameEngine {
     };
   }
 
-  /** Each player can call envido only before they play their first card in the first trick */
+  /** Only the DEALER and the PIE (left of dealer) can call envido, before playing their first card */
   private canCallEnvido(playerId: string): boolean {
-    if (this.currentRound !== 0) return false;      // only before first card of 1st trick
-    if (this.currentTrick.length >= 2) return false; // 2+ cards played → phase over
-    // Player hasn't played a card yet in this first trick
+    if (this.currentRound !== 0) return false;
+    if (this.currentTrick.length >= 2) return false;
     const alreadyPlayed = this.currentTrick.some(p => p.playerId === playerId);
-    return !alreadyPlayed;
+    if (alreadyPlayed) return false;
+    // Only dealer or pie can call
+    const order = this.getPlayingOrder();
+    const dealerIdx = order.indexOf(this.dealerId);
+    const pieIdx = (dealerIdx - 1 + order.length) % order.length; // left of dealer clockwise
+    const pieId = order[pieIdx];
+    return playerId === this.dealerId || playerId === pieId;
   }
 
   private canRespondEnvido(): boolean {
@@ -466,8 +471,12 @@ export class GameEngine {
     } else if (team1Best > team0Best) {
       winnerTeam = 1;
     } else {
-      // Tie: caller's team wins (they called first)
-      winnerTeam = this.envido.callerTeam ?? 0;
+      // Tie: el MANO (right of dealer, primer jugador) gana
+      const order = this.getPlayingOrder();
+      const dealerIdx = order.indexOf(this.dealerId);
+      const manoIdx = (dealerIdx + 1) % order.length;
+      const manoId = order[manoIdx];
+      winnerTeam = this.getPlayerTeam(manoId);
     }
 
     if (winnerTeam === 0) this.scores.team0 += points;
@@ -575,18 +584,6 @@ export class GameEngine {
       team0Scored: 0,
       team1Scored: 0,
     };
-  }
-
-  private canOpenEnvido(playerId: string): boolean {
-    if (this.currentTrick.length > 0) return false;
-    if (this.truco.level > 0) return false;
-    // Only the dealer and the pie (left of dealer) can call envido
-    const order = this.getPlayingOrder();
-    const dealerIdx = order.indexOf(this.dealerId);
-    const pieIdx = (dealerIdx - 1 + order.length) % order.length;
-    const pieId = order[pieIdx];
-    if (playerId !== this.dealerId && playerId !== pieId) return false;
-    return true;
   }
 
   private canChallengeTruco(): boolean {
@@ -729,7 +726,7 @@ export class GameEngine {
     const order = this.getPlayingOrder();
     const currentIdx = order.indexOf(this.currentTurnPlayerId);
     // Counter-clockwise: go backwards in position order (position 0 → n-1 → n-2 → ...)
-    const nextIdx = (currentIdx - 1 + order.length) % order.length;
+    const nextIdx = (currentIdx + 1) % order.length;
     this.currentTurnPlayerId = order[nextIdx];
 
     // Check if it's AI's turn

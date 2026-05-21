@@ -83,9 +83,17 @@ export class App {
       }
     });
 
-    // After envido resolves, resume the turn
-    this.gameEngine.on('envido-resolved', () => {
-      setTimeout(() => this.resumeCurrentTurn(), 300);
+    // After envido resolves, show result notification
+    this.gameEngine.on('envido-resolved', (data: any) => {
+      this.renderGameState();
+      if (data && data.team0Best !== undefined) {
+        const wTeam = data.winnerTeam;
+        const title = wTeam === 0 ? 'Equipo 1 gana el Envido' : 'Equipo 2 gana el Envido';
+        const msg = `Equipo 1: ${data.team0Best} pts — Equipo 2: ${data.team1Best} pts`;
+        this.uiManager.showNotification(title, msg, 'info');
+      } else {
+        setTimeout(() => this.resumeCurrentTurn(), 300);
+      }
     });
 
     // When truco is challenged, AI responds if human challenged

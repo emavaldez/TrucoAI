@@ -237,7 +237,7 @@ section('starter', () => {
   const { engine, players } = createTestGame(4);
   const order = [...players].sort((a, b) => a.position - b.position);
   const dealerIdx = order.findIndex(p => p.id === engine.getDealerId());
-  const expectedStarterIdx = (dealerIdx - 1 + order.length) % order.length;
+  const expectedStarterIdx = (dealerIdx + 1) % order.length;
   assert('Starter is right of dealer (counter-clockwise)',
     engine.getStarterId() === order[expectedStarterIdx].id
   );
@@ -338,10 +338,9 @@ section('envido', () => {
   const trioScore = engineAny.getEnvidoScore(trioCards);
   assert('Envido three same suit = 20 + top2 (30)', trioScore === 30, `got ${trioScore}`);
 
-  // Envido can't be opened if truco already called
-  // envido only in round 0, before any card played, before truco
-  // Only dealer or pie can open - but we're testing the method exists
-  assert('Has canOpenEnvido method', typeof engineAny.canOpenEnvido === 'function');
+  // Envido: only dealer or pie can call (tested via canCallEnvido)
+  const hasCanCall = typeof engineAny.canCallEnvido === 'function';
+  assert('Has canCallEnvido method', hasCanCall, 'canCallEnvido not found');
 });
 
 // ─── Truco Tests ─────────────────────────────────────────────────────────
