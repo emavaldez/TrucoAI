@@ -290,11 +290,22 @@ export class App {
     if (this.gameEngine.getCurrentRound() !== 0) return;
     const humanPlayer = this.players[0];
     if (!humanPlayer) return;
-    // Only the DEALER and the PIE can call envido
     const dealerId = this.gameEngine.getDealerId();
     const pieId = this.getPiePlayerId();
     if (humanPlayer.id === dealerId || humanPlayer.id === pieId) {
+      // Human IS the pie or dealer → call envido directly
       this.gameEngine['openEnvido'](humanPlayer.id);
+    } else {
+      // Human is NOT pie/dealer → request the AI teammate (team pie) to call envido
+      const humanTeam = humanPlayer.team;
+      const teammatePie = this.findPiePlayer(humanTeam);
+      if (teammatePie) {
+        const piePlayer = this.players.find(p => p.id === teammatePie);
+        if (piePlayer && piePlayer.isAI) {
+          // Trigger AI teammate to call envido on their turn
+          this.gameEngine['openEnvido'](teammatePie);
+        }
+      }
     }
   }
 

@@ -458,20 +458,17 @@ export class UIManager {
           playedRow.className = 'played-row';
           playerEl.appendChild(playedRow);
         }
-        // Add this card to the row (small, side-by-side)
+        // Current trick card - golden glow, full opacity
         const cardEl = this.createCardElement(played.card, true);
         cardEl.classList.add('played-small');
-        cardEl.style.margin = '0 -10px 0 0'; // overlap slightly like a fan
-        cardEl.style.position = 'relative';
-        cardEl.style.zIndex = String(playedRow.children.length);
+        cardEl.style.cssText = 'margin: 0 4px 0 0; position: relative; display:inline-block; box-shadow: 0 0 12px rgba(255,215,0,0.6), 0 0 4px rgba(255,215,0,0.4);';
         playedRow.appendChild(cardEl);
 
-        // Name badge
+        // Name badge with bright gold
         const nameEl = document.createElement('div');
-        nameEl.className = 'played-card-name';
+        nameEl.style.cssText = 'font-size:9px;color:#ffd700;font-weight:700;background:rgba(0,0,0,0.85);padding:1px 5px;border-radius:3px;text-align:center;border:1px solid rgba(255,215,0,0.3);';
         const suitNames: { [suit: string]: string } = { espada: 'Esp', basto: 'Bas', oro: 'Oro', copa: 'Cop' };
         nameEl.textContent = `${played.card.number} ${suitNames[played.card.suit]}`;
-        nameEl.style.cssText = 'font-size:9px;color:#ffd700;font-weight:700;background:rgba(0,0,0,0.8);padding:1px 4px;border-radius:3px;margin-top:-2px;text-align:center;';
         playedRow.appendChild(nameEl);
       }
     }
@@ -489,13 +486,12 @@ export class UIManager {
           }
           const cardEl = this.createCardElement(played.card, true);
           cardEl.classList.add('played-small');
-          cardEl.style.cssText = `margin: 0 -10px 0 0; position: relative; z-index: ${playedRow.children.length}; opacity: 0.7;`;
+          cardEl.style.cssText = 'margin: 0 4px 0 0; display:inline-block; opacity: 0.5; filter: grayscale(0.5);';
           playedRow.appendChild(cardEl);
           const nameEl = document.createElement('div');
-          nameEl.className = 'played-card-name';
+          nameEl.style.cssText = 'font-size:8px;color:#888;font-weight:400;background:rgba(0,0,0,0.7);padding:1px 3px;border-radius:2px;text-align:center;';
           const suitNames: { [suit: string]: string } = { espada: 'Esp', basto: 'Bas', oro: 'Oro', copa: 'Cop' };
           nameEl.textContent = `${played.card.number} ${suitNames[played.card.suit]}`;
-          nameEl.style.cssText = 'font-size:8px;color:#aaa;font-weight:700;background:rgba(0,0,0,0.8);padding:1px 3px;border-radius:3px;margin-top:-2px;text-align:center;';
           playedRow.appendChild(nameEl);
         }
       }
@@ -728,33 +724,45 @@ export class UIManager {
 
     // Envido: ONLY in round 0, before any card played, before truco
     // Only the "pie" (last player of team in playing order) can sing envido
-    // Only the dealer and the pie (left of dealer) can sing envido
+    // Only the dealer and the pie (left of dealer) can sing envido directly
     const isHumanDealer = humanPlayer && humanPlayer.id === params.dealerId;
     const isHumanPie = humanPlayer && humanPlayer.id === params.piePlayerId;
-    const canCallEnvido = isHumanTurn
-      && (isHumanDealer || isHumanPie)
-      && params.currentRound === 0
+    const envidoAllowed = params.currentRound === 0
       && params.envido.phase === 'none'
       && params.truco.level === 0;
 
-    if (canCallEnvido) {
-      const envidoGroup = document.createElement('div');
-      envidoGroup.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;';
-      const btnEnvido = document.createElement('button');
-      btnEnvido.textContent = '🎯 Envido';
-      btnEnvido.addEventListener('click', () => this.callbacks.onEnvidoOpen());
-      envidoGroup.appendChild(btnEnvido);
-      const btnReal = document.createElement('button');
-      btnReal.textContent = '🎯 Real Envido';
-      btnReal.style.fontSize = '12px'; btnReal.style.padding = '6px 10px';
-      btnReal.addEventListener('click', () => this.callbacks.onEnvidoOpenType('real-envido'));
-      envidoGroup.appendChild(btnReal);
-      const btnFalta = document.createElement('button');
-      btnFalta.textContent = '🎯 Falta Envido';
-      btnFalta.style.fontSize = '12px'; btnFalta.style.padding = '6px 10px';
-      btnFalta.addEventListener('click', () => this.callbacks.onEnvidoOpenType('falta-envido'));
-      envidoGroup.appendChild(btnFalta);
-      controls.appendChild(envidoGroup);
+    if (envidoAllowed && isHumanTurn) {
+      if (isHumanDealer || isHumanPie) {
+        // Human can call envido directly
+        const envidoGroup = document.createElement('div');
+        envidoGroup.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;';
+        const btnEnvido = document.createElement('button');
+        btnEnvido.textContent = '🎯 Envido';
+        btnEnvido.style.borderColor = '#4caf50'; btnEnvido.style.color = '#4caf50';
+        btnEnvido.addEventListener('click', () => this.callbacks.onEnvidoOpen());
+        envidoGroup.appendChild(btnEnvido);
+        const btnReal = document.createElement('button');
+        btnReal.textContent = 'Real Envido';
+        btnReal.style.fontSize = '11px'; btnReal.style.padding = '6px 8px';
+        btnReal.style.borderColor = '#ff9800'; btnReal.style.color = '#ff9800';
+        btnReal.addEventListener('click', () => this.callbacks.onEnvidoOpenType('real-envido'));
+        envidoGroup.appendChild(btnReal);
+        const btnFalta = document.createElement('button');
+        btnFalta.textContent = 'Falta Envido';
+        btnFalta.style.fontSize = '11px'; btnFalta.style.padding = '6px 8px';
+        btnFalta.style.borderColor = '#f44336'; btnFalta.style.color = '#f44336';
+        btnFalta.addEventListener('click', () => this.callbacks.onEnvidoOpenType('falta-envido'));
+        envidoGroup.appendChild(btnFalta);
+        controls.appendChild(envidoGroup);
+      } else {
+        // Not pie/dealer: ask teammate to call envido
+        const btnPedir = document.createElement('button');
+        btnPedir.textContent = '📣 Pedir Envido';
+        btnPedir.style.borderColor = '#9c27b0'; btnPedir.style.color = '#ce93d8';
+        btnPedir.style.fontSize = '12px'; btnPedir.style.padding = '6px 12px';
+        btnPedir.addEventListener('click', () => this.callbacks.onEnvidoOpen());
+        controls.appendChild(btnPedir);
+      }
     }
 
     // Truco: can be called if truco not already at max and envido not pending
