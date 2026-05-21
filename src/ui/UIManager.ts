@@ -711,45 +711,44 @@ export class UIManager {
 
     // Envido: ONLY in round 0, before any card played, before truco
     // Only the "pie" (last player of team in playing order) can sing envido
-    // Only the dealer and the pie (left of dealer) can sing envido directly
-    const isHumanDealer = humanPlayer && humanPlayer.id === params.dealerId;
-    const isHumanPie = humanPlayer && humanPlayer.id === params.piePlayerId;
-    const envidoAllowed = params.currentRound === 0
+    // Show envido options when applicable (round 0, no truco called yet)
+    const showEnvido = params.currentRound === 0
       && params.envido.phase === 'none'
       && params.truco.level === 0;
 
-    if (envidoAllowed && isHumanTurn) {
-      if (isHumanDealer || isHumanPie) {
-        // Human can call envido directly
-        const envidoGroup = document.createElement('div');
-        envidoGroup.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;';
-        const btnEnvido = document.createElement('button');
-        btnEnvido.textContent = '🎯 Envido';
-        btnEnvido.style.borderColor = '#4caf50'; btnEnvido.style.color = '#4caf50';
-        btnEnvido.addEventListener('click', () => this.callbacks.onEnvidoOpen());
-        envidoGroup.appendChild(btnEnvido);
-        const btnReal = document.createElement('button');
-        btnReal.textContent = 'Real Envido';
-        btnReal.style.fontSize = '11px'; btnReal.style.padding = '6px 8px';
-        btnReal.style.borderColor = '#ff9800'; btnReal.style.color = '#ff9800';
-        btnReal.addEventListener('click', () => this.callbacks.onEnvidoOpenType('real-envido'));
-        envidoGroup.appendChild(btnReal);
-        const btnFalta = document.createElement('button');
-        btnFalta.textContent = 'Falta Envido';
-        btnFalta.style.fontSize = '11px'; btnFalta.style.padding = '6px 8px';
-        btnFalta.style.borderColor = '#f44336'; btnFalta.style.color = '#f44336';
-        btnFalta.addEventListener('click', () => this.callbacks.onEnvidoOpenType('falta-envido'));
-        envidoGroup.appendChild(btnFalta);
-        controls.appendChild(envidoGroup);
+    if (showEnvido && isHumanTurn) {
+      const isDealerOrPie = humanPlayer && (
+        humanPlayer.id === params.dealerId || humanPlayer.id === params.piePlayerId
+      );
+      
+      const envidoGroup = document.createElement('div');
+      envidoGroup.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;';
+      
+      if (isDealerOrPie) {
+        // Can call envido directly
+        const b1 = document.createElement('button');
+        b1.textContent = '🎯 Envido'; b1.style.borderColor = '#4caf50'; b1.style.color = '#4caf50';
+        b1.addEventListener('click', () => this.callbacks.onEnvidoOpen());
+        envidoGroup.appendChild(b1);
+        const b2 = document.createElement('button');
+        b2.textContent = 'Real Envido'; b2.style.fontSize = '11px'; b2.style.padding = '6px 8px';
+        b2.style.borderColor = '#ff9800'; b2.style.color = '#ff9800';
+        b2.addEventListener('click', () => this.callbacks.onEnvidoOpenType('real-envido'));
+        envidoGroup.appendChild(b2);
+        const b3 = document.createElement('button');
+        b3.textContent = 'Falta Envido'; b3.style.fontSize = '11px'; b3.style.padding = '6px 8px';
+        b3.style.borderColor = '#f44336'; b3.style.color = '#f44336';
+        b3.addEventListener('click', () => this.callbacks.onEnvidoOpenType('falta-envido'));
+        envidoGroup.appendChild(b3);
       } else {
-        // Not pie/dealer: ask teammate to call envido
-        const btnPedir = document.createElement('button');
-        btnPedir.textContent = '📣 Pedir Envido';
-        btnPedir.style.borderColor = '#9c27b0'; btnPedir.style.color = '#ce93d8';
-        btnPedir.style.fontSize = '12px'; btnPedir.style.padding = '6px 12px';
-        btnPedir.addEventListener('click', () => this.callbacks.onEnvidoOpen());
-        controls.appendChild(btnPedir);
+        const bp = document.createElement('button');
+        bp.textContent = '📣 Pedir Envido';
+        bp.style.borderColor = '#9c27b0'; bp.style.color = '#ce93d8';
+        bp.style.fontSize = '12px'; bp.style.padding = '6px 12px';
+        bp.addEventListener('click', () => this.callbacks.onEnvidoOpen());
+        envidoGroup.appendChild(bp);
       }
+      controls.appendChild(envidoGroup);
     }
 
     // Truco: can be called if truco not already at max and envido not pending

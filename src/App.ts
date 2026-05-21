@@ -399,7 +399,8 @@ export class App {
   private isAIPiePlayer(playerId: string): boolean {
     const player = this.players.find(p => p.id === playerId);
     if (!player || !player.isAI) return false;
-    const pie = this.findPiePlayer(player.team);
+    // Table pie = left of dealer (clockwise previous), regardless of team
+    const pie = this.getPiePlayerId();
     return pie === playerId;
   }
 
