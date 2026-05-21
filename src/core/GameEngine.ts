@@ -806,7 +806,7 @@ export class GameEngine {
       this.firstTrickWinnerTeam = this.trickWinnerTeam;
     }
     this.roundResults.push({
-      roundNumber: this.currentTrickNumber,
+      roundNumber: this.currentRound,
       teamWinner: this.trickWinnerTeam,
       cards: [...this.currentTrick],
       highestCard,

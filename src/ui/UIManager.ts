@@ -647,25 +647,12 @@ export class UIManager {
       summary = `Equipo ${params.handWinnerTeam + 1} gana la mano`;
     }
 
-    let resultsHtml = '';
-    if (params.isPicaPica) {
-      for (const sr of params.picapicaResults) {
-        resultsHtml += `<div class="round-result-line">Submano ${sr.submanoNumber + 1}: ${sr.teamWinner >= 0 ? `Equipo ${sr.teamWinner + 1}` : 'Empate'}</div>`;
-      }
-    } else {
-      for (const r of params.roundResults) {
-        const winnerText = r.teamWinner >= 0 ? `Equipo ${r.teamWinner + 1}` : 'Empate';
-        resultsHtml += `<div class="round-result-line">Ronda ${r.roundNumber + 1}: ${winnerText}</div>`;
-      }
-    }
-
     panel.innerHTML = `
       <div class="round-over-text">${summary}</div>
       <div class="round-over-scores">
         <span>Equipo 1: ${params.scores.team0}</span>
         <span>Equipo 2: ${params.scores.team1}</span>
       </div>
-      <div class="round-over-results">${resultsHtml}</div>
       <button class="btn-new-round" onclick="window._uiCallbacks?.onNewRound()">SIGUIENTE MANO</button>
     `;
 
