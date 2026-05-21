@@ -233,11 +233,11 @@ section('starter', () => {
     );
   }
 
-  // Test starter = right of dealer
+  // Test starter = right of dealer (counter-clockwise = previous index)
   const { engine, players } = createTestGame(4);
   const order = [...players].sort((a, b) => a.position - b.position);
   const dealerIdx = order.findIndex(p => p.id === engine.getDealerId());
-  const expectedStarterIdx = (dealerIdx + 1) % order.length;
+  const expectedStarterIdx = (dealerIdx - 1 + order.length) % order.length;
   assert('Starter is right of dealer (counter-clockwise)',
     engine.getStarterId() === order[expectedStarterIdx].id
   );

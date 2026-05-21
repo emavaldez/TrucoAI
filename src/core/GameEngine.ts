@@ -46,6 +46,7 @@ export class GameEngine {
   private firstHandCompleted: boolean = false;
   private previousStarterId: string = '';
   private roundWinnerTeam: number = -1;
+  private firstTrickWinnerTeam: number = -1;
 
   // Envido state
   private envido: EnvidoState = {
@@ -112,6 +113,7 @@ export class GameEngine {
     this.picaPicaHandAlternation = true; // Start with normal hand
     this.dealerId = players[0].id;
     this.previousStarterId = this.determineStarterForFirstRound();
+    this.firstTrickWinnerTeam = -1;
     this.startNewHand();
   }
 
@@ -229,15 +231,9 @@ export class GameEngine {
     this.currentRound = 0;
     this.roundResults = [];
 
-    // Set starter before startRound so it can use it
-    if (this.firstHandCompleted) {
-      // 2da mano: starter = player who played highest card in last round of 1ra mano
-      if (lastRoundHighestCardPlayerId) {
-        this.starterId = lastRoundHighestCardPlayerId;
-      } else {
-        this.starterId = this.determineStarterForFirstRound();
-      }
-    }
+    // Set starter for the first round of this hand
+    // Always: starter = right of the CURRENT dealer (counter-clockwise)
+    this.starterId = this.determineStarterForFirstRound();
 
     this.startRound();
   }
@@ -480,6 +476,9 @@ export class GameEngine {
     this.envido.pointsAwarded = points;
     this.envido.team0Scored = this.scores.team0;
     this.envido.team1Scored = this.scores.team1;
+
+    // Reset envido phase so truco button can appear
+    this.envido.phase = 'none';
 
     this.emit('envido-resolved', {
       winnerTeam,
@@ -849,9 +848,6 @@ export class GameEngine {
   }
 
   // ---- Hand resolution ----
-
-  /** Track which team won the first trick, for parda tie-breaking */
-  private firstTrickWinnerTeam: number = -1;
 
   private resolveHand(): void {
     let handWinnerTeam: number = -1;
