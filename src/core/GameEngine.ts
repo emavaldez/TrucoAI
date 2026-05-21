@@ -365,16 +365,15 @@ export class GameEngine {
     };
   }
 
-  /** Only the DEALER and the PIE (left of dealer) can call envido, before playing their first card */
+  /** Only the DEALER and the PIE (left of dealer) can call envido, on their turn before playing */
   private canCallEnvido(playerId: string): boolean {
     if (this.currentRound !== 0) return false;
-    if (this.currentTrick.length >= 2) return false;
     const alreadyPlayed = this.currentTrick.some(p => p.playerId === playerId);
     if (alreadyPlayed) return false;
     // Only dealer or pie can call
     const order = this.getPlayingOrder();
     const dealerIdx = order.indexOf(this.dealerId);
-    const pieIdx = (dealerIdx - 1 + order.length) % order.length; // left of dealer clockwise
+    const pieIdx = (dealerIdx - 1 + order.length) % order.length;
     const pieId = order[pieIdx];
     return playerId === this.dealerId || playerId === pieId;
   }

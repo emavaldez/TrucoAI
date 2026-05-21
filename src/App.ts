@@ -408,10 +408,8 @@ export class App {
   }
 
   private getHumanPiePlayerId(): string {
-    const human = this.players[0];
-    if (!human) return '';
-    if (this.players.length === 2) return human.id;
-    return this.findPiePlayer(human.team) || '';
+    // The pie for envido is LEFT of the dealer (clockwise previous), regardless of team
+    return this.getPiePlayerId();
   }
 
   // ---- Truco Handlers ----
