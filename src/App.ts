@@ -225,12 +225,38 @@ export class App {
     const hand = this.gameEngine.getHands()[data.playerId] || [];
     if (hand.length === 0) return;
 
-    let cardIndex: number;
     const diff = aiPlayer.difficulty || 'normal';
+    const currentTrick = this.gameEngine.getCurrentTrick();
 
+    // Check if opponent already played an unbeatable card
+    // If an opponent card beats ALL of our remaining cards, play the weakest
+    let playWeakest = false;
+    if (currentTrick.length > 0) {
+      // Opponent has played — check each opponent card vs our best card
+      const myBestRank = Math.max(...hand.map((c: any) => getCardRank(c)));
+      for (const played of currentTrick) {
+        const playedPlayer = this.players.find(p => p.id === played.playerId);
+        if (playedPlayer && playedPlayer.team !== aiPlayer.team) {
+          // Opponent card — does it beat our best?
+          if (getCardRank(played.card) > myBestRank) {
+            playWeakest = true;
+            break;
+          }
+        }
+      }
+    }
+
+    let cardIndex: number;
     if (diff === 'easy') {
       cardIndex = Math.floor(Math.random() * hand.length);
+    } else if (playWeakest) {
+      // Can't win this trick — play the WEAKEST card
+      const sortedWeak = hand
+        .map((card: any, idx: number) => ({ card, idx }))
+        .sort((a: any, b: any) => getCardRank(a.card) - getCardRank(b.card));
+      cardIndex = sortedWeak[0].idx;
     } else {
+      // Try to win — play the STRONGEST card
       const sorted = hand
         .map((card: any, idx: number) => ({ card, idx }))
         .sort((a: any, b: any) => getCardRank(b.card) - getCardRank(a.card));
@@ -253,10 +279,10 @@ export class App {
       return;
     }
 
-    // AI calls envido if it's the pie
-    if (currentRound === 0 && envState.phase === 'none' && trucoState.level === 0 && Math.random() < 0.3) {
+    // AI calls envido if it's the dealer or pie
+    if (currentRound === 0 && envState.phase === 'none' && Math.random() < 0.3) {
       const currentTrick = this.gameEngine.getCurrentTrick();
-      if (currentTrick.length === 0 && this.isAIPiePlayer(playerId)) {
+      if (currentTrick.length === 0 && this.isAIDealerOrPie(playerId)) {
         setTimeout(() => { this.gameEngine['openEnvido'](playerId); }, 500);
         return;
       }
@@ -396,12 +422,12 @@ export class App {
     return teamPlayers.length > 0 ? teamPlayers[teamPlayers.length - 1] : null;
   }
 
-  private isAIPiePlayer(playerId: string): boolean {
+  private isAIDealerOrPie(playerId: string): boolean {
     const player = this.players.find(p => p.id === playerId);
     if (!player || !player.isAI) return false;
-    // Table pie = left of dealer (clockwise previous), regardless of team
+    const dealerId = this.gameEngine.getDealerId();
     const pie = this.getPiePlayerId();
-    return pie === playerId;
+    return playerId === dealerId || pie === playerId;
   }
 
   // Pending actions that wait for notification OK click

@@ -714,7 +714,6 @@ export class UIManager {
     // Show envido options when applicable (round 0, no truco called yet)
     const showEnvido = params.currentRound === 0
       && params.envido.phase === 'none'
-      && params.truco.level === 0
       && params.envido.pointsAwarded === 0;
 
     if (showEnvido && isHumanTurn) {

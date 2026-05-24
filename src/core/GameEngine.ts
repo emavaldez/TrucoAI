@@ -81,6 +81,7 @@ export class GameEngine {
   private picaPicaSubmano: number = 0; // 0, 1, 2
   private picaPicaHandAlternation: boolean = false; // true = normal hand, false = picapica hand
   private picapicaResults: PicaPicaSubmanoResult[] = [];
+  private picaPicaActivePairIds: string[] = [];
 
   // Event listeners
   private listeners: { [event: string]: Function[] } = {};
@@ -301,14 +302,14 @@ export class GameEngine {
   // ---- Pica-Pica hand ----
 
   private startPicaPicaHand(): void {
-    // Reset hand state
+    // Reset hand state — deal once, all 3 submanos share the same cards
     this.deck = new Deck();
     this.currentHand = this.firstHandCompleted ? 1 : 0;
     this.roundResults = [];
     this.picapicaResults = [];
     this.picaPicaSubmano = 0;
 
-    // Deal 3 cards to each player
+    // Deal 3 cards to each player (once for all 3 submanos)
     this.hands = {};
     for (const player of this.players) {
       this.hands[player.id] = [];
@@ -322,12 +323,22 @@ export class GameEngine {
       }
     }
 
-    // Determine starter (mano = right of dealer)
-    const order = this.getPlayingOrder();
-    const dealerIdx = order.indexOf(this.dealerId);
-    const starterIdx = (dealerIdx + 1) % order.length;
-    this.starterId = order[starterIdx];
+    // Start first submano
+    this.startPicaPicaSubmano(0);
+  }
+
+  private startPicaPicaSubmano(submano: number): void {
+    // Set the active pair for this submano
+    this.picaPicaActivePairIds = this.getPicaPicaPairForSubmano(submano);
+
+    // Determine starter: first in playing order = lower position number
+    this.starterId = this.picaPicaActivePairIds[0];
     this.previousStarterId = this.starterId;
+    this.currentTurnPlayerId = this.starterId;
+    this.currentRound = 0;
+    this.currentTrick = [];
+    this.currentTrickNumber = 0;
+    this.roundResults = [];
 
     this.resetEnvido();
     this.resetTruco();
@@ -340,7 +351,7 @@ export class GameEngine {
       deckRemaining: this.deck.remaining,
       scores: { ...this.scores },
       isPicaPica: true,
-      picaPicaSubmano: 0
+      picaPicaSubmano: submano
     });
   }
 
@@ -370,9 +381,12 @@ export class GameEngine {
     if (this.currentRound !== 0) return false;
     if (this.envido.phase !== 'none') return false;
     if (this.envido.pointsAwarded > 0) return false; // Already resolved this round
-    if (this.truco.level > 0) return false; // Can't envido after truco
     const alreadyPlayed = this.currentTrick.some(p => p.playerId === playerId);
     if (alreadyPlayed) return false;
+    if (this.isPicaPica) {
+      // In Pica-Pica 1v1, any of the 2 paired players can call envido
+      return this.picaPicaActivePairIds.includes(playerId);
+    }
     // Only dealer or pie can call
     const order = this.getPlayingOrder();
     const dealerIdx = order.indexOf(this.dealerId);
@@ -461,7 +475,10 @@ export class GameEngine {
 
     // Each team's best individual envido (not summed!)
     let team0Best = 0, team1Best = 0;
-    for (const player of this.players) {
+    const playersToCompare = this.isPicaPica
+      ? this.players.filter(p => this.picaPicaActivePairIds.includes(p.id))
+      : this.players;
+    for (const player of playersToCompare) {
       const s = scores[player.id] || 0;
       if (player.team === 0) team0Best = Math.max(team0Best, s);
       else team1Best = Math.max(team1Best, s);
@@ -534,9 +551,9 @@ export class GameEngine {
       case 5: return 5;
       case 6: return 6;
       case 7: return 7;
-      case 10: return 10;
-      case 11: return 11;
-      case 12: return 12;
+      case 10: return 0;
+      case 11: return 0;
+      case 12: return 0;
       default: return 0;
     }
   }
@@ -573,6 +590,24 @@ export class GameEngine {
     });
     if (teamPlayers.length === 0) return null;
     return teamPlayers[0];
+  }
+
+  /**
+   * Get the number of active players for the current round.
+   * In Pica-Pica, only the 2 paired players play per submano.
+   */
+  private getActivePlayerCount(): number {
+    if (this.isPicaPica) return 2;
+    return this.players.length;
+  }
+
+  /**
+   * Get the pair of players for a Pica-Pica submano.
+   * Submano 0: positions 0 and 3, Submano 1: positions 1 and 4, Submano 2: positions 2 and 5.
+   */
+  private getPicaPicaPairForSubmano(submano: number): string[] {
+    const order = this.getPlayingOrder();
+    return [order[submano], order[submano + 3]];
   }
 
   // ---- Truco ----
@@ -714,7 +749,8 @@ export class GameEngine {
     });
 
     // Determine next player
-    if (this.currentTrick.length < this.players.length) {
+    const activeCount = this.getActivePlayerCount();
+    if (this.currentTrick.length < activeCount) {
       this.nextTurn();
     } else {
       // Trick complete - resolve
@@ -725,11 +761,20 @@ export class GameEngine {
   }
 
   private nextTurn(): void {
-    const order = this.getPlayingOrder();
-    const currentIdx = order.indexOf(this.currentTurnPlayerId);
-    // Counter-clockwise: go backwards in position order (position 0 → n-1 → n-2 → ...)
-    const nextIdx = (currentIdx + 1) % order.length;
-    this.currentTurnPlayerId = order[nextIdx];
+    let nextId: string;
+    if (this.isPicaPica) {
+      // Pica-Pica: cycle between the 2 paired players
+      const idx0 = this.picaPicaActivePairIds[0];
+      const idx1 = this.picaPicaActivePairIds[1];
+      nextId = this.currentTurnPlayerId === idx0 ? idx1 : idx0;
+    } else {
+      const order = this.getPlayingOrder();
+      const currentIdx = order.indexOf(this.currentTurnPlayerId);
+      // Counter-clockwise: go forward in position order
+      const nextIdx = (currentIdx + 1) % order.length;
+      nextId = order[nextIdx];
+    }
+    this.currentTurnPlayerId = nextId;
 
     // Check if it's AI's turn
     const nextPlayer = this.getPlayerById(this.currentTurnPlayerId);
@@ -815,7 +860,7 @@ export class GameEngine {
     this.currentRound++;
 
     // Track first trick winner for parda tie-break
-    if (this.currentRound === 1 && !this.isPicaPica) {
+    if (this.currentRound === 1) {
       this.firstTrickWinnerTeam = this.trickWinnerTeam;
     }
     this.roundResults.push({
@@ -884,7 +929,7 @@ export class GameEngine {
       // Pica-Pica: this was a submano, not a full hand
       this.picapicaResults.push({
         submanoNumber: this.picaPicaSubmano,
-        teamWinner: this.trickWinnerTeam,
+        teamWinner: handWinnerTeam,
         cards: this.roundResults.flatMap(r => r.cards)
       });
 
@@ -911,7 +956,8 @@ export class GameEngine {
     let pointsAwarded = 0;
     if (handWinnerTeam !== -1) {
       if (this.isPicaPica) {
-        pointsAwarded = 1;
+        // Pica-Pica: base 1 point + truco bonus
+        pointsAwarded = this.truco.accepted ? (this.truco.level + 1) : 1;
       } else if (this.truco.accepted) {
         // Truco accepted during play: level 1=2pts, 2=3pts, 3=4pts
         pointsAwarded = this.truco.level + 1;
@@ -963,42 +1009,9 @@ export class GameEngine {
   }
 
   private startNextPicaPicaSubmano(): void {
-    // Reset for next submano
-    this.currentTrick = [];
-    this.currentTrickNumber = 0;
-    this.hands = {};
-    this.roundResults = [];
-
-    // Deal 3 cards
-    for (const player of this.players) {
-      this.hands[player.id] = [];
-    }
-    for (let i = 0; i < 3; i++) {
-      for (const player of this.players) {
-        const card = this.deck.draw();
-        if (card) {
-          this.hands[player.id].push(card);
-        }
-      }
-    }
-
-    // Starter for submano: same as the round starter
-    this.starterId = this.previousStarterId;
-    this.currentTurnPlayerId = this.starterId;
-
-    this.resetEnvido();
-    this.resetTruco();
-
-    this.emit('round-start', {
-      roundNumber: 0,
-      handNumber: this.currentHand,
-      dealerId: this.dealerId,
-      starterId: this.starterId,
-      deckRemaining: this.deck.remaining,
-      scores: { ...this.scores },
-      isPicaPica: true,
-      picaPicaSubmano: this.picaPicaSubmano
-    });
+    this.picaPicaSubmano++;
+    // Don't redeal — keep the same cards, just advance to the next pair
+    this.startPicaPicaSubmano(this.picaPicaSubmano);
   }
 
   // ---- Getters for UI ----
