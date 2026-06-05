@@ -100,7 +100,7 @@ export function getCardName(card: Card): string {
  * Note: Flor is optional in many variants
  */
 export function hasFlor(cards: Card[]): boolean {
-  if (cards.length < 2) return false;
+  if (cards.length < 3) return false;
   const suits = cards.map(c => c.suit);
   return suits[0] === suits[1] && suits[1] === suits[2];
 }

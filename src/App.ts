@@ -61,12 +61,6 @@ export class App {
       }
     });
 
-    // When opponent calls envido and AI (opponent's pie) responds
-    // Actually handle in the envido-resolved which shows notification
-    this.gameEngine.on('envido-resolved', () => {
-      this.renderGameState();
-    });
-
     // When envido is raised, AI responds when it's their turn
     this.gameEngine.on('envido-raised', (data: any) => {
       this.renderGameState();
@@ -110,7 +104,11 @@ export class App {
     });
 
     // After truco resolves (rejected), end the hand and start a new one
-    this.gameEngine.on('truco-resolved', () => {
+    this.gameEngine.on('truco-resolved', (data: any) => {
+      if (data.isGameOver) {
+        this.renderGameState();
+        return;
+      }
       setTimeout(() => this.handleTrucoRejected(), 500);
     });
 
@@ -505,6 +503,11 @@ export class App {
    */
   private handleTrucoRejected(): void {
     if (!this.gameRunning) return;
+    const scores = this.gameEngine.getScores();
+    if (scores.team0 >= 30 || scores.team1 >= 30) {
+      this.renderGameState();
+      return;
+    }
     this.gameEngine['startNewHand']();
     this.renderGameState();
   }
@@ -512,6 +515,10 @@ export class App {
   // ---- Render ----
 
   private renderGameState(): void {
+    const scores = this.gameEngine.getScores();
+    const isGameOver = scores.team0 >= 30 || scores.team1 >= 30;
+    const gameOverWinner = isGameOver ? (scores.team0 >= 30 ? 0 : 1) : null;
+
     this.uiManager.renderGame({
       players: this.players,
       hands: this.gameEngine.getHands(),
@@ -522,7 +529,7 @@ export class App {
       starterId: this.gameEngine.getStarterId(),
       currentTurnPlayerId: this.gameEngine.getCurrentTurnPlayerId(),
       deckRemaining: this.gameEngine.getDeckRemaining(),
-      scores: this.gameEngine.getScores(),
+      scores,
       envido: this.gameEngine.getEnvidoState(),
       truco: this.gameEngine.getTrucoState(),
       roundResults: this.gameEngine.getRoundResults(),
@@ -532,9 +539,9 @@ export class App {
       firstHandCompleted: this.gameEngine.isFirstHandCompleted(),
       isSecondHand: this.gameEngine.getIsSecondHand(),
       handWinnerTeam: -1,
-      isGameOver: false,
-      gameOverWinner: null,
-      gameOverScores: this.gameEngine.getScores(),
+      isGameOver,
+      gameOverWinner,
+      gameOverScores: scores,
       piePlayerId: this.getHumanPiePlayerId(),
     });
   }

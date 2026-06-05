@@ -75,6 +75,7 @@ export class GameEngine {
     team0Scored: 0,
     team1Scored: 0,
   };
+  private trucoWaitingForResponse: boolean = false;
 
   // Pica-Pica state
   private isPicaPica: boolean = false;
@@ -376,7 +377,7 @@ export class GameEngine {
     };
   }
 
-  /** Only the DEALER and the PIE (left of dealer) can call envido, on their turn before playing */
+  /** Any player can call envido on their turn, before playing their first card in round 0 */
   private canCallEnvido(playerId: string): boolean {
     if (this.currentRound !== 0) return false;
     if (this.envido.phase !== 'none') return false;
@@ -387,12 +388,8 @@ export class GameEngine {
       // In Pica-Pica 1v1, any of the 2 paired players can call envido
       return this.picaPicaActivePairIds.includes(playerId);
     }
-    // Only dealer or pie can call
-    const order = this.getPlayingOrder();
-    const dealerIdx = order.indexOf(this.dealerId);
-    const pieIdx = (dealerIdx - 1 + order.length) % order.length;
-    const pieId = order[pieIdx];
-    return playerId === this.dealerId || playerId === pieId;
+    // Any player who hasn't played a card yet can call
+    return true;
   }
 
   private canRespondEnvido(): boolean {
@@ -434,13 +431,30 @@ export class GameEngine {
     if (player.team === this.envido.callerTeam) return;
 
     if (!want) {
-      // No quiero — caller gets 1 point
-      this.resolveEnvido(1);
+      // No quiero — caller gets 1 point (no score comparison)
+      this.envido.phase = 'resolution';
+      this.envido.pointsAwarded = 1;
+      const callerTeam = this.envido.callerTeam!;
+      if (callerTeam === 0) this.scores.team0 += 1;
+      else this.scores.team1 += 1;
+      this.envido.team0Scored = this.scores.team0;
+      this.envido.team1Scored = this.scores.team1;
+      this.envido.phase = 'none';
+      this.emit('envido-resolved', {
+        winnerTeam: callerTeam,
+        points: 1,
+        scores: this.getEnvidoPlayerScores(),
+        team0Best: 0,
+        team1Best: 0,
+        team0Scored: this.scores.team0,
+        team1Scored: this.scores.team1,
+        level: this.envido.level
+      });
       return;
     }
 
     if (raiseTo) {
-      // Accept and raise
+      // Accept and raise — set the new level's value (don't accumulate)
       const raiseValues: Record<string, number> = {
         'envido': 2,
         'envido-envido': 2,
@@ -448,11 +462,10 @@ export class GameEngine {
         'falta-envido': this.getFaltaEnvidoValue(),
       };
       this.envido.level = raiseTo;
-      // Accumulate — if the new level has its own value, add it on top
       if (raiseTo === 'falta-envido') {
         this.envido.totalPoints = this.getFaltaEnvidoValue();
       } else {
-        this.envido.totalPoints += raiseValues[raiseTo];
+        this.envido.totalPoints = raiseValues[raiseTo] || this.envido.totalPoints;
       }
       // Flip caller: now the raiser's team is the one waiting for an answer
       this.envido.callerTeam = player.team;
@@ -621,10 +634,11 @@ export class GameEngine {
       team0Scored: 0,
       team1Scored: 0,
     };
+    this.trucoWaitingForResponse = false;
   }
 
   private canChallengeTruco(): boolean {
-    return true; // Can challenge at any time
+    return !this.trucoWaitingForResponse && !this.truco.accepted && this.truco.level < 3;
   }
 
   private challengeTruco(playerId: string): void {
@@ -632,12 +646,18 @@ export class GameEngine {
     const player = this.getPlayerById(playerId);
     if (!player) return;
 
+    // Only opponents of the last challenger can call truco (or anyone if no prior challenge)
+    if (this.truco.lastChallengerTeam !== null && player.team === this.truco.lastChallengerTeam) {
+      return;
+    }
+
     const nextLevel = this.truco.level + 1;
     if (nextLevel > 3) return; // Max vale 4
 
     this.truco.level = nextLevel as 1 | 2 | 3;
     this.truco.lastChallengerTeam = player.team;
     this.truco.accepted = false;
+    this.trucoWaitingForResponse = true;
 
     this.emit('truco-challenged', {
       level: this.truco.level,
@@ -657,6 +677,8 @@ export class GameEngine {
     if (player.team === this.truco.lastChallengerTeam) {
       return;
     }
+
+    this.trucoWaitingForResponse = false;
 
     // Opponent team
     if (!want) {
@@ -719,7 +741,8 @@ export class GameEngine {
       points,
       level: this.truco.level,
       team0Scored: this.scores.team0,
-      team1Scored: this.scores.team1
+      team1Scored: this.scores.team1,
+      isGameOver: this.scores.team0 >= this.targetScore || this.scores.team1 >= this.targetScore
     });
   }
 
@@ -734,7 +757,7 @@ export class GameEngine {
     if (!card) return false;
 
     this.currentTrick.push({ card, playerId });
-    this.currentTrickNumber = this.currentTrick.length;
+    this.currentTrickNumber = this.currentRound;
 
     this.emit('card-played', {
       card,
@@ -873,7 +896,15 @@ export class GameEngine {
 
     this.currentTrick = [];
 
-    if (this.currentRound < 3) {
+    // Check if one team already won 2 tricks (best of 3 — no need for 3rd)
+    const team0Wins = this.roundResults.filter(r => r.teamWinner === 0).length;
+    const team1Wins = this.roundResults.filter(r => r.teamWinner === 1).length;
+    const handOverEarly = team0Wins >= 2 || team1Wins >= 2;
+
+    if (handOverEarly || this.currentRound >= 3) {
+      // Hand is decided — resolve
+      this.resolveHand();
+    } else {
       // Next round
       this.starterId = this.determineStarterForRound(this.currentRound);
       this.currentTurnPlayerId = this.starterId;
@@ -895,9 +926,6 @@ export class GameEngine {
         deckRemaining: this.deck.remaining,
         scores: { ...this.scores }
       });
-    } else {
-      // All 3 rounds done - resolve hand
-      this.resolveHand();
     }
   }
 
@@ -993,9 +1021,9 @@ export class GameEngine {
     }
 
     // Next hand
+    this.isPicaPica = this.checkPicaPica();
     if (!this.firstHandCompleted) {
       this.firstHandCompleted = true;
-      this.isPicaPica = this.checkPicaPica();
       this.emit('round-over', {
         isSecondHand: false,
         handWinnerTeam,
@@ -1009,7 +1037,6 @@ export class GameEngine {
   }
 
   private startNextPicaPicaSubmano(): void {
-    this.picaPicaSubmano++;
     // Don't redeal — keep the same cards, just advance to the next pair
     this.startPicaPicaSubmano(this.picaPicaSubmano);
   }

@@ -751,19 +751,14 @@ export class UIManager {
       controls.appendChild(envidoGroup);
     }
 
-    // Truco: can be called if truco not already at max and envido not pending
+    // Truco: only show when no truco is pending/active and envido not pending
     const canCallTruco = params.envido.phase === 'none'
-      && params.truco.level < 3
+      && params.truco.level === 0
       && !params.isGameOver;
 
     if (canCallTruco) {
       const btnTruco = document.createElement('button');
-      const trucoLabels: { [level: number]: string } = {
-        0: '🔥 Truco',
-        1: '🔥 Retruco',
-        2: '🔥 Vale 4',
-      };
-      btnTruco.textContent = trucoLabels[params.truco.level] || '🔥 Truco';
+      btnTruco.textContent = '🔥 Truco';
       btnTruco.addEventListener('click', () => this.callbacks.onTrucoChallenge());
       controls.appendChild(btnTruco);
     }

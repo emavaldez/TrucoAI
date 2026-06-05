@@ -517,6 +517,13 @@ html, body {
   align-items: center;
 }
 
+.played-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+}
+
 /* ─── Message Area ──────────────────────────── */
 
 .message-area {
