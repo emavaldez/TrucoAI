@@ -61,11 +61,12 @@ export class App {
       }
     });
 
-    // When envido is raised, AI responds when it's their turn
+    // When envido is raised, AI responds when HUMAN raised (AI team is respondent)
     this.gameEngine.on('envido-raised', (data: any) => {
       this.renderGameState();
       const humanTeam = this.players[0]?.team ?? 0;
-      if (data.team !== humanTeam) {
+      // data.team is the raiser's team — if human raised, AI must respond
+      if (data.team === humanTeam) {
         setTimeout(() => {
           const aiWants = Math.random() < 0.6;
           if (data.level !== 'falta-envido' && Math.random() < 0.25) {

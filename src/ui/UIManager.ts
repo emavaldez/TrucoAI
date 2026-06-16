@@ -445,7 +445,8 @@ export class UIManager {
     isPicaPica: boolean;
     picaPicaSubmano: number;
   }): void {
-    document.querySelectorAll('.played-card-overlay').forEach(el => el.remove());
+    // Remove old played-card rows before re-rendering to prevent accumulation
+    this.container.querySelectorAll('.played-row').forEach(el => el.remove());
 
     // Current trick cards — full opacity, clearly visible
     for (const played of params.currentTrick) {
@@ -751,9 +752,10 @@ export class UIManager {
       controls.appendChild(envidoGroup);
     }
 
-    // Truco: only show when no truco is pending/active and envido not pending
+    // Truco: only show when no truco is pending/active, envido not pending, and it's the human's turn
     const canCallTruco = params.envido.phase === 'none'
       && params.truco.level === 0
+      && isHumanTurn
       && !params.isGameOver;
 
     if (canCallTruco) {

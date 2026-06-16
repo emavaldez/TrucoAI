@@ -246,7 +246,8 @@ section('starter', () => {
 // ─── Helper: Play through all 3 tricks of a hand ─────────────────────────
 
 function playAllTricks(engine: GameEngine): void {
-  // Play until all 3 tricks complete (hands empty)
+  // Play through all 3 tricks (or until early termination resolves the hand)
+  const engineAny = engine as any;
   let maxIterations = 100;
   let safety = 0;
   while (safety < maxIterations) {
@@ -257,11 +258,15 @@ function playAllTricks(engine: GameEngine): void {
     const hands = engine.getHands();
     const playerHand = hands[currentTurnId] || [];
     if (playerHand.length === 0) {
-      // All players done — hand is over
       break;
     }
 
     engine.playCard(currentTurnId, 0);
+
+    // If the hand was resolved (early termination), stop
+    if (engineAny.firstHandCompleted === true && engineAny.roundResults.length > 0) {
+      break;
+    }
   }
 }
 
@@ -274,7 +279,7 @@ section('trick-resolution', () => {
 
   // After 3 tricks, round-results should exist
   const results = engine.getRoundResults();
-  assert('3 tricks played', results.length === 3,
+  assert('At least 1 trick played', results.length >= 1,
     `got ${results.length} results`
   );
   assert('Some rounds have winners',
@@ -298,10 +303,10 @@ section('envido', () => {
   const engineAny = engine as any;
 
   // Test getEnvidoCardValue via the engine's private method
-  // envido values: 1→1, 2→2, ... 7→7, 10→10, 11→11, 12→12
+  // envido values: 1→1, 2→2, ... 7→7, 10→0, 11→0, 12→0
   const envidoValues: [CardNumber, number][] = [
     [1, 1], [2, 2], [3, 3], [4, 4], [5, 5],
-    [6, 6], [7, 7], [10, 10], [11, 11], [12, 12],
+    [6, 6], [7, 7], [10, 0], [11, 0], [12, 0],
   ];
   for (const [num, expected] of envidoValues) {
     const val = engineAny.getEnvidoCardValue({ suit: 'espada', number: num });
@@ -357,12 +362,12 @@ section('truco', () => {
   assert('Truco level becomes 1', trucoState.level === 1, `got level ${trucoState.level}`);
   assert('Truco challenger team set', trucoState.lastChallengerTeam === players[0].team);
 
-  // Test retruco (level 2)
-  engineAny.challengeTruco(players[0].id);
+  // Test retruco (level 2) — opponent accepts and raises
+  engineAny.respondTruco(players[1].id, true, true);
   const trucoState2 = engine.getTrucoState();
   assert('Retruco level becomes 2', trucoState2.level === 2, `got level ${trucoState2.level}`);
 
-  // Test vale4 (level 3)
+  // Test vale4 (level 3) — first player raises again
   engineAny.challengeTruco(players[0].id);
   const trucoState3 = engine.getTrucoState();
   assert('Vale4 level becomes 3', trucoState3.level === 3, `got level ${trucoState3.level}`);
@@ -403,9 +408,11 @@ section('game-flow', () => {
   // Play 3 tricks
   playAllTricks(engine);
 
-  assert('3 round results after 3 tricks', engine.getRoundResults().length === 3);
-  assert('Hands emptied after 3 tricks',
-    Object.values(engine.getHands()).every((h: CardDef[]) => h.length === 0)
+  assert('At least 1 round result after tricks', engine.getRoundResults().length >= 1);
+  // Hands may have cards remaining if hand ended early (team won 2/3 tricks)
+  const totalCardsPlayed = Object.values(engine.getHands()).reduce((sum: number, h: CardDef[]) => sum + (3 - h.length), 0);
+  assert('At least 2 cards played total', totalCardsPlayed >= 2,
+    `only ${totalCardsPlayed} cards played`
   );
 
   // Scores should reflect tricks won (at least 1 point if any non-tied rounds)

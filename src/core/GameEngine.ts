@@ -116,7 +116,7 @@ export class GameEngine {
     this.dealerId = players[0].id;
     this.previousStarterId = this.determineStarterForFirstRound();
     this.firstTrickWinnerTeam = -1;
-    this.startNewHand();
+    this.startNewHand(true);
   }
 
   private checkPicaPica(): boolean {
@@ -198,7 +198,7 @@ export class GameEngine {
 
   // ---- Hand management ----
 
-  private startNewHand(): void {
+  private startNewHand(skipRotation: boolean = false): void {
     // Reset first trick tracker for parda
     this.firstTrickWinnerTeam = -1;
 
@@ -206,17 +206,17 @@ export class GameEngine {
     if (this.isPicaPica) {
       if (this.picaPicaHandAlternation) {
         // Normal hand
-        this.startNormalHand();
+        this.startNormalHand(skipRotation);
       } else {
         // Pica-Pica hand
         this.startPicaPicaHand();
       }
     } else {
-      this.startNormalHand();
+      this.startNormalHand(skipRotation);
     }
   }
 
-  private startNormalHand(): void {
+  private startNormalHand(skipRotation: boolean = false): void {
     // Save the highest card player from the last round before resetting
     let lastRoundHighestCardPlayerId: string = '';
     if (this.roundResults.length > 0) {
@@ -224,8 +224,10 @@ export class GameEngine {
       lastRoundHighestCardPlayerId = lastRound.highestCardPlayerId || '';
     }
 
-    // Rotate dealer counter-clockwise
-    this.rotateDealer();
+    // Rotate dealer counter-clockwise (skip on very first hand)
+    if (!skipRotation) {
+      this.rotateDealer();
+    }
 
     // Reset hand state
     this.deck = new Deck();
@@ -234,8 +236,13 @@ export class GameEngine {
     this.roundResults = [];
 
     // Set starter for the first round of this hand
-    // Always: starter = right of the CURRENT dealer (counter-clockwise)
-    this.starterId = this.determineStarterForFirstRound();
+    // Hand 1: starter = right of the CURRENT dealer (counter-clockwise)
+    // Hand 2+: starter = winner of the last trick of the previous hand
+    if (this.firstHandCompleted && lastRoundHighestCardPlayerId) {
+      this.starterId = lastRoundHighestCardPlayerId;
+    } else {
+      this.starterId = this.determineStarterForFirstRound();
+    }
 
     this.startRound();
   }
