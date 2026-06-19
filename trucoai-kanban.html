@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TrucoAI — Kanban de Desarrollo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: #0d1117;
+    color: #e6edf3;
+    line-height: 1.5;
+    padding: 24px;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #30363d;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  .header h1 {
+    font-size: 28px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #58a6ff, #1f6feb);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .header .subtitle {
+    color: #8b949e;
+    font-size: 14px;
+    font-weight: 500;
+    margin-left: auto;
+  }
+  .header .stats {
+    display: flex;
+    gap: 12px;
+    font-size: 13px;
+  }
+  .header .stat {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 6px 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .stat .num { font-weight: 700; color: #58a6ff; }
+  .stat.critical .num { color: #f85149; }
+  .stat.medium .num { color: #d29922; }
+
+  /* Filters */
+  .filters {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .filter-btn {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 20px;
+    padding: 6px 16px;
+    color: #c9d1d9;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all .15s;
+    font-family: inherit;
+  }
+  .filter-btn:hover { border-color: #58a6ff; color: #58a6ff; }
+  .filter-btn.active { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+  .filter-btn.count { display: inline-flex; align-items: center; gap: 6px; }
+  .filter-btn .badge {
+    background: #30363d;
+    border-radius: 10px;
+    padding: 0 8px;
+    font-size: 11px;
+    line-height: 18px;
+  }
+  .filter-btn.active .badge { background: rgba(255,255,255,0.2); }
+
+  /* Section */
+  .section {
+    margin-bottom: 28px;
+  }
+  .section-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #8b949e;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid #21262d;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-title .emoji { font-size: 18px; }
+  .section-title .count {
+    font-size: 12px;
+    font-weight: 500;
+    color: #6e7681;
+    margin-left: auto;
+  }
+
+  /* US Card */
+  .us-card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 10px;
+    transition: all .15s;
+    position: relative;
+  }
+  .us-card:hover {
+    border-color: #58a6ff;
+    box-shadow: 0 0 0 1px rgba(88,166,255,0.15);
+  }
+
+  .us-card .us-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .us-card .us-id {
+    font-size: 11px;
+    font-weight: 700;
+    color: #58a6ff;
+    background: rgba(88,166,255,0.1);
+    padding: 2px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    font-family: monospace;
+    flex-shrink: 0;
+  }
+  .us-card .us-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #e6edf3;
+    flex: 1;
+  }
+
+  /* Priority badges */
+  .priority {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 1px 8px;
+    border-radius: 10px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .priority.critical { background: rgba(248,81,73,0.15); color: #f85149; }
+  .priority.high { background: rgba(210,153,34,0.15); color: #d29922; }
+  .priority.medium { background: rgba(88,166,255,0.15); color: #58a6ff; }
+  .priority.low { background: rgba(139,148,158,0.15); color: #8b949e; }
+
+  /* Tags */
+  .us-card .tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+  .tag {
+    font-size: 11px;
+    padding: 1px 8px;
+    border-radius: 10px;
+    background: #21262d;
+    color: #8b949e;
+  }
+  .tag.bug { background: rgba(248,81,73,0.12); color: #f85149; }
+  .tag.feature { background: rgba(88,166,255,0.12); color: #58a6ff; }
+  .tag.ai { background: rgba(163,113,247,0.12); color: #a371f7; }
+  .tag.ui { background: rgba(210,153,34,0.12); color: #d29922; }
+  .tag.test { background: rgba(63,185,80,0.12); color: #3fb950; }
+  .tag.infra { background: rgba(139,148,158,0.12); color: #8b949e; }
+  .tag.docs { background: rgba(88,166,255,0.08); color: #58a6ff; }
+
+  .us-card .us-body {
+    font-size: 13px;
+    color: #8b949e;
+    margin-bottom: 10px;
+    line-height: 1.6;
+  }
+  .us-card .us-body strong { color: #c9d1d9; }
+  .us-card .us-body code {
+    font-family: 'SF Mono', monospace;
+    font-size: 12px;
+    background: rgba(240,246,252,0.08);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: #f0f6fc;
+  }
+
+  /* Acceptance */
+  .us-card .acceptance {
+    background: #0d1117;
+    border: 1px solid #21262d;
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-bottom: 10px;
+  }
+  .us-card .acceptance .label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6e7681;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .us-card .acceptance ul {
+    margin: 0;
+    padding-left: 16px;
+  }
+  .us-card .acceptance li {
+    font-size: 12px;
+    color: #8b949e;
+    margin-bottom: 2px;
+  }
+
+  /* Status indicators */
+  .status-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #6e7681;
+  }
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+  .status-dot.backlog { background: #30363d; }
+  .status-dot.ready { background: #58a6ff; }
+  .status-dot.in-progress { background: #d29922; }
+  .status-dot.blocked { background: #f85149; }
+  .status-dot.done { background: #3fb950; }
+
+  /* Comment box */
+  .comment-box {
+    margin-top: 10px;
+    border-top: 1px solid #21262d;
+    padding-top: 10px;
+  }
+  .comment-box textarea {
+    width: 100%;
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 8px 10px;
+    color: #e6edf3;
+    font-family: inherit;
+    font-size: 13px;
+    resize: vertical;
+    min-height: 50px;
+    transition: border .15s;
+  }
+  .comment-box textarea:focus {
+    outline: none;
+    border-color: #58a6ff;
+  }
+  .comment-box .comment-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+  }
+  .comment-box button {
+    background: #21262d;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 4px 12px;
+    color: #c9d1d9;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all .15s;
+  }
+  .comment-box button:hover { background: #30363d; border-color: #58a6ff; }
+  .comment-box button.save { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+  .comment-box button.save:hover { background: #388bfd; }
+
+  .comment-box .comments-list {
+    margin-top: 6px;
+    font-size: 12px;
+    color: #6e7681;
+  }
+  .comment-box .comments-list .comment-item {
+    padding: 4px 8px;
+    background: rgba(240,246,252,0.03);
+    border-radius: 4px;
+    margin-bottom: 4px;
+    color: #8b949e;
+  }
+  .comment-box .comments-list .comment-item .date {
+    color: #6e7681;
+    font-size: 11px;
+  }
+
+  /* Legend */
+  .legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    padding: 12px 16px;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #8b949e;
+  }
+
+  /* QA results */
+  .qa-failures {
+    background: rgba(248,81,73,0.08);
+    border: 1px solid rgba(248,81,73,0.3);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+  }
+  .qa-failures h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #f85149;
+    margin-bottom: 6px;
+  }
+  .qa-failures ul { padding-left: 20px; }
+  .qa-failures li {
+    font-size: 13px;
+    color: #f0f6fc;
+    margin-bottom: 2px;
+  }
+
+  /* Actions bar */
+  .actions-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .actions-bar button {
+    background: #21262d;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 8px 16px;
+    color: #c9d1d9;
+    font-size: 13px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all .15s;
+  }
+  .actions-bar button:hover { background: #30363d; border-color: #58a6ff; }
+  .actions-bar button.primary { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+  .actions-bar button.primary:hover { background: #388bfd; }
+
+  .filtered-out { display: none !important; }
+
+  @media (max-width: 600px) {
+    body { padding: 12px; }
+    .header { flex-direction: column; align-items: flex-start; }
+    .header .subtitle { margin-left: 0; }
+    .header .stats { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>♠️ TrucoAI · Kanban de Desarrollo</h1>
+    <div style="color:#8b949e;font-size:13px;margin-top:4px;">
+      Proyecto en <code style="background:#21262d;padding:1px 6px;border-radius:4px;">/Users/emmanuelvaldez/GameDev/TrucoAI</code>
+      · TypeScript + Vite · 3,749 LOC · Último fix: 14 bugs (commit 288b802)
+    </div>
+  </div>
+  <div class="subtitle">
+    <span id="total-count">0</span> User Stories · 
+    <a href="#" onclick="exportJSON()" style="color:#58a6ff;text-decoration:none;">Exportar JSON</a>
+  </div>
+</div>
+
+<!-- Status -->
+<div class="legend">
+  <span class="legend-item"><span class="status-dot backlog"></span> Backlog</span>
+  <span class="legend-item"><span class="status-dot ready"></span> Ready</span>
+  <span class="legend-item"><span class="status-dot in-progress"></span> In Progress</span>
+  <span class="legend-item"><span class="status-dot blocked"></span> Blocked</span>
+  <span class="legend-item"><span class="status-dot done"></span> Done</span>
+  <span class="legend-item" style="margin-left:auto;">
+    <span class="priority critical">Crit</span>
+    <span class="priority high">High</span>
+    <span class="priority medium">Med</span>
+    <span class="priority low">Low</span>
+  </span>
+</div>
+
+<!-- QA Status -->
+<div class="qa-failures" id="qa-status" style="background:rgba(63,185,80,0.08);border-color:rgba(63,185,80,0.3);">
+  <h3 style="color:#3fb950;">✅ QA Status: 170 passed, 0 failed</h3>
+  <p style="font-size:13px;color:#8b949e;">Todos los tests del QA suite pasan después de los fixes de esta iteración.</p>
+</div>
+
+<!-- Filters -->
+<div class="filters">
+  <button class="filter-btn active" data-filter="all" onclick="setFilter('all')">📋 Todas <span class="badge" id="count-all">0</span></button>
+  <button class="filter-btn critical" data-filter="critical" onclick="setFilter('critical')">🔴 Críticas <span class="badge" id="count-critical">0</span></button>
+  <button class="filter-btn" data-filter="high" onclick="setFilter('high')">🟡 Altas <span class="badge" id="count-high">0</span></button>
+  <button class="filter-btn" data-filter="backlog" onclick="setFilter('backlog')">📦 Backlog <span class="badge" id="count-backlog">0</span></button>
+  <button class="filter-btn" data-filter="bug" onclick="setFilter('bug')">🐛 Bugs <span class="badge" id="count-bug">0</span></button>
+  <button class="filter-btn" data-filter="ai" onclick="setFilter('ai')">🤖 AI <span class="badge" id="count-ai">0</span></button>
+  <button class="filter-btn" data-filter="feature" onclick="setFilter('feature')">✨ Features <span class="badge" id="count-feature">0</span></button>
+  <button class="filter-btn" data-filter="ui" onclick="setFilter('ui')">🎨 UI/UX <span class="badge" id="count-ui">0</span></button>
+</div>
+
+<div class="actions-bar">
+  <button class="primary" onclick="moveAll('ready')">▶️ Marcar todo como Ready</button>
+  <button onclick="moveAllInFilter('in-progress')">🔧 Mover filtrados a In Progress</button>
+  <button onclick="resetAll()">🔄 Reset estados</button>
+  <button onclick="saveState()">💾 Guardar estado (localStorage)</button>
+</div>
+
+<div id="board"></div>
+
+<script>
+// ─── DATA ────────────────────────────────────────────────────────────────
+const US = [
+  // ═══════ BUGS (críticos) ═══════
+  {
+    id: 'US-001', title: 'Truco level no avanza correctamente',
+    priority: 'critical', category: 'bug', status: 'done',
+    tags: ['bug', 'game-engine', 'done'],
+    body: 'QA test detecta que <code>truco.level</code> no pasa de 1. <code>challengeTruco()</code> ejecuta <code>nextLevel = truco.level + 1</code> pero luego el test assert contra nivel esperado falla. Posible race condition con <code>trucoWaitingForResponse</code> o el raise alternating flow.',
+    acceptance: ['Retruco level = 2 cuando se sube desde Truco', 'Vale4 level = 3 cuando se sube desde Retruco', 'QA test truco-flow pasa completo'],
+    comments: []
+  },
+  {
+    id: 'US-002', title: 'Test de envido desactualizado tras fix 10-11-12=0',
+    priority: 'high', category: 'bug', status: 'done',
+    tags: ['bug', 'test', 'done'],
+    body: 'El fix "envido 10-11-12=0" cambió intencionalmente el cálculo de envido. Los tests esperan valor 10/11/12 pero el código devuelve 0. Hay que actualizar los asserts del QA.',
+    acceptance: ['Tests esperan getEnvidoValue(10)=0, 11=0, 12=0', '165/170 tests pasan en lugar de 165/170'],
+    comments: []
+  },
+  {
+    id: 'US-003', title: 'Game Over no se muestra al llegar a 30 pts (verificar)',
+    priority: 'critical', category: 'bug', status: 'done',
+    tags: ['bug', 'game-engine', 'ui', 'done'],
+    body: 'Fix parcial aplicado (isGameOver se computa en renderGameState, truco-resolved checkea isGameOver) pero falta verificar que el panel de game-over realmente se muestre y el juego no intente empezar una nueva mano después de que un equipo llegue a 30.',
+    acceptance: ['Al llegar a 30 pts, aparece panel de game-over', 'No se puede seguir jugando', 'No hay errores en consola del browser'],
+    comments: []
+  },
+  {
+    id: 'US-004', title: 'AI no responde a raise de truco/envido (verificar handlers)',
+    priority: 'high', category: 'bug', status: 'done',
+    tags: ['bug', 'ai', 'game-engine', 'done'],
+    body: 'Cuando el humano sube el truco (accept + raise), se emite <code>truco-raised</code> (no <code>truco-challenged</code>). Los handlers existen pero no se verificó que funcionen correctamente con la nueva flag <code>trucoWaitingForResponse</code>.',
+    acceptance: ['AI responde correctamente cuando humano hace raise de truco', 'AI responde correctamente a raise de envido', 'Flujo alternante (raise → respuesta → raise) funciona'],
+    comments: []
+  },
+  {
+    id: 'US-005', title: 'Primera mano: dealer debería ser player-0, no player-1',
+    priority: 'medium', category: 'bug', status: 'done',
+    tags: ['bug', 'game-engine', 'done'],
+    body: '<code>startGame()</code> llama <code>startNewHand()</code> → <code>rotateDealer()</code>, entonces player-0 nunca es dealer en la primera mano. La badge 📦 aparece en player-1.',
+    acceptance: ['Player-0 puede ser dealer en la primera mano', 'QA test starter confirma dealer correcto', 'No rompe rotación de dealer en manos siguientes'],
+    comments: []
+  },
+  {
+    id: 'US-006', title: 'Starter no rota correctamente entre manos',
+    priority: 'high', category: 'bug', status: 'done',
+    tags: ['bug', 'game-engine', 'done'],
+    body: '<code>startNormalHand()</code> usa <code>determineStarterForFirstRound()</code> para mano 2 cuando debería basarse en el ganador de la última ronda de la mano 1. <code>lastRoundHighestCardPlayerId</code> puede estar vacío si hay empate.',
+    acceptance: ['Mano 2: starter = ganador de última ronda de mano 1', 'Si empate: mismo starter que mano 1', 'Dealer rota correctamente en sentido horario'],
+    comments: []
+  },
+  {
+    id: 'US-007', title: 'Pica-Pica: submanos no arrancan con starter correcto',
+    priority: 'high', category: 'bug', status: 'done',
+    tags: ['bug', 'game-engine', 'pica-pica', 'done'],
+    body: '<code>startPicaPicaSubmano()</code> usa <code>+1</code> para starter pero la lógica de dirección puede no alinearse con el par activo. Falta verificar que cada submano empiece con el jugador correcto del par.',
+    acceptance: ['Cada submano empieza con el starter correcto del par', 'En 6-player Pica-Pica, el orden por par se respeta', 'QA test pica-pica pasa'],
+    comments: []
+  },
+  {
+    id: 'US-008', title: 'Truco button se muestra durante response window (fijo parcial)',
+    priority: 'medium', category: 'bug', status: 'done',
+    tags: ['bug', 'ui', 'done'],
+    body: 'Fix parcial cambió condición de <code>truco.level &lt; 3</code> a <code>truco.level === 0</code>. Verificar que el botón no aparezca durante la ventana de respuesta del oponente ni después de que alguien ya cantó truco. También verificar que aparezca correctamente para el turno adecuado.',
+    acceptance: ['Botón Truco visible solo cuando truco.level === 0', 'No visible durante ventana de respuesta', 'Visible para el jugador correcto en cada turno'],
+    comments: []
+  },
+  {
+    id: 'US-009', title: 'Envido button reaparece tras resolución (verificar fix)',
+    priority: 'medium', category: 'bug', status: 'done',
+    tags: ['bug', 'ui', 'envido', 'done'],
+    body: 'Fix previo agregó <code>pointsAwarded &gt; 0</code> a <code>canCallEnvido()</code>. Verificar que envido buttons NO reaparezcan tras resolución y que sí aparezcan correctamente en ronda 0 antes de jugar.',
+    acceptance: ['Botón Envido no reaparece tras resolverse', 'Aparece correctamente en ronda 0 antes de jugar primera carta', 'Humano puede cantar envido si es su turno y nadie cantó aún'],
+    comments: []
+  },
+  {
+    id: 'US-010', title: 'Notificación overlay no se muestra para acciones de AI',
+    priority: 'medium', category: 'bug', status: 'done',
+    tags: ['bug', 'ui', 'ai', 'done'],
+    body: 'Cuando AI responde a envido/truco, debería mostrarse un popup overlay con la decisión de la AI (ej: "La IA dice Quiero"). El patrón <code>_pendingEnvidoAction</code>/<code>_pendingTrucoAction</code> existe pero puede no estar funcionando con la nueva lógica.',
+    acceptance: ['Popup aparece cuando AI acepta/rechaza envido', 'Popup aparece cuando AI acepta/rechaza/subetruco', 'Click en OK del popup continúa el juego correctamente'],
+    comments: []
+  },
+  {
+    id: 'US-011', title: 'Cartas jugadas no se limpian entre rondas (overlay accumulation)',
+    priority: 'medium', category: 'bug', status: 'done',
+    tags: ['bug', 'ui', 'done'],
+    body: 'Los overlays de cartas jugadas (clase <code>.played-card-overlay</code>) pueden acumularse entre rondas si <code>renderPlayedCardsNearPlayers</code> no limpia los viejos antes de agregar nuevos.',
+    acceptance: ['Solo 1 overlay de carta jugada por jugador a la vez', 'Overlays se limpian al empezar nueva ronda', 'Sin duplicados en el DOM'],
+    comments: []
+  },
+
+  // ═══════ FEATURES ── Envido y Truco ═══════
+  {
+    id: 'US-012', title: 'Implementar Flor (opcional, variante argentina)',
+    priority: 'low', category: 'feature', status: 'backlog',
+    tags: ['feature', 'envido'],
+    body: 'La Flor es una opción en algunas variantes de Truco argentino. Si un jugador tiene 3 cartas del mismo palo, puede cantar Flor. Puntuación: Flor=3pts, contraflor=6pts, contraflor al resto=resto. <code>hasFlor()</code> ya existe en Rules.ts pero no está integrada.',
+    acceptance: ['Botón "🌸 Flor" aparece cuando aplica', 'Puntuación correcta de Flor y contraflor', 'Contraflor al resto calcula puntos restantes', 'No interfiere con envido normal'],
+    comments: []
+  },
+  {
+    id: 'US-013', title: 'Implementar "Envido va primero" (envido antes que truco)',
+    priority: 'medium', category: 'feature', status: 'backlog',
+    tags: ['feature', 'envido', 'truco'],
+    body: 'Si alguien canta Truco antes de jugar cartas, el oponente puede (opcionalmente) cantar "Envido va primero" — envido toma precedencia y se resuelve antes de responder al truco.',
+    acceptance: ['Opción aparece cuando truco es cantado en ronda 0', 'Envido se resuelve completamente antes de continuar con truco', 'Flujo no rompe si jugador elige no cantar envido va primero'],
+    comments: []
+  },
+  {
+    id: 'US-014', title: 'Flag de partida completa 2 jugadores (end-to-end)',
+    priority: 'high', category: 'feature', status: 'backlog',
+    tags: ['feature', 'testing', 'game-engine'],
+    body: 'Correr una partida completa de 2 jugadores (humano vs AI) de principio a fin hasta 30 puntos, con envido, truco, raises. Documentar cualquier bug encontrado. Hay una simulación en docs/partida-guia.html pero hay que verificarla con el código actual.',
+    acceptance: ['Partida completa jugable sin crashes', 'Ambiente, truco y raises funcionan', 'Puntuación correcta al final (30 pts)', 'Documentar bugs encontrados'],
+    comments: []
+  },
+  {
+    id: 'US-015', title: 'Integrar envido/truco en UI con notificaciones visibles',
+    priority: 'medium', category: 'feature', status: 'backlog',
+    tags: ['feature', 'ui', 'envido', 'truco'],
+    body: 'Mejorar las notificaciones de envido/truco: mostrar en pantalla quién cantó qué, cuántos puntos están en juego, y resaltar el resultado de forma vistosa (animation/glow).',
+    acceptance: ['Notificación muestra quién canta y el nivel', 'Resultado del envido/truco se muestra claramente', 'Animación suave (no instantánea)'],
+    comments: []
+  },
+
+  // ═══════ FEATURES ── Multiplayer ═══════
+  {
+    id: 'US-016', title: 'Implementar selección de modo de juego (2/4/6 jugadores)',
+    priority: 'high', category: 'feature', status: 'backlog',
+    tags: ['feature', 'ui'],
+    body: 'Menú inicial con selector de cantidad de jugadores. Actualmente hardcodeado a 2. Debe permitir 2 (1v1), 4 (2v2), 6 (3v3 con Pica-Pica).',
+    acceptance: ['Menú con opciones 2/4/6 jugadores', 'Al seleccionar, el juego inicia con esa cantidad', 'UI se adapta al número de jugadores'],
+    comments: []
+  },
+  {
+    id: 'US-017', title: 'Renderizar mesa circular para 4 y 6 jugadores',
+    priority: 'high', category: 'feature', status: 'backlog',
+    tags: ['feature', 'ui'],
+    body: 'La UI actual solo posiciona 2 jugadores. Para 4 y 6 jugadores, hay que renderizar posiciones alrededor de la mesa usando <code>data-count</code> CSS. El esqueleto con <code>.circle-seating</code> y <code>data-player-id</code> existe parcialmente.',
+    acceptance: ['4 jugadores: abajo (vos), derecha, arriba, izquierda', '6 jugadores: 3 arriba, 3 abajo o circular', 'Cartas del compañero visibles (face-up)', 'Cartas oponentes face-down'],
+    comments: []
+  },
+  {
+    id: 'US-018', title: 'Implementar Pica-Pica completa (6 jugadores 1v1)',
+    priority: 'high', category: 'feature', status: 'backlog',
+    tags: ['feature', 'game-engine', 'pica-pica'],
+    body: 'La lógica Pica-Pica está implementada parcialmente (fix de submano increment y re-evaluation). Falta: UI de submanos, mostrar qué par está jugando, y flujo completo entre submanos.',
+    acceptance: ['Partida Pica-Pica completa jugable (manos alternan normal/pica-pica)', 'UI muestra qué par está activo en cada submano', '3 submanos por mano pica-pica', 'Gana 2 de 3 submanos = gana la mano'],
+    comments: []
+  },
+  {
+    id: 'US-019', title: 'Hot-seat multiplayer local (2 humanos misma PC)',
+    priority: 'low', category: 'feature', status: 'backlog',
+    tags: ['feature', 'multiplayer'],
+    body: 'Permitir que 2 humanos jueguen en la misma PC, alternando turnos. Requiere: pantalla oculta de cartas, pasar el mouse/teclado entre turnos.',
+    acceptance: ['2 humanos pueden jugar en la misma PC', 'Cartas se ocultan cuando no es el turno del jugador', 'Flujo completo funciona'],
+    comments: []
+  },
+
+  // ═══════ AI DEVELOPMENT ═══════
+  {
+    id: 'US-020', title: 'Phase 1: Headless Truco Simulator',
+    priority: 'medium', category: 'ai', status: 'backlog',
+    tags: ['ai', 'feature'],
+    body: 'Extraer un <code>TrucoSimulator</code> del <code>GameEngine</code> actual que corra sin DOM/eventos — puras transiciones de estado. Soporte para clonar/fork (tree search). Benchmarks: 100k+ manos/min. Exponer interfaz <code>Agent</code>.',
+    acceptance: ['Simulator abstraído del DOM', 'Soporta clonado de estado', 'Benchmark >100k manos/min', 'Interfaz Agent.getAction(state, legalActions)'],
+    comments: []
+  },
+  {
+    id: 'US-021', title: 'Phase 2: Baseline agents (Random, Greedy, Markovian)',
+    priority: 'medium', category: 'ai', status: 'backlog',
+    tags: ['ai', 'feature'],
+    body: 'Implementar 3 baseline agents: <strong>Random</strong> (uniforme), <strong>Greedy</strong> (juega carta más fuerte, acepta envido si ≥24, acepta truco si mano "buena"), <strong>Markovian</strong> (cadena de Markov ligera sobre buckets de fuerza).',
+    acceptance: ['3 agents implementados con interfaz Agent', 'Greedy juega contra AI actual y gana >50%', 'Markovian se puede entrenar/inferir'],
+    comments: []
+  },
+  {
+    id: 'US-022', title: 'Phase 3: CFR tabular (ES-MCCFR)',
+    priority: 'medium', category: 'ai', status: 'backlog',
+    tags: ['ai', 'feature'],
+    body: 'Implementar External Sampling Monte Carlo CFR. Infoset: (card_abstraction, highest_card_played, team_scores, round, mano_number, envido_state, truco_level). Card Abstractions: A1 (3 buckets), B1 (4). Alternating updates, linear weighting. Pruning 1%. TypeScript first.',
+    acceptance: ['CFR entrena para abstracción A1', 'WR >65% vs Random', 'WR >50% vs Deterministic', 'Memoria <4GB para A1'],
+    comments: []
+  },
+  {
+    id: 'US-023', title: 'Phase 4: Deep CFR (neural) con PyTorch',
+    priority: 'low', category: 'ai', status: 'backlog',
+    tags: ['ai', 'feature'],
+    body: 'Bridge TypeScript ↔ Python/PyTorch para Deep CFR. Network: input 40-dim (3 cartas one-hot + public info) → Embedding 64 → 3 FC (256,128,64, ReLU) → output logits. MPS en Mac M5 Max.',
+    acceptance: ['Bridge TS↔Python funciona (IPC o archivos)', 'Deep CFR converge en abstracción pequeña', 'Mejora WR sobre CFR tabular'],
+    comments: []
+  },
+  {
+    id: 'US-024', title: 'Phase 5: Unsafe search en decisión-time',
+    priority: 'low', category: 'ai', status: 'backlog',
+    tags: ['ai', 'feature'],
+    body: 'Al decidir, forkear el simulator N veces (~100 rollouts) desde estado actual, simular a completo con opponent = cached policy. Elegir acción con highest expected value.',
+    acceptance: ['Rollout search implementado', 'Mejora WR ~15 pp sobre baseline CFR', 'Tiempo de decisión aceptable (<500ms)'],
+    comments: []
+  },
+  {
+    id: 'US-025', title: 'AI Difficulty Levels (Fácil/Medio/Difícil)',
+    priority: 'medium', category: 'feature', status: 'backlog',
+    tags: ['ai', 'feature', 'ui'],
+    body: 'La AI actual usa <code>Math.random()</code> para decisiones simples. Crear 3 niveles: Fácil (random), Medio (heurísticas básicas), Difícil (CFR agent). Menú de selección al inicio.',
+    acceptance: ['3 niveles seleccionables desde menú', 'Fácil pierde seguido', 'Difícil gana >60% vs jugador novato'],
+    comments: []
+  },
+
+  // ═══════ UI/UX ═══════
+  {
+    id: 'US-026', title: 'Responsive design para mobile',
+    priority: 'medium', category: 'ui', status: 'backlog',
+    tags: ['ui', 'feature'],
+    body: 'El juego actual está pensado para desktop. Adaptar layout para mobile: cartas más chicas, disposición vertical, touch events en lugar de click.',
+    acceptance: ['Jugable en pantalla de 375px (iPhone)', 'Touch events funcionan', 'No hay overflow horizontal'],
+    comments: []
+  },
+  {
+    id: 'US-027', title: 'Sonidos y animaciones',
+    priority: 'low', category: 'ui', status: 'backlog',
+    tags: ['ui', 'feature'],
+    body: 'Agregar efectos de sonido para: carta jugada, envido cantado, truco, fin de ronda, fin de partida. Animaciones CSS para cartas, glow en cartas ganadoras.',
+    acceptance: ['Sonidos se reproducen en eventos clave', 'Animaciones CSS suaves', 'No degradan performance'],
+    comments: []
+  },
+  {
+    id: 'US-028', title: 'Historial de mano (log de acciones)',
+    priority: 'low', category: 'feature', status: 'backlog',
+    tags: ['feature', 'ui'],
+    body: 'Panel lateral o inferior que muestre un log con timestamp de todas las acciones: cartas jugadas, envidos, trucos, puntos. Útil para debugging y aprendizaje.',
+    acceptance: ['Log visible durante la partida', 'Muestra todas las acciones cronológicamente', 'Se limpia entre manos'],
+    comments: []
+  },
+  {
+    id: 'US-029', title: 'Pantalla de reglas / tutorial interactivo',
+    priority: 'low', category: 'feature', status: 'backlog',
+    tags: ['feature', 'ui', 'docs'],
+    body: 'Agregar botón/pantalla con las reglas del Truco argentino: ranking de cartas, cómo funciona envido, truco, puntuación. Idealmente un tutorial interactivo paso a paso.',
+    acceptance: ['Pantalla de reglas accesible desde menú', 'Explica ranking de cartas visualmente', 'Explica envido, truco, pica-pica', 'Tutorial paso a paso opcional'],
+    comments: []
+  },
+
+  // ═══════ TESTING ═══════
+  {
+    id: 'US-030', title: 'Agregar missing QA tests (12 nuevos)',
+    priority: 'high', category: 'test', status: 'backlog',
+    tags: ['test', 'bug-prevention'],
+    body: 'Agregar tests para bugs que no fueron capturados por el QA suite actual. Ver lista en <code>trucoai-qa</code> skill > "Known Missing Test Coverage".',
+    acceptance: ['Test: envido "no quiero" da 1pt sin comparar scores', 'Test: submano increment 0→1→2 (no 0→2)', 'Test: checkPicaPica() se llama cada mano', 'Test: Real Envido = 3pts (no 5)', 'Test: truco turn lock', 'Test: teammate no puede cantar truco', 'Test: hasFlor false con 2 cartas', 'Test: early hand termination (2 de 3 tricks)', 'Test: truco button oculto cuando truco.level>0', 'Test: game over tras truco rejection en 28+', 'Test: renderGameState isGameOver desde scores', 'Total tests: 182+'],
+    comments: []
+  },
+  {
+    id: 'US-031', title: 'Automatizar QA test suite en CI',
+    priority: 'low', category: 'test', status: 'backlog',
+    tags: ['test', 'infra'],
+    body: 'Configurar un GitHub Action que corra <code>npx tsx scripts/trucoai-qa.ts</code> en cada push/PR.',
+    acceptance: ['GitHub Action configurado', 'QA suite corre automáticamente', 'Fallo en tests bloquea merge'],
+    comments: []
+  },
+
+  // ═══════ INFRASTRUCTURE ═══════
+  {
+    id: 'US-032', title: 'Configurar GitHub Pages / Vercel auto-deploy',
+    priority: 'medium', category: 'infra', status: 'backlog',
+    tags: ['infra', 'deploy'],
+    body: 'El proyecto usa TrucoAI en <code>trucoai.vercel.app</code> (netlify/vercel?). Configurar deploy automático desde main branch.',
+    acceptance: ['Deploy automático en cada push a main', 'URL pública funcional', 'Build pasa sin errores'],
+    comments: []
+  },
+  {
+    id: 'US-033', title: 'Modo debug / dev tools',
+    priority: 'low', category: 'feature', status: 'backlog',
+    tags: ['feature', 'testing'],
+    body: 'Panel de debug: mostrar estado interno del engine (currentTurn, truco.level, envido.phase, scores, hands), permitir avanzar turnos manualmente.',
+    acceptance: ['Panel de debug toggleable', 'Muestra estado completo del engine', 'No afecta gameplay normal'],
+    comments: []
+  },
+
+  // ═══════ DOCUMENTATION ═══════
+  {
+    id: 'US-034', title: 'Documentar API del GameEngine (typedoc)',
+    priority: 'low', category: 'docs', status: 'backlog',
+    tags: ['docs'],
+    body: 'Generar documentación TypeDoc para GameEngine, Rules, UIManager. Ideal para futuros contribuidores y para el agente Hermes.',
+    acceptance: ['TypeDoc genera documentación HTML', 'Cubre todas las clases públicas', 'Se puede hostear en GitHub Pages'],
+    comments: []
+  },
+  {
+    id: 'US-035', title: 'README completo con instrucciones de setup',
+    priority: 'medium', category: 'docs', status: 'backlog',
+    tags: ['docs', 'infra'],
+    body: 'README.md con: qué es TrucoAI, cómo correrlo localmente, arquitectura, cómo contribuir, enlaces a docs y deploy.',
+    acceptance: ['README.md completo', 'Incluye comandos de setup', 'Enlaces a documentación', 'Badge de CI status'],
+    comments: []
+  },
+
+  // ═══════ EXISTING (Done) ═══════
+  {
+    id: 'US-036', title: '[DONE] 14 bugs corregidos en motor y UI (commit 288b802)',
+    priority: 'low', category: 'bug', status: 'done',
+    tags: ['bug', 'done'],
+    body: 'Incluye: envido no-quiero scoring, pica-pica submano increment, pica-pica re-evaluation, envido raise replacement, truco turn lock, teammate truco check, hasFlor guard, currentTrickNumber, early hand termination (2/3 tricks), truco button visibility, game-over after truco rejection, renderGameState isGameOver, styles.css .played-row, GameEngine listeners.',
+    acceptance: ['14 bugs corregidos y mergeados'],
+    comments: []
+  },
+  {
+    id: 'US-037', title: '[DONE] Simulación partida completa 20 manos (commit 4c29561)',
+    priority: 'low', category: 'docs', status: 'done',
+    tags: ['docs', 'done', 'testing'],
+    body: 'Documento docs/partida-guia.html con simulación completa de partida a 30 puntos con envido, truco, IA.',
+    acceptance: ['Documento creado y verificado'],
+    comments: []
+  },
+];
+
+// ─── RENDER ──────────────────────────────────────────────────────────────
+function render() {
+  const board = document.getElementById('board');
+  const sections = [
+    { id: 'critical', label: '🔴 Bugs Activos', filter: c => c.priority === 'critical' && c.status !== 'done' },
+    { id: 'high', label: '🟡 Prioridad Alta', filter: c => c.priority === 'high' && c.status !== 'done' },
+    { id: 'medium', label: '🔵 Prioridad Media', filter: c => c.priority === 'medium' && c.status !== 'done' },
+    { id: 'low', label: '⚪ Prioridad Baja', filter: c => c.priority === 'low' && c.status !== 'done' },
+    { id: 'done', label: '✅ Completado', filter: c => c.status === 'done' },
+  ];
+
+  const currentFilter = document.querySelector('.filter-btn.active')?.dataset?.filter || 'all';
+
+  board.innerHTML = '';
+
+  sections.forEach(section => {
+    const items = US.filter(section.filter);
+    if (items.length === 0) return;
+
+    const sec = document.createElement('div');
+    sec.className = 'section';
+
+    const title = document.createElement('div');
+    title.className = 'section-title';
+    title.innerHTML = `${section.label} <span class="count">${items.length}</span>`;
+    sec.appendChild(title);
+
+    items.forEach(us => {
+      const card = document.createElement('div');
+      card.className = 'us-card';
+      card.dataset.priority = us.priority;
+      card.dataset.category = us.category;
+      card.dataset.status = us.status;
+
+      // Tags set
+      const categoryTags = us.tags.map(t => `<span class="tag ${t}">${t}</span>`).join('');
+      const priorityClass = us.priority === 'critical' ? 'critical' : us.priority === 'high' ? 'high' : us.priority === 'medium' ? 'medium' : 'low';
+      const statusDots = { backlog: 'backlog', ready: 'ready', 'in-progress': 'in-progress', blocked: 'blocked', done: 'done' };
+      const sd = statusDots[us.status] || 'backlog';
+
+      card.innerHTML = `
+        <div class="us-header">
+          <span class="us-id">${us.id}</span>
+          <span class="us-title">${us.title}</span>
+          <span class="priority ${priorityClass}">${us.priority.toUpperCase()}</span>
+        </div>
+        <div class="tags">${categoryTags}</div>
+        <div class="us-body">${us.body}</div>
+        <div class="acceptance">
+          <div class="label">✅ Acceptance Criteria</div>
+          <ul>${us.acceptance.map(a => `<li>${a}</li>`).join('')}</ul>
+        </div>
+        <div class="status-bar">
+          <span class="status-dot ${sd}"></span> <span style="text-transform:capitalize;">${us.status}</span>
+          <select onchange="updateStatus('${us.id}', this.value)" style="margin-left:auto;background:#21262d;border:1px solid #30363d;border-radius:4px;color:#c9d1d9;padding:2px 6px;font-size:11px;font-family:inherit;">
+            <option value="backlog" ${us.status==='backlog'?'selected':''}>Backlog</option>
+            <option value="ready" ${us.status==='ready'?'selected':''}>Ready</option>
+            <option value="in-progress" ${us.status==='in-progress'?'selected':''}>In Progress</option>
+            <option value="blocked" ${us.status==='blocked'?'selected':''}>Blocked</option>
+            <option value="done" ${us.status==='done'?'selected':''}>Done</option>
+          </select>
+        </div>
+        <div class="comment-box">
+          <textarea id="ta-${us.id}" placeholder="Dejá tu feedback o comentario acá..." rows="1">${us.comments.length > 0 ? us.comments[us.comments.length-1].text : ''}</textarea>
+          <div class="comment-actions">
+            <button class="save" onclick="addComment('${us.id}')">💬 Comentar</button>
+            <button onclick="clearInput('ta-${us.id}')">🗑️ Limpiar</button>
+            <span style="margin-left:auto;font-size:11px;color:#6e7681;" id="comment-count-${us.id}">${us.comments.length} comentarios</span>
+          </div>
+          <div class="comments-list" id="comments-${us.id}">
+            ${us.comments.slice(-3).map(c => `<div class="comment-item"><span class="date">${c.date}</span> ${c.text}</div>`).join('')}
+          </div>
+        </div>
+      `;
+
+      // Filter visibility
+      if (currentFilter !== 'all') {
+        if (currentFilter === 'backlog' && us.status !== 'backlog') card.classList.add('filtered-out');
+        else if (currentFilter === 'bug' && !us.tags.includes('bug')) card.classList.add('filtered-out');
+        else if (currentFilter === 'ai' && !us.tags.includes('ai')) card.classList.add('filtered-out');
+        else if (currentFilter === 'feature' && !us.tags.includes('feature')) card.classList.add('filtered-out');
+        else if (currentFilter === 'ui' && !us.tags.includes('ui')) card.classList.add('filtered-out');
+        else if (['critical','high','medium','low'].includes(currentFilter) && us.priority !== currentFilter) card.classList.add('filtered-out');
+      }
+
+      sec.appendChild(card);
+    });
+
+    board.appendChild(sec);
+  });
+
+  updateCounts();
+}
+
+function updateCounts() {
+  const total = US.length;
+  document.getElementById('total-count').textContent = total;
+  document.getElementById('count-all').textContent = total;
+  document.getElementById('count-critical').textContent = US.filter(u => u.priority === 'critical').length;
+  document.getElementById('count-high').textContent = US.filter(u => u.priority === 'high').length;
+  document.getElementById('count-bug').textContent = US.filter(u => u.tags.includes('bug')).length;
+  document.getElementById('count-ai').textContent = US.filter(u => u.tags.includes('ai')).length;
+  document.getElementById('count-feature').textContent = US.filter(u => u.tags.includes('feature')).length;
+  document.getElementById('count-ui').textContent = US.filter(u => u.tags.includes('ui')).length;
+  document.getElementById('count-backlog').textContent = US.filter(u => u.status === 'backlog').length;
+}
+
+function setFilter(filter) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`[data-filter="${filter}"]`).classList.add('active');
+  render();
+}
+
+function addComment(usId) {
+  const ta = document.getElementById(`ta-${usId}`);
+  const text = ta.value.trim();
+  if (!text) return;
+  const us = US.find(u => u.id === usId);
+  if (!us) return;
+  us.comments.push({ date: new Date().toLocaleString('es-AR'), text });
+  ta.value = '';
+  render();
+  // Refocus textarea
+  setTimeout(() => {
+    const newTa = document.getElementById(`ta-${usId}`);
+    if (newTa) newTa.focus();
+  }, 50);
+}
+
+function clearInput(id) {
+  document.getElementById(id).value = '';
+}
+
+function updateStatus(usId, status) {
+  const us = US.find(u => u.id === usId);
+  if (us) us.status = status;
+  updateCounts();
+}
+
+function moveAll(status) {
+  US.forEach(u => { if (u.status !== 'done') u.status = status; });
+  render();
+}
+
+function moveAllInFilter(status) {
+  const activeFilter = document.querySelector('.filter-btn.active')?.dataset?.filter || 'all';
+  US.forEach(u => {
+    if (u.status === 'done') return;
+    if (activeFilter === 'all') u.status = status;
+    else if (activeFilter === 'backlog' && u.status === 'backlog') u.status = status;
+    else if (activeFilter === 'bug' && u.tags.includes('bug')) u.status = status;
+    else if (activeFilter === 'ai' && u.tags.includes('ai')) u.status = status;
+    else if (activeFilter === 'feature' && u.tags.includes('feature')) u.status = status;
+    else if (activeFilter === 'ui' && u.tags.includes('ui')) u.status = status;
+    else if (['critical','high','medium','low'].includes(activeFilter) && u.priority === activeFilter) u.status = status;
+  });
+  render();
+}
+
+function resetAll() {
+  US.forEach(u => { if (u.status !== 'done') u.status = 'backlog'; });
+  render();
+}
+
+function saveState() {
+  const state = US.map(u => ({ id: u.id, status: u.status, comments: u.comments }));
+  localStorage.setItem('trucoai-kanban-state', JSON.stringify(state));
+  alert('Estado guardado en localStorage. No se pierde al recargar la página.');
+}
+
+function loadState() {
+  const raw = localStorage.getItem('trucoai-kanban-state');
+  if (!raw) return;
+  try {
+    const state = JSON.parse(raw);
+    state.forEach(s => {
+      const us = US.find(u => u.id === s.id);
+      if (us) {
+        us.status = s.status;
+        if (s.comments) us.comments = s.comments;
+      }
+    });
+  } catch(e) { console.warn('Failed to load state:', e); }
+}
+
+function exportJSON() {
+  const data = JSON.stringify({ exported: new Date().toISOString(), stories: US }, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'trucoai-kanban-export.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────
+loadState();
+render();
+</script>
+</body>
+</html>

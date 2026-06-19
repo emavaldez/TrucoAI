@@ -85,6 +85,91 @@ export function compareCards(card1: Card, card2: Card): number {
 /**
  * Get the name of a card for display
  */
+
+/**
+ * Resolve a baza (trick) — given played cards, determine the winning team
+ * @param playedCards Array of { card: Card; playerId: string } — one per player
+ * @param getPlayerTeam Function to determine team (0 or 1) for a player ID
+ * @returns Object with winnerTeam, winnerPlayerId, highestCard, tied flag
+ */
+export function resolverBaza(
+  playedCards: Array<{ card: Card; playerId: string }>,
+  getPlayerTeam?: (playerId: string) => number
+): { winnerTeam: number; winnerPlayerId: string | null; highestCard: Card | null; tied: boolean } {
+  if (playedCards.length === 0) {
+    return { winnerTeam: -1, winnerPlayerId: null, highestCard: null, tied: false };
+  }
+
+  // Group cards by team — find highest card per team
+  const teamCards: Record<number, { card: Card; playerId: string }> = {};
+  
+  for (const played of playedCards) {
+    let teamKey: number;
+    
+    if (getPlayerTeam) {
+      // Use the provided team lookup function
+      teamKey = getPlayerTeam(played.playerId);
+      if (teamKey === -1) continue; // invalid player
+    } else {
+      // Fallback: infer team from playerId (e.g., 'p0'/'p1' = team 0, 'p2'/'p3' = team 1)
+      // This is a simple heuristic — in the standard 4-player game,
+      // team 0 = players at positions 0,2; team 1 = players at positions 1,3
+      // But this is fragile — prefer to pass getPlayerTeam
+      const playerNum = parseInt(played.playerId.replace(/[^0-9]/g, ''), 10);
+      // Default assumption: even-numbered players are team 0, odd are team 1
+      teamKey = playerNum % 2 === 0 ? 0 : 1;
+    }
+    
+    const existing = teamCards[teamKey];
+    if (!existing || getCardRank(played.card) > getCardRank(existing.card)) {
+      teamCards[teamKey] = { card: played.card, playerId: played.playerId };
+    }
+  }
+
+  // Compare highest cards of each team
+  const teams = Object.keys(teamCards).map(Number);
+  if (teams.length < 2) {
+    // Only one team present
+    const only = teamCards[teams[0]];
+    return { 
+      winnerTeam: teams[0], 
+      winnerPlayerId: only.playerId, 
+      highestCard: only.card, 
+      tied: false 
+    };
+  }
+
+  const team0Highest = getCardRank(teamCards[0].card);
+  const team1Highest = getCardRank(teamCards[1].card);
+
+  if (team0Highest > team1Highest) {
+    return { 
+      winnerTeam: 0, 
+      winnerPlayerId: teamCards[0].playerId, 
+      highestCard: teamCards[0].card, 
+      tied: false 
+    };
+  } else if (team1Highest > team0Highest) {
+    return { 
+      winnerTeam: 1, 
+      winnerPlayerId: teamCards[1].playerId, 
+      highestCard: teamCards[1].card, 
+      tied: false 
+    };
+  } else {
+    // Tie — same highest card rank on both teams
+    return { 
+      winnerTeam: -1, 
+      winnerPlayerId: null, 
+      highestCard: teamCards[0].card, 
+      tied: true 
+    };
+  }
+}
+
+/**
+ * Get the name of a card for display
+ */
 export function getCardName(card: Card): string {
   const suitNames: Record<string, string> = {
     espada: 'Espada',

@@ -25,6 +25,7 @@ export class App {
       onEnvidoOpen: this.handleEnvidoOpen.bind(this),
       onEnvidoOpenType: this.handleEnvidoOpenType.bind(this),
       onEnvidoWant: this.handleEnvidoWant.bind(this),
+      onEnvidoSonBuenas: this.handleEnvidoSonBuenas.bind(this),
       onEnvidoNoWant: this.handleEnvidoNoWant.bind(this),
       onEnvidoRaise: this.handleEnvidoRaise.bind(this),
       onTrucoChallenge: this.handleTrucoChallenge.bind(this),
@@ -32,6 +33,7 @@ export class App {
       onTrucoDecline: this.handleTrucoDecline.bind(this),
       onTrucoRaise: this.handleTrucoRaise.bind(this),
       onContinueAfterNotification: this.handleContinueAfterNotification.bind(this),
+      onIrseAlMazo: this.handleIrseAlMazo.bind(this),
     });
 
     this.setupEventListeners();
@@ -44,6 +46,7 @@ export class App {
       'hand-resolved', 'round-over', 'game-over',
       'envido-raised', 'envido-resolved',
       'truco-accepted', 'truco-resolved',
+      'irse-al-mazo',
     ];
     for (const event of renderHandlers) {
       this.gameEngine.on(event, () => this.renderGameState());
@@ -79,13 +82,26 @@ export class App {
       }
     });
 
-    // After envido resolves, show result notification
+    // After envido resolves, show result notification with individual scores
     this.gameEngine.on('envido-resolved', (data: any) => {
       this.renderGameState();
+      if (data && data.sonBuenas) {
+        // "Son buenas" — show a compact message
+        const wTeam = data.winnerTeam;
+        const title = wTeam === 0 ? 'Equipo 1 gana el Envido' : 'Equipo 2 gana el Envido';
+        this.uiManager.showNotification(title, 'El rival dijo "Son buenas". Envido para tu equipo.', 'success');
+        return;
+      }
       if (data && data.team0Best !== undefined) {
         const wTeam = data.winnerTeam;
         const title = wTeam === 0 ? 'Equipo 1 gana el Envido' : 'Equipo 2 gana el Envido';
-        const msg = `Equipo 1: ${data.team0Best} pts — Equipo 2: ${data.team1Best} pts`;
+        // Build individual player scores message (mostrar tantos)
+        const scores = data.scores || {};
+        const playerLines = this.players.map(p => {
+          const pts = scores[p.id];
+          return `${p.name}: ${pts !== undefined ? pts + ' pts' : '—'}`;
+        }).join(' · ');
+        const msg = `Equipo 1: ${data.team0Best} pts — Equipo 2: ${data.team1Best} pts\n${playerLines}`;
         this.uiManager.showNotification(title, msg, 'info');
       } else {
         setTimeout(() => this.resumeCurrentTurn(), 300);
@@ -153,7 +169,7 @@ export class App {
       currentTurnPlayerId: '',
       deckRemaining: 40,
       scores: { team0: 0, team1: 0 },
-      envido: { phase: 'none', callerTeam: null, level: 'envido', accepted: false, totalPoints: 0, pointsAwarded: 0, team0Scored: 0, team1Scored: 0, team0Player0Envido: null, team0Player1Envido: null, team1Player0Envido: null, team1Player1Envido: null, team1Player2Envido: null, team0Player2Envido: null },
+      envido: { phase: 'none', callerTeam: null, level: 'envido', accepted: false, totalPoints: 0, pointsAwarded: 0, team0Scored: 0, team1Scored: 0, envidoWinner: null, team0Player0Envido: null, team0Player1Envido: null, team1Player0Envido: null, team1Player1Envido: null, team1Player2Envido: null, team0Player2Envido: null },
       truco: { level: 0, lastChallengerTeam: null, accepted: false, pointsAwarded: 0, team0Scored: 0, team1Scored: 0 },
       roundResults: [],
       isPicaPica: false,
@@ -166,6 +182,15 @@ export class App {
       gameOverWinner: null,
       gameOverScores: { team0: 0, team1: 0 },
       piePlayerId: '',
+      partidaHistory: {
+        initialDealerId: '',
+        hands: [],
+        finalScores: { team0: 0, team1: 0 },
+        winningTeam: -1,
+        totalHands: 0,
+        startedAt: Date.now(),
+        endedAt: null,
+      },
     });
   }
 
@@ -338,6 +363,10 @@ export class App {
     this.gameEngine['respondEnvido'](this.players[0].id, true);
   }
 
+  private handleEnvidoSonBuenas(): void {
+    this.gameEngine['respondEnvido'](this.players[0].id, 'son-buenas');
+  }
+
   private handleEnvidoOpenType(level: 'envido' | 'real-envido' | 'falta-envido'): void {
     if (this.gameEngine.getCurrentRound() !== 0) return;
     const humanPlayer = this.players[0];
@@ -480,6 +509,13 @@ export class App {
     this.gameEngine['respondTruco'](this.players[0].id, true, true);
   }
 
+  // ---- Irse al Mazo Handler ----
+
+  private handleIrseAlMazo(): void {
+    if (!this.gameRunning) return;
+    this.gameEngine['irseAlMazo'](this.players[0].id);
+  }
+
   /**
    * Resume the current turn after envido/truco resolution.
    * If it's an AI's turn, trigger AI. If human, update UI.
@@ -544,6 +580,7 @@ export class App {
       gameOverWinner,
       gameOverScores: scores,
       piePlayerId: this.getHumanPiePlayerId(),
+      partidaHistory: this.gameEngine.getPartidaHistory(),
     });
   }
 }

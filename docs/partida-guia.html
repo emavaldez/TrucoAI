@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TrucoAI — Guía de Partida Paso a Paso</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; background: #1a1a2e; color: #e0e0e0; padding: 20px; }
+.container { max-width: 1100px; margin: 0 auto; }
+h1 { color: #f0c040; font-size: 1.6rem; margin-bottom: 4px; }
+.subtitle { color: #888; font-size: 0.9rem; margin-bottom: 20px; }
+
+/* Layout */
+.game-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+
+/* Scoreboard */
+.scoreboard { grid-column: 1 / -1; display: flex; justify-content: center; gap: 40px; background: #16213e; padding: 12px 24px; border-radius: 8px; margin-bottom: 4px; }
+.team-box { text-align: center; }
+.team-box .name { font-size: 0.85rem; color: #aaa; }
+.team-box .score { font-size: 2rem; font-weight: bold; }
+.team-box.eq0 .score { color: #4fc3f7; }
+.team-box.eq1 .score { color: #ff8a65; }
+
+/* Step selector */
+.step-nav { background: #16213e; border-radius: 8px; padding: 10px 16px; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.step-nav label { font-size: 0.8rem; color: #888; }
+.step-nav select { flex: 1; min-width: 200px; padding: 6px 10px; background: #0f3460; color: #e0e0e0; border: 1px solid #333; border-radius: 4px; font-size: 0.9rem; }
+.step-nav button { padding: 6px 14px; background: #e94560; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem; }
+.step-nav button:hover { background: #c73d54; }
+.step-counter { font-size: 0.8rem; color: #888; }
+
+/* Main content */
+.step-content { background: #16213e; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+
+/* Players section */
+.players-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px; }
+.player-card { background: #0f3460; border-radius: 6px; padding: 10px; border: 2px solid transparent; transition: border-color .2s; }
+.player-card.active-turn { border-color: #f0c040; }
+.player-card .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 0.85rem; }
+.player-card .name { font-weight: 600; }
+.player-card .role { font-size: 0.75rem; background: #333; padding: 1px 6px; border-radius: 3px; }
+.player-card .role.dealer { background: #1565c0; }
+.player-card .role.mano { background: #2e7d32; }
+.player-card .role.pie { background: #6a1b9a; }
+.player-card .role.starter { background: #e65100; }
+
+/* Cards */
+.cards-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.card { display: inline-flex; align-items: center; justify-content: center; width: 52px; height: 74px; background: linear-gradient(135deg, #fff, #f0f0f0); border: 2px solid #ccc; border-radius: 6px; font-size: 0.75rem; font-weight: bold; color: #222; cursor: default; position: relative; }
+.card .card-num { font-size: 0.9rem; }
+.card .card-suit { font-size: 0.65rem; }
+.card.oro { color: #d4a017; border-color: #d4a017; }
+.card.copa { color: #2e7d32; border-color: #2e7d32; }
+.card.espada { color: #1565c0; border-color: #1565c0; }
+.card.basto { color: #6a1b9a; border-color: #6a1b9a; }
+.card.played { background: linear-gradient(135deg, #fff8e1, #ffe082); border-color: #f0c040; cursor: pointer; }
+
+/* Played cards on table */
+.table-area { background: #0a1628; border-radius: 8px; padding: 16px; margin-bottom: 16px; text-align: center; }
+.table-area .label { font-size: 0.8rem; color: #666; margin-bottom: 8px; }
+.table-cards { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; }
+.played-card-wrapper { text-align: center; }
+.played-card-wrapper .player-tag { font-size: 0.7rem; color: #888; margin-top: 2px; }
+
+/* Envido scores */
+.envido-display { background: #0d2137; border-radius: 6px; padding: 10px; margin: 10px 0; font-size: 0.85rem; }
+.envido-display .row { display: flex; justify-content: space-between; padding: 2px 0; }
+.envido-display .winner { color: #4caf50; font-weight: bold; }
+
+/* Step description */
+.step-desc { font-size: 0.95rem; line-height: 1.6; margin-bottom: 12px; padding: 12px; background: #0d2137; border-radius: 6px; border-left: 3px solid #f0c040; }
+.step-desc .phase-tag { display: inline-block; background: #e94560; color: white; padding: 2px 8px; border-radius: 3px; font-size: 0.7rem; margin-bottom: 6px; }
+.step-desc .highlight { color: #f0c040; font-weight: 500; }
+
+/* Actions */
+.actions-box { background: #1a1a2e; border-radius: 6px; padding: 10px; margin-top: 10px; }
+.actions-box .action-title { font-size: 0.8rem; color: #888; margin-bottom: 6px; }
+.action { display: inline-block; background: #333; padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; margin: 2px; }
+.action.chosen { background: #2e7d32; color: #a5d6a7; font-weight: 600; }
+
+/* Comment section */
+.comment-area { background: #16213e; border-radius: 8px; padding: 16px; margin-top: 16px; }
+.comment-area h3 { font-size: 0.95rem; color: #f0c040; margin-bottom: 8px; }
+.comment-area textarea { width: 100%; min-height: 60px; background: #0f3460; border: 1px solid #333; color: #e0e0e0; padding: 8px; border-radius: 4px; font-family: inherit; font-size: 0.85rem; resize: vertical; }
+.comment-area .comment-meta { font-size: 0.75rem; color: #666; margin-top: 4px; }
+
+/* Round results */
+.round-results { display: flex; gap: 10px; margin-top: 10px; }
+.round-dot { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: bold; }
+.round-dot.team0 { background: #4fc3f7; color: #000; }
+.round-dot.team1 { background: #ff8a65; color: #000; }
+.round-dot.draw { background: #666; color: #ccc; }
+.round-dot.pending { background: #333; color: #666; }
+
+/* Pending in step selector */
+.pending-step { color: #888; }
+.completed-step { color: #e0e0e0; }
+.current-step { color: #f0c040; font-weight: 600; }
+
+/* Error highlight */
+.error-flag { background: #e94560; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.7rem; margin-left: 6px; }
+
+/* Buttons for testing */
+.test-buttons { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.test-buttons button { padding: 6px 12px; border: 1px solid #555; background: #333; color: #ccc; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
+.test-buttons button:hover { background: #444; }
+.test-buttons button.primary { background: #e94560; color: white; border-color: #e94560; }
+.test-buttons button.primary:hover { background: #c73d54; }
+
+/* Hand summary */
+.hand-summary { background: #0d2137; border-radius: 6px; padding: 12px; margin-top: 10px; }
+.hand-summary h3 { color: #f0c040; font-size: 0.95rem; margin-bottom: 6px; }
+
+/* Responsive */
+@media (max-width: 700px) {
+  .game-layout { grid-template-columns: 1fr; }
+  .players-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>🃏 TrucoAI — Partida Guía Paso a Paso</h1>
+<p class="subtitle">4 jugadores (2v2) · Mano 1 y Mano 2 completas · Usá este documento para verificar que el juego funcione correctamente</p>
+
+<div class="scoreboard" id="globalScoreboard">
+  <div class="team-box eq0">
+    <div class="name">EQUIPO 0</div>
+    <div class="score" id="team0Score">0</div>
+  </div>
+  <div class="team-box eq1">
+    <div class="name">EQUIPO 1</div>
+    <div class="score" id="team1Score">0</div>
+  </div>
+</div>
+
+<div class="step-nav">
+  <label>Paso:</label>
+  <select id="stepSelect"></select>
+  <span class="step-counter" id="stepCounter"></span>
+  <button id="prevBtn">◀ Anterior</button>
+  <button id="nextBtn">Siguiente ▶</button>
+</div>
+
+<div id="stepContent" class="step-content">
+  <!-- Dynamic content -->
+</div>
+
+<div class="comment-area">
+  <h3>💬 Mis comentarios sobre este paso</h3>
+  <textarea id="commentText" placeholder="Escribí acá si ves algo raro, algún error, o una duda..."></textarea>
+  <div class="comment-meta" id="commentMeta"></div>
+</div>
+</div>
+
+<script>
+// ===== DATA: Partida completa =====
+
+const TEAMS = {
+  names: { 0: 'Equipo 0 (Azul)', 1: 'Equipo 1 (Naranja)' }
+};
+
+const PLAYERS = [
+  { id: 'p0', name: 'Juan', team: 0, pos: 0, isHuman: false },
+  { id: 'p1', name: 'Carlos', team: 1, pos: 1, isHuman: false },
+  { id: 'p2', name: 'María', team: 0, pos: 2, isHuman: true },
+  { id: 'p3', name: 'Ana', team: 1, pos: 3, isHuman: false }
+];
+
+function getPlayer(id) { return PLAYERS.find(p => p.id === id); }
+function getTeam(id) { return getPlayer(id).team; }
+
+// Display helpers
+const SUIT_SYMBOLS = { espada: '♠', basto: '♣', oro: '♦', copa: '♥' };
+const SUIT_CLASS = { espada: 'espada', basto: 'basto', oro: 'oro', copa: 'copa' };
+
+function renderCard(card, opts = {}) {
+  if (!card) return '<span class="card" style="opacity:0.3">?</span>';
+  const cls = SUIT_CLASS[card.suit] || '';
+  const extra = opts.played ? ' played' : '';
+  return `<span class="card ${cls}${extra}"><span class="card-num">${card.number}</span><span class="card-suit">${SUIT_SYMBOLS[card.suit]}</span></span>`;
+}
+
+function renderCards(cards, opts = {}) {
+  if (!cards || cards.length === 0) return '<span style="color:#666;font-size:0.8rem">sin cartas</span>';
+  return cards.map(c => renderCard(c, opts)).join(' ');
+}
+
+function cardRankName(rank) {
+  const names = {
+    13: '1♠ (Macho)', 12: '1♣ (Hembra)', 11: '7♠ (Bravo)', 10: '7♦ (Siete Oro)',
+    9: '3', 8: '2', 7: '1♦/♥ (Falso)', 6: '12 (Rey)', 5: '11 (Caballo)', 4: '10 (Sota)',
+    3: '7♣/♥ (Falso)', 2: '6', 1: '5', 0: '4'
+  };
+  return names[rank] || rank.toString();
+}
+
+// ===== STEP DEFINITIONS =====
+const steps = [];
+
+// Helper to add steps
+let sid = 0;
+function S(title, desc, cb) {
+  const s = { id: sid++, title, desc, phase: '', turnPlayerId: '', envidoState: null, trucoState: null, actions: [], cardsPlayed: [], roundResults: [], scores: { team0: 0, team1: 0 }, comments: '' };
+  if (cb) cb(s);
+  steps.push(s);
+  return s;
+}
+
+// Reset comments
+let savedComments = {};
+
+// ============================================================
+// PARTIDA: 4 jugadores, 2 manos completas
+// ============================================================
+
+// --- SETUP INITIAL ---
+let currentScores = { team0: 0, team1: 0 };
+let deckCardsDealt = 0;
+
+// --- MANO 1: Juan (p0) es dealer ---
+// Orden de posiciones: 0-Juan, 1-Carlos, 2-María, 3-Ana
+// Mano (starter): derecha del dealer = posición +1 = Carlos (p1)
+// Orden de juego: Carlos → María → Ana → Juan
+// Pie (ultimo del equipo en jugar): 
+//   Team 0: María (pos 2) es pie de team 0
+//   Team 1: Ana (pos 3) es pie de team 1
+
+// Cartas MANO 1:
+// Juan (p0): 4Oro(rank0), 2Copas(rank8), SotaEspadas(rank4)
+// Carlos (p1): 3Oro(rank9), 7Copas(rank3), 1Bastos(rank12)
+// María (p2): 1Oro(rank7), 5Oro(rank1), 2Bastos(rank8)
+// Ana (p3): 7Bastos(rank3), 6Bastos(rank2), 4Espadas(rank0)
+
+const H1 = {
+  p0: [{suit:'oro',number:4},{suit:'copa',number:2},{suit:'espada',number:10}],
+  p1: [{suit:'oro',number:3},{suit:'copa',number:7},{suit:'basto',number:1}],
+  p2: [{suit:'oro',number:1},{suit:'oro',number:5},{suit:'basto',number:2}],
+  p3: [{suit:'basto',number:7},{suit:'basto',number:6},{suit:'espada',number:4}]
+};
+
+function cards(pId) { return H1[pId] || []; }
+function handStr(pId) {
+  return cards(pId).map((c,i) => `[${i}] ${c.number}${SUIT_SYMBOLS[c.suit]}`).join(', ');
+}
+
+// Envido scores per player
+function calcEnvido(cards) {
+  const suits = {};
+  for (const c of cards) {
+    if (!suits[c.suit]) suits[c.suit] = [];
+    suits[c.suit].push(c);
+  }
+  let best = 0;
+  for (const [s, clist] of Object.entries(suits)) {
+    if (clist.length >= 2) {
+      const vals = clist.map(c => c.number).sort((a,b)=>b-a);
+      const score = 20 + vals[0] + vals[1];
+      if (score > best) best = score;
+    }
+  }
+  if (best === 0 && cards.length > 0) {
+    best = Math.max(...cards.map(c => c.number));
+  }
+  return best;
+}
+
+const envidoScores = {
+  p0: calcEnvido(H1.p0),
+  p1: calcEnvido(H1.p1),
+  p2: calcEnvido(H1.p2),
+  p3: calcEnvido(H1.p3),
+};
+
+// Truco ranks (from Rules.ts)
+function trucoRank(card) {
+  const key = `${card.suit}-${card.number}`;
+  const SPECIAL = {
+    'espada-1':13, 'basto-1':12, 'espada-7':11, 'oro-7':10,
+    'oro-1':7, 'copa-1':7, 'basto-7':3, 'copa-7':3
+  };
+  if (SPECIAL[key] !== undefined) return SPECIAL[key];
+  const gen = { 3:9, 2:8, 12:6, 11:5, 10:4, 6:2, 5:1, 4:0 };
+  return gen[card.number] !== undefined ? gen[card.number] : card.number;
+}
+
+function compareCards(c1, c2) {
+  return trucoRank(c1) - trucoRank(c2);
+}
+
+// Highest card per team in a trick
+function trickWinner(trickCards) {
+  let best = { rank: -1, playerId: '', team: -1 };
+  for (const pc of trickCards) {
+    const r = trucoRank(pc.card);
+    if (r > best.rank) {
+      best = { rank: r, playerId: pc.playerId, team: getTeam(pc.playerId) };
+    }
+  }
+  return best;
+}
+
+function teamHighest(trickCards, team) {
+  const teamCards = trickCards.filter(pc => getTeam(pc.playerId) === team);
+  if (teamCards.length === 0) return null;
+  return teamCards.sort((a,b) => trucoRank(b.card) - trucoRank(a.card))[0];
+}
+
+// ============================================================
+// STEP BUILDER
+// ============================================================
+
+// PREÁMBULO
+S('📋 Configuración de la partida', 'Resumen de la partida antes de empezar.', s => {
+  s.phase = 'setup';
+  s.desc = `
+    <span class="phase-tag">CONFIGURACIÓN</span>
+    <p><strong>Modalidad:</strong> 4 jugadores (2v2). Puntaje objetivo: 30.</p>
+    <p><strong>Equipo 0 (Azul):</strong> Juan (dealer, pos 0) y María (pos 2)</p>
+    <p><strong>Equipo 1 (Naranja):</strong> Carlos (pos 1, mano) y Ana (pos 3, pie)</p>
+    <p><strong>Orden de juego:</strong> sentido antihorario. Posiciones: 0→1→2→3→0...</p>
+    <p><strong>Dealer:</strong> Juan (p0). <strong>Mano (primero en jugar):</strong> derecha del dealer → Carlos (p1).</p>
+    <p><strong>Pie (puede cantar Envido):</strong> dealer (Juan) y último de cada equipo en la ronda → María (p2, pie Eq0) y Ana (p3, pie Eq1)</p>
+    <hr style="border-color:#333;margin:8px 0">
+    <p style="color:#f0c040;"><strong>👉 IMPORTANTE:</strong> Revisá cada paso y anotá si el comportamiento del juego coincide con lo que dice acá. Si ves algo que no cuadra, dejanos un comentario abajo.</p>
+  `;
+  s.scores = { team0: 0, team1: 0 };
+});
+
+// MANO 1 - Reparto
+S('🃏 Mano 1 — Reparto de cartas', '', s => {
+  s.phase = 'dealing';
+  s.dealerId = 'p0';
+  s.starterId = 'p1';
+  s.hands = H1;
+  s.desc = `
+    <span class="phase-tag">REPARTO</span>
+    <p>El dealer <strong class="highlight">Juan</strong> baraja y reparte 3 cartas a cada jugador, una por una.</p>
+    <div class="players-grid">
+      ${PLAYERS.map(p => {
+        const role = p.id === 'p0' ? '<span class="role dealer">DEALER</span>' : 
+                     p.id === 'p1' ? '<span class="role mano">MANO</span>' :
+                     p.id === 'p3' ? '<span class="role pie">PIE</span>' : '';
+        return `<div class="player-card">
+          <div class="header"><span class="name">${p.name}</span> Eq${p.team} ${role}</div>
+          <div class="cards-row">${renderCards(H1[p.id])}</div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="envido-display">
+      <strong>Puntajes de Envido:</strong>
+      ${PLAYERS.map(p => `<div class="row"><span>${p.name}:</span><span>${envidoScores[p.id]} pts</span></div>`).join('')}
+      <div class="row winner">▸ Mejor envido: Ana con 33 (7+6 de Bastos)</div>
+      <div class="row">▸ María tiene 26 (1+5 de Oros)</div>
+    </div>
+  `;
+  s.scores = { team0: 0, team1: 0 };
+});
+
+// MANO 1 - Fase Envido
+// El pie del equipo mano (Team 1) es Ana (p3). Pero según regla del código,
+// SOLO el DEALER (p0, Team 0) y el PIE (p3, Team 1), y solo pueden cantar en su turno.
+// Orden de juego: p1(Carlos,Team1) → p2(María,Team0) → p3(Ana,Team1) → p0(Juan,Team0)
+// En el turno de cada jugador, antes de jugar carta:
+//   - p1 Carlos: NI dealer ni pie → no puede cantar envido
+//   - p2 María: es pie de Team 0 → PUEDE cantar envido
+//   - p3 Ana: es pie de Team 1 → PUEDE cantar envido
+//   - p0 Juan: es dealer → PUEDE cantar envido
+
+S('📢 Mano 1 — Fase de Envido (turno de Carlos)', '', s => {
+  s.phase = 'envido';
+  s.turnPlayerId = 'p1';
+  s.desc = `
+    <span class="phase-tag">ENVIDO — Turno de Carlos</span>
+    <p>Es el turno de <strong class="highlight">Carlos</strong> (Eq 1, mano). Antes de jugar una carta, puede cantar Envido.</p>
+    <div class="actions-box">
+      <div class="action-title">Opciones de Carlos:</div>
+      <span class="action">Pasar (no cantar Envido)</span>
+      <span class="action" style="color:#666;text-decoration:line-through;">Envido / Real Envido / Falta Envido</span>
+      <span class="action chosen">→ Elige: PASAR</span>
+    </div>
+    <p style="color:#888;font-size:0.85rem;margin-top:6px;">📝 Carlos <strong>no puede</strong> cantar Envido según las reglas: solo el <strong>dealer</strong> (Juan) y el <strong>pie</strong> (María y Ana) pueden hacerlo. Carlos no es ninguna de esas posiciones.</p>
+  `;
+  s.scores = { team0: 0, team1: 0 };
+});
+
+S('📢 Mano 1 — Fase de Envido (turno de María)', '', s => {
+  s.phase = 'envido';
+  s.turnPlayerId = 'p2';
+  s.desc = `
+    <span class="phase-tag">ENVIDO — Turno de María</span>
+    <p>Es el turno de <strong class="highlight">María</strong> (Eq 0). María es <strong>pie del Equipo 0</strong> → puede cantar Envido.</p>
+    <p>María tiene 26 de envido (1+5 de Oros). Es un buen puntaje.</p>
+    <div class="actions-box">
+      <div class="action-title">Opciones de María:</div>
+      <span class="action">Pasar</span>
+      <span class="action">Envido (2 pts)</span>
+      <span class="action">Real Envido (3 pts)</span>
+      <span class="action">Falta Envido (30 pts — le faltan al rival)</span>
+      <span class="action chosen">→ Elige: ENVIDO</span>
+    </div>
+  `;
+  s.scores = { team0: 0, team1: 0 };
+  s.envidoCalled = true;
+  s.envidoLevel = 'envido';
+  s.envidoTeam = 0;
+});
+
+S('📢 Mano 1 — Envido: respuesta de Ana', '', s => {
+  s.phase = 'envido';
+  s.turnPlayerId = 'p3';
+  s.envido = { phase: 'opening', callerTeam: 0, level: 'envido', totalPoints: 2 };
+  s.desc = `
+    <span class="phase-tag">ENVIDO — Respuesta de Ana (Eq 1)</span>
+    <p>María cantó <strong>Envido (2 pts)</strong>. Ahora responde <strong class="highlight">Ana</strong> (Eq 1, pie).</p>
+    <div class="envido-display">
+      <div class="row"><strong>Ana sabe que tiene:</strong></div>
+      <div class="row"><span>7 de Bastos + 6 de Bastos = 20 + 7 + 6 = <span style="color:#4caf50;font-weight:bold;">33 pts</span></span></div>
+      <div class="row" style="color:#888;">¡El máximo envido posible! Sabe que gana contra cualquiera.</div>
+    </div>
+    <div class="actions-box">
+      <div class="action-title">Opciones de Ana:</div>
+      <span class="action">No querer (Eq 0 gana 1 pt)</span>
+      <span class="action">Querer (se juegan 2 pts)</span>
+      <span class="action">Subir a Real Envido (3 pts acumulados)</span>
+      <span class="action chosen">→ Elige: QUIERO (acepta 2 pts)</span>
+    </div>
+    <p style="color:#888;font-size:0.85rem;margin-top:6px;">📝 Ana quiere de una porque sabe que gana. Podría subir pero no hace falta.</p>
+  `;
+  s.scores = { team0: 0, team1: 0 };
+});
+
+// Envido resolution - showing scores
+S('📊 Mano 1 — Envido: resolución', '', s => {
+  s.phase = 'envido-resolution';
+  s.envido = { phase: 'resolution', callerTeam: 0, level: 'envido', accepted: true, totalPoints: 2, pointsAwarded: 2 };
+  s.desc = `
+    <span class="phase-tag">ENVIDO — ¡Resolución!</span>
+    <p>Se aceptó el Envido. Ahora se cantan los tantos:</p>
+    <div class="envido-display">
+      <div class="row"><span><strong>Orden de declaración:</strong></span></div>
+      <div class="row"><span>Carlos (Eq 1, mano):</span><span>"22" (3O + 7C + 12B → singles: 7) → dice 22</span></div>
+      <div class="row"><span>María (Eq 0):</span><span>"26" (1O+5O = 20+5+1)</span></div>
+      <div class="row"><span>Ana (Eq 1):</span><span>"33" (7B+6B = 20+7+6) 🏆</span></div>
+      <div class="row"><span>Juan (Eq 0):</span><span>"10" (Sota♠=10, singles)</span></div>
+      <hr style="border-color:#333;margin:4px 0">
+      <div class="row winner">▸ <strong>MEJOR DE CADA EQUIPO:</strong> Eq 0 = 26 (María) vs Eq 1 = 33 (Ana)</div>
+      <div class="row winner">🏆 <strong style="color:#ff8a65;">Gana Equipo 1 (Ana con 33)! +2 puntos</strong></div>
+    </div>
+    <p>El puntaje del Envido no se acumula con puntos de mano. Son puntos extras.</p>
+  `;
+  s.scores = { team0: 0, team1: 2 };
+});
+
+// Mano 1 — Ronda 1 (Trick 1)
+S('🎯 Mano 1 — Ronda 1: turno de Carlos (mano)', '', s => {
+  s.phase = 'playing-trick';
+  s.turnPlayerId = 'p1';
+  s.trickNumber = 1;
+  s.scores = { team0: 0, team1: 2 };
+  s.hands = {
+    p0: [{suit:'oro',number:4},{suit:'copa',number:2},{suit:'espada',number:10}],
+    p1: [{suit:'oro',number:3},{suit:'copa',number:7},{suit:'basto',number:1}],
+    p2: [{suit:'oro',number:1},{suit:'oro',number:5},{suit:'basto',number:2}],
+    p3: [{suit:'basto',number:7},{suit:'basto',number:6},{suit:'espada',number:4}]
+  };
+  s.desc = `
+    <span class="phase-tag">RONDA 1 — Turno de Carlos (mano, Eq 1)</span>
+    <p>Envido resuelto. Ahora se juega la <strong>Ronda 1</strong>.</p>
+    <p>Empieza <strong class="highlight">Carlos</strong> (Eq 1, mano).</p>
+    <div class="players-grid">
+      ${PLAYERS.map(p => {
+        const isTurn = p.id === 'p1';
+        const h = s.hands[p.id].map((c,i) => ({...c}));
+        return `<div class="player-card ${isTurn ? 'active-turn' : ''}">
+          <div class="header">
+            <span class="name">${p.name}</span>
+            ${isTurn ? '<span style="color:#f0c040;font-size:0.7rem;">▶ TURNO</span>' : ''}
+          </div>
+          <div class="cards-row">${renderCards(h)}</div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="actions-box">
+      <div class="action-title">Cartas de Carlos:</div>
+      <span class="action">[0] 3♠Oro (rank 9)</span>
+      <span class="action">[1] 7♥Copa (rank 3)</span>
+      <span class="action">[2] 1♣Basto (rank 12 — ¡casi la más fuerte!)</span>
+    </div>
+    <p>Carlos no quiere gastar su 1 de Bastos ni perder con 7 de Copas. Elige la <span class="highlight">3 de Oro</span> (rank 9, fuerte pero no la mejor).</p>
+    <p style="color:#888;font-size:0.85rem;">Antes de jugar, Carlos puede cantar <strong>Truco</strong> en cualquier momento.</p>
+  `;
+});
+
+S('🎯 Mano 1 — Ronda 1: Carlos juega 3 de Oro', '', s => {
+  s.phase = 'playing-trick';
+  s.turnPlayerId = 'p2';
+  s.trickNumber = 1;
+  s.scores = { team0: 0, team1: 2 };
+  s.hands = {
+    p0: [{suit:'oro',number:4},{suit:'copa',number:2},{suit:'espada',number:10}],
+    p1: [{suit:'copa',number:7},{suit:'basto',number:1}],  // played 3O
+    p2: [{suit:'oro',number:1},{suit:'oro',number:5},{suit:'basto',number:2}],
+    p3: [{suit:'basto',number:7},{suit:'basto',number:6},{suit:'espada',number:4}]
+  };
+  s.desc = `
+    <span class="phase-tag">RONDA 1 — Carlos juega 3 de Oro</span>
+    <div class="table-area">
+      <div class="label">🃏 Cartas jugadas en la mesa:</div>
+      <div class="table-cards">
+        <div class="played-card-wrapper">
+          ${renderCard({suit:'oro',number:3}, {played:true})}
+          <div class="player-tag">Carlos (Eq 1) · rank 9</div>
+        </div>
+      </div>
+    </div>
+    <p>Ahora juega <strong class="highlight">María</strong> (Eq 0).</p>
+    <p>María puede ver la 3 de Oro de Carlos (rank 9) en la mesa.</p>
+    <div class="actions-box">
+      <div class="action-title">Cartas de María:</div>
+      <span class="action">[0] 1♦Oro (rank 7) — pierde contra 9</span>
+      <span class="action">[1] 5♦Oro (rank 1) — pierde</span>
+      <span class="action">[2] 2♣Basto (rank 8) — pierde contra 9 por 1</span>
+    </div>
+    <p>Ninguna carta de María le gana a la 3 de Oro (rank 9). Juega <span class="highlight">2 de Bastos</span> (rank 8) — la más cercana.</p>
+    <p>María también podría cantar <strong>Truco</strong> en su turno para subir la apuesta, aunque va perdiendo.</p>
+  `;
+});
+
+S('🎯 Mano 1 — Ronda 1: María juega 2 de Bastos', '', s => {
+  s.phase = 'playing-trick';
+  s.turnPlayerId = 'p3';
+  s.trickNumber = 1;
+  s.scores = { team0: 0, team1: 2 };
+  s.hands = {
+    p0: [{suit:'oro',number:4},{suit:'copa',number:2},{suit:'espada',number:10}],
+    p1: [{suit:'copa',number:7},{suit:'basto',number:1}],
+    p2: [{suit:'oro',number:1},{suit:'oro',number:5}],  // played 2B
+    p3: [{suit:'basto',number:7},{suit:'basto',number:6},{suit:'espada',number:4}]
+  };
+  s.desc = `
+    <span class="phase-tag">RONDA 1 — María juega 2 de Bastos</span>
+    <div class="table-area">
+      <div class="label">🃏 Cartas jugadas:</div>
+      <div class="table-cards">
+        <div class="played-card-wrapper">
+          ${renderCard({suit:'oro',number:3}, {played:true})}
+          <div class="player-tag">Carlos · rank 9 (Eq 1) 🏆</div>
+        </div>
+        <div class="played-card-wrapper">
+          ${renderCard({suit:'basto',number:2}, {played:true})}
+          <div class="player-tag">María · rank 8 (Eq 0)</div>
+        </div>
+      </div>
+    </div>
+    <p><strong style="color:#4fc3f7;">Eq 1</strong> va ganando: 3Oro (9) vs 2Basto (8).</p>
+    <p>Ahora es el turno de <strong class="highlight">Ana</strong> (Eq 1, pie). Como su equipo va ganando, puede jugar una carta baja.</p>
+    <p>Ana también puede cantar <strong>Truco</strong> para presionar.</p>
+  `;
+});
+
+S('🎯 Mano 1 — Ronda 1: Ana juega 4 de Espadas (baja)', '', s => {
+  s.phase = 'playing-trick';
+  s.turnPlayerId = 'p0';
+  s.trickNumber = 1;
+  s.scores = { team0: 0, team1: 2 };
+  s.hands = {
+    p0: [{suit:'oro',number:4},{suit:'copa',number:2},{suit:'espada',number:10}],
+    p1: [{suit:'copa',number:7},{suit:'basto',number:1}],
+    p2: [{suit:'oro',number:1},{suit:'oro',number:5}],
+    p3: [{suit:'basto',number:7},{suit:'basto',number:6}]  // played 4E
+  };
+  s.desc = `
+    <span class="phase-tag">RONDA 1 — Ana juega 4 de Espadas</span>
+    <div class="table-area">
+      <div class="label">🃏 Cartas jugadas:</div>
+      <div class="table-cards">
+        <div class="played-card-wrapper">${renderCard({suit:'oro',number:3}, {played:true})}<div class="player-tag">Carlos · rank 9 (Eq 1) 🏆</div></div>
+        <div class="played-card-wrapper">${renderCard({suit:'basto',number:2}, {played:true})}<div class="player-tag">María · rank 8 (Eq 0)</div></div>
+        <div class="played-card-wrapper">${renderCard({suit:'espada',number:4}, {played:true})}<div class="player-tag">Ana · rank 0 (Eq 1)</div></div>
+      </div>
+    </div>
+    <p>Ana juega <span class="highlight">4 de Espadas</span> (rank 0, la más baja). Su equipo ya va ganando, no necesita arriesgar.</p>
+    <p>Ahora juega <strong class="highlight">Juan</strong> (Eq 0, dealer). Es la última carta de la ronda. Juan necesita una carta que gane a la 3 de Oro (rank 9) para empatar o ganar.</p>
+    <div class="actions-box">
+      <div class="action-title">Cartas de Juan:</div>
+      <span class="action">[0] 4♦Oro (rank 0) — pierde</span>
+      <span class="action">[1] 2♥Copa (rank 8) — pierde contra 9</span>
+      <span class="action">[2] 10♠Espada (Sota, rank 4) — pierde</span>
+    </div>
+    <p>Ninguna carta de Juan le gana a la 3 de Oro de Carlos.</p>
+  `;
+});
+
+S('🎯 Mano 1 — Ronda 1: Juan juega 4 de Oro', '', s => {
+  s.phase = 'trick-resolving';
+  s.scores = { team0: 0, team1: 2 };
+  s.desc = `
+    <span class="phase-tag">🔥 RONDA 1 — Resolución</span>
+    <div class="table-area">
+      <div class="label">🃏 Todas las cartas jugadas:</div>
+      <div class="table-cards">
+        <div class="played-card-wrapper">${renderCard({suit:'oro',number:3}, {played:true})}<div class="player-tag">Carlos · 3O (rank 9) 🏆</div></div>
+        <div class="played-card-wrapper">${renderCard({suit:'basto',number:2}, {played:true})}<div class="player-tag">María · 2B (rank 8)</div></div>
+        <div class="played-card-wrapper">${renderCard({suit:'espada',number:4}, {played:true})}<div class="player-tag">Ana · 4E (rank 0)</div></div>
+        <div class="played-card-wrapper">${renderCard({suit:'oro',number:4}, {played:true})}<div class="player-tag">Juan · 4O (rank 0)</div></div>
+      </div>
+    </div>
+    <div class="envido-display">
+      <strong>Comparación por equipo:</strong>
+      <div class="row"><span>Eq 1 (Carlos):</span><span>3O (rank 9) — <strong>mejor carta</strong></span></div>
+      <div class="row"><span>Eq 0 (María):</span><span>2B (rank 8)</span></div>
+      <div class="row winner">🏆 <strong style="color:#ff8a65;">Gana Equipo 1 — Ronda 1 para Carlos/Ana!</strong></div>
+    </div>
+    <p><strong>Próximo starter (Ronda 2):</strong> Carlos (p1) — jugó la carta más alta (3O).</p>
+    <p>🏆 <strong>Si Eq 1 gana también la Ronda 2, se lleva la mano.</strong></p>
+  `;
+});
+
+// Trick 2 - Ronda 2
+S('🎯 Mano 1 — Ronda 2: turno de Carlos', '', s => {
+  s.phase = 'playing-trick';
+  s.turnPlayerId = 'p1';
+  s.trickNumber = 2;
+  s.scores = { team0: 0, team1: 2 };
+  s.roundResults = [{ roundNumber: 1, teamWinner: 1 }];
+  s.hands = {
+    p0: [{suit:'copa',number:2},{suit:'espada',number:10}],
+    p1: [{suit:'copa',number:7},{suit:'basto',number:1}],
+    p2: [{suit:'oro',number:1},{suit:'oro',number:5}],
+    p3: [{suit:'basto',number:7},{suit:'basto',number:6}]
+  };
+  s.desc = `
+    <span class="phase-tag">RONDA 2 — Empieza Carlos (ganó Ronda 1)</span>
+    <p><strong>Starter de Ronda 2:</strong> Carlos (p1) — jugó la carta más alta en Ronda 1.</p>
+    <p>Su equipo ya ganó la primera ronda. Si ganan esta, se llevan la mano.</p>
+    <div class="round-results">
+      <div class="round-dot team1">R1</div>
+      <div class="round-dot pending">R2</div>
+      <div class="round-dot pending">R3</div>
+    </div>
+    <div class="actions-box">
+      <div class="action-title">Cartas de Carlos:</div>
+      <span class="action">[0] 7♥Copa (rank 3)</span>
+      <span class="action">[1] 1♣Basto (rank 12 — la más fuerte del mazo!)</span>
+    </div>
+    <p>Carlos juega <span class="highlight">7 de Copas</span> (rank 3). No necesita gastar su 1 de Bastos.</p>
+    <p style="color:#888;font-size:0.85rem;">Desde acá, en la UI del juego: ¿aparece botón de <strong>Truco</strong> para el jugador humano? Carlos es AI, pero este es un check de UI.</p>
+  `;
+});
+
+S('🎯 Mano 1 — Ronda 2: Carlos juega 7 de Copas', '', s => {
+  s.phase = 'playing-trick';
+  s.turnPlayerId = 'p2';
+  s.trickNumber = 2;
+  s.scores = { team0: 0, team1: 2 };
+  s.hands = {
+    p0: [{suit:'copa',number:2},{suit:'espada',number:10}],
+    p1: [{suit:'basto',number:1}],  // played 7C
+    p2: [{suit:'oro',number:1},{suit:'oro',number:5}],
+    p3: [{suit:'basto',number:7},{suit:'basto',number:6}]
+  };
+  s.desc = `
+    <span class="phase-tag">RONDA 2 — Carlos juega 7 de Copas</span>
+    <div class="table-area">
+      <div class="label">🃏 Cartas jugadas:</div>
+      <div class="table-cards">
+        <div class="played-card-wrapper">${renderCard({suit:'copa',number:7}, {played:true})}<div class="player-tag">Carlos · rank 3 (Eq 1)</div></div>
+      </div>
+    </div>
+    <p>Ahora juega <strong class="highlight">María</strong> (Eq 0).</p>
+    <p>Carlos jugó 7 de Copas (rank 3). María tiene 1 de Oro (rank 7) y 5 de Oro (rank 1).</p>
+    <div class="actions-box">
+      <div class="action-title">Opciones de María:</div>
+      <span class="action">[0] 1♦Oro (rank 7) — ¡LE GANA a 7C (3)!</span>
+      <span class="action">[1] 5♦Oro (rank 1) — pierde</span>
+    </div>
+    <p style="color:#4fc3f7;">María puede <strong>ganarle a Carlos</strong> con su 1 de Oro (rank 7 > 3). Elige <span class="highlight">1 de Oro</span>.</p>
+  `;
+});
+
+S('🎯 Mano 1 — Ronda 2: María juega 1 de Oro', '', s => {
+  s.phase = 'playing-trick';
+  s.turnPlayerId = 'p3';
+  s.trickNumber = 2;
+  s.scores = { team0: 0, team1: 2 };
+  s.hands = {
+    p0: [{suit:'copa',number:2},{suit:'espada',number:10}],
+    p1: [{suit:'basto',number:1}],
+    p2: [{suit:'oro',number:5}],  // played 1O
+    p3: [{suit:'basto',number:7},{suit:'basto',number:6}]
+  };
+  s.desc = `
+    <span class="phase-tag">RONDA 2 — María juega 1 de Oro</span>
+    <div class="table-area">
+      <div class="label">🃏 Cartas jugadas:</div>
+      <div class="table-cards">
+        <div class="played-card-wrapper">${renderCard({suit:'copa',number:7}, {played:true})}<div class="player-tag">Carlos · rank 3 (Eq 1)</div></div>
+        <div class="played-card-wrapper">${renderCard({suit:'oro',number:1}, {played:true})}<div class="player-tag">María · rank 7 (Eq 0) 🏆</div></div>
+      </div>
+    </div>
+    <p><strong style="color:#4fc3f7;">Eq 0</strong> va ganando esta ronda! 1O(7) > 7C(3).</p>
+    <p>Ahora juega <strong class="highlight">Ana</strong> (Eq 1). Su equipo va perdiendo esta ronda pero ya ganó la Ronda 1.</p>
+    <p>Ana puede cantar <strong>Truco</strong> para presionar.</p>
+  `;
+});
+
+S('🎯 Mano 1 — Ronda 2: Ana juega 6 de Bastos', '', s => {
+  s.phase = 'playing-trick';
+  s.turnPlayerId = 'p0';
+  s.trickNumber = 2;
+  s.scores = { team0: 0, team1: 2 };
+  s.hands = {
+    p0: [{suit:'copa',number:2},{suit:'espada',number:10}],
+    p1: [{suit:'basto',number:1}],
+    p2: [{suit:'oro',number:5}],
+    p3: [{suit:'basto',number:7}] // played 6B
+  };
+  s.desc = `
+    <span class="phase-tag">RONDA 2 — Ana juega 6 de Bastos</span>
+    <div class="table-area">
+      <div class="label">🃏 Cartas jugadas:</div>
+      <div class="table-cards">
+        <div class="played-card-wrapper">${renderCard({suit:'copa',number:7}, {played:true})}<div class="player-tag">Carlos · rank 3</div></div>
+        <div class="played-card-wrapper">${renderCard({suit:'oro',number:1}, {played:true})}<div class="player-tag">María · rank 7 🏆</div></div>
+        <div class="played-card-wrapper">${renderCard({suit:'basto',number:6}, {played:true})}<div class="player-tag">Ana · rank 2</div></div>
+      </div>
+    </div>
+    <p>Ana juega <span class="highlight">6 de Bastos</span> (rank 2). No puede ganarle al 1 de Oro de María (rank 7).</p>
+    <p>Ahora juega <strong class="highlight">Juan</strong> (Eq 0, dealer). Su equipo va ganando esta ronda. Juan tiene 2 de Copas (rank 8) y Sota de Espadas (rank 4).</p>
+    <p>Juan puede jugar <span class="highlight">2 de Copas</span> (rank 8) para asegurar la victoria de esta ronda, o la Sota para no gastar una carta decente.</p>
+  `;
+});
+
+S('🎯 Mano 1 — Ronda 2: Juan juega 2 de Copas', '', s => {
+  s.phase = 'trick-resolving';
+  s.scores = { team0: 0, team1: 2 };
+  s.desc = `
+    <span class="phase-tag">🔥 RONDA 2 — Resolución</span>
+    <div class="table-area">
+      <div class="label">🃏 Todas las cartas jugadas:</div>
+      <div class="table-cards">
+        <div class="played-card-wrapper">${renderCard({suit:'copa',number:7}, {played:true})}<div class="player-tag">Carlos · 7C (rank 3)</div></div>
+        <div class="played-card-wrapper">${renderCard({suit:'oro',number:1}, {played:true})}<div class="player-tag">María · 1O (rank 7) 🏆</div></div>
+        <div class="played-card-wrapper">${renderCard({suit:'basto',number:6}, {played:true})}<div class="player-tag">Ana · 6B (rank 2)</div></div>
+        <div class="played-card-wrapper">${renderCard({suit:'copa',number:2}, {played:true})}<div class="player-tag">Juan · 2C (rank 8)</div></div>
+      </div>
+    </div>
+    <div class="envido-display">
+      <strong>Comparación por equipo:</strong>
+      <div class="row"><span>Eq 0 (Juan):</span><span>2C (rank 8) — <strong>mejor carta</strong></span></div>
+      <div class="row"><span>Eq 1 (Carlos):</span><span>7C (rank 3)</span></div>
+      <div class="row winner">🏆 <strong style="color:#4fc3f7;">Gana Equipo 0 — Ronda 2 para María/Juan!</strong></div>
+    </div>
+    <p><strong>Estado: Empate 1-1.</strong> Todo se define en Ronda 3.</p>
+    <div class="round-results">
+      <div class="round-dot team1">R1</div>
+      <div class="round-dot team0">R2</div>
+      <div class="round-dot pending">R3</div>
+    </div>
+    <p><strong>Starter Ronda 3:</strong> Juan (p0) — jugó la carta más alta (2C, rank 8).</p>
+  `;
+});
+
+// Trick 3 - Ronda 3
+S('🎯 Mano 1 — Ronda 3: la definición', '', s => {
+  s.phase = 'playing-trick';
+  s.turnPlayerId = 'p0';
+  s.trickNumber = 3;
+  s.scores = { team0: 0, team1: 2 };
+  s.hands = {
+    p0: [{suit:'espada',number:10}],  // Sota
+    p1: [{suit:'basto',number:1}],    // 1Basto (rank 12!)
+    p2: [{suit:'oro',number:5}],      // 5Oro
+    p3: [{suit:'basto',number:7}]     // 7Basto
+  };
+  s.desc = `
+    <span class="phase-tag">🔥 RONDA 3 — ¡La definición!</span>
+    <p>Empieza <strong class="highlight">Juan</strong> (Eq 0, ganó Ronda 2). Cada equipo tiene 1 carta.</p>
+    <div class="round-results">
+      <div class="round-dot team1">R1</div>
+      <div class="round-dot team0">R2</div>
+      <div class="round-dot pending">R3 ← ACÁ SE DEFINE</div>
+    </div>
+    <div class="players-grid">
+      ${[
+        { id:'p0', name:'Juan', team:0, cards:[{suit:'espada',number:10}] },
+        { id:'p1', name:'Carlos', team:1, cards:[{suit:'basto',number:1}] },
+        { id:'p2', name:'María', team:0, cards:[{suit:'oro',number:5}] },
+        { id:'p3', name:'Ana', team:1, cards:[{suit:'basto',number:7}] }
+      ].map(p => {
+        const isTurn = p.id === 'p0';
+        return `<div class="player-card ${isTurn ? 'active-turn' : ''}">
+          <div class="header"><span class="name">${p.name}</span> Eq${p.team} ${isTurn ? '<span style="color:#f0c040;font-size:0.7rem;">▶ TURNO</span>' : ''}</div>
+          <div class="cards-row">${renderCards(p.cards)}</div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="actions-box">
+      <div class="action-title">Juan tiene:</div>
+      <span class="action">Sota♠Espada (rank 4)</span>
+    </div>
+    <p>Juan juega su única carta: Sota de Espadas (rank 4).</p>
+  `;
+});
+
+S('🎯 Mano 1 — Ronda 3: todos juegan', '', s => {
+  s.phase = 'trick-resolving';
+  s.scores = { team0: 0, team1: 2 };
+  s.desc = `
+    <span class="phase-tag">🔥 RONDA 3 — Resolución final</span>
+    <div class="table-area">
+      <div class="label">🃏 Todas las cartas:</div>
+      <div class="table-cards">
+        <div class="played-card-wrapper">${renderCard({suit:'espada',number:10}, {played:true})}<div class="player-tag">Juan · Sota♠ (rank 4)</div></div>
+        <div class="played-card-wrapper">${renderCard({suit:'basto',number:1}, {played:true})}<div class="player-tag">Carlos · 1♣Basto (rank 12) 🏆</div></div>
+        <div class="played-card-wrapper">${renderCard({suit:'oro',number:5}, {played:true})}<div class="player-tag">María · 5O (rank 1)</div></div>
+        <div class="played-card-wrapper">${renderCard({suit:'basto',number:7}, {played:true})}<div class="player-tag">Ana · 7B (rank 3)</div></div>
+      </div>
+    </div>
+    <div class="envido-display">
+      <strong>Comparación por equipo:</strong>
+      <div class="row"><span>Eq 1 (Carlos):</span><span>1♣Basto (rank 12) — <strong>casi la más fuerte del mazo!</strong></span></div>
+      <div class="row"><span>Eq 0 (Juan):</span><span>Sota♠ (rank 4)</span></div>
+      <div class="row winner">🏆 <strong style="color:#ff8a65;">Gana Equipo 1 — Ronda 3!</strong></div>
+    </div>
+    <div class="hand-summary">
+      <h3>📊 Resultado de Mano 1</h3>
+      <div class="round-results">
+        <div class="round-dot team1">R1</div>
+        <div class="round-dot team0">R2</div>
+        <div class="round-dot team1">R3</div>
+      </div>
+      <p><strong>Eq 1 ganó 2 rondas (R1 y R3) → GANA LA MANO</strong></p>
+      <p>Puntos de mano: <strong>1 pt</strong> (no se cantó Truco).</p>
+      <p>+ Envido previo: 2 pts → Eq 1 suma <strong>3 pts totales</strong> en Mano 1.</p>
+    </div>
+  `;
+});
+
+// --- RESOLUCIÓN MANO 1 ---
+S('📊 Mano 1 — Resumen final', '', s => {
+  s.phase = 'round-over';
+  s.scores = { team0: 0, team1: 5 };  // 2 (envido) + 1 (mano) = 3? Wait, let me recalculate.
+  // Wait: envido gave Team 1 2 pts (currentScores was 0-0, then team1 got +2 = 0-2)
+  // Then Team 1 won the hand = +1 pt. Total: 0-3.
+  // But the initial envido was at 0-0, and we tracked it in scores.
+  // Let me recalculate the proper flow:
+  // Step "envido resolution" set scores to 0-2 (team 1 got 2).
+  // Trick 1-3 didn't change scores.
+  // Now hand resolved: team 1 gets +1 (or more if truco called).
+  // But no truco was called in our scenario.
+  // So final: 0-3.
+
+  // Hmm actually wait - the envido was awarded at step envido-resolution:
+  // s.scores = { team0: 0, team1: 2 } at that step.
+  // All subsequent steps carried forward team0:0, team1:2.
+  // Now hand won by team 1 = +1 = team0:0, team1:3
+  
+  s.scores = { team0: 0, team1: 3 };
+  s.desc = `
+    <span class="phase-tag">📊 FIN MANO 1</span>
+    <div class="hand-summary">
+      <h3>Mano 1 — Resumen</h3>
+      <table style="width:100%;border-collapse:collapse;margin:8px 0;">
+        <tr style="border-bottom:1px solid #333;"><th style="text-align:left;padding:4px;">Concepto</th><th style="text-align:center;padding:4px;">Puntos</th></tr>
+        <tr><td style="padding:4px;">🎯 Envido (Ana 33 vs María 26)</td><td style="text-align:center;color:#ff8a65;font-weight:bold;">+2 Eq 1</td></tr>
+        <tr><td style="padding:4px;">🃏 Mano (Eq 1 ganó R1+R3)</td><td style="text-align:center;color:#ff8a65;font-weight:bold;">+1 Eq 1</td></tr>
+        <tr style="border-top:1px solid #555;"><td style="padding:4px;font-weight:bold;">Total</td><td style="text-align:center;font-weight:bold;font-size:1.1rem;">Eq 0: 0 — Eq 1: 3</td></tr>
+      </table>
+    </div>
+    <p>🔄 <strong>Rota el dealer:</strong> Juan → Carlos (siguiente en sentido antihorario).</p>
+    <p>Próximo dealer: <strong>Carlos (p1)</strong>. Mano (starter): María (p2, derecha de Carlos).</p>
+  `;
+});
+
+// =================== MANO 2 ===================
+// Dealer: Carlos (p1)
+// Mano: María (p2) — derecha del dealer
+// Order: p2(María) → p3(Ana) → p0(Juan) → p1(Carlos)
+// El PIE de cada equipo (último en jugar): 
+//   Eq 0 team: p2 (María, first), p0 (Juan, last) — pie = Juan
+//   Eq 1 team: p3 (Ana, first), p1 (Carlos, last) — pie = Carlos
+
+S('🃏 Mano 2 — Reparto de cartas', '', s => {
+  s.phase = 'dealing';
+  s.dealerId = 'p1';
+  s.starterId = 'p2';
+  s.scores = { team0: 0, team1: 3 };
+
+  const H2 = {
+    p0: [{suit:'copa',number:3},{suit:'oro',number:6},{suit:'espada',number:12}],
+    p1: [{suit:'espada',number:5},{suit:'basto',number:7},{suit:'oro',number:4}],
+    p2: [{suit:'basto',number:3},{suit:'copa',number:1},{suit:'oro',number:7}],
+    p3: [{suit:'oro',number:5},{suit:'copa',number:12},{suit:'basto',number:10}]
+  };
+  s.hands = H2;
+
+  const eScores = { p0: calcEnvido(H2.p0), p1: calcEnvido(H2.p1), p2: calcEnvido(H2.p2), p3: calcEnvido(H2.p3) };
+
+  s.desc = `
+    <span class="phase-tag">REPARTO — Mano 2</span>
+    <p>Nuevo dealer: <strong class="highlight">Carlos</strong> (p1). Mano (starter): <strong>María</strong> (p2, derecha de Carlos).</p>
+    <p>Orden de juego: <strong>María (p2) → Ana (p3) → Juan (p0) → Carlos (p1)</strong></p>
+    <div class="players-grid">
+      ${PLAYERS.map(p => {
+        let role = '';
+        if (p.id === 'p1') role = '<span class="role dealer">DEALER</span>';
+        if (p.id === 'p2') role = '<span class="role mano">MANO</span>';
+        if (p.id === 'p0') role = '<span class="role pie">PIE Eq0</span>';
+        if (p.id === 'p1') role = '<span class="role pie" style="background:#6a1b9a;">PIE Eq1</span>';
+        return `<div class="player-card">
+          <div class="header"><span class="name">${p.name}</span> Eq${p.team} ${role}</div>
+          <div class="cards-row">${renderCards(H2[p.id])}</div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="envido-display">
+      <strong>Puntajes de Envido:</strong>
+      ${PLAYERS.map(p => `<div class="row"><span>${p.name}:</span><span>${eScores[p.id]} pts</span></div>`).join('')}
+      <div class="row winner">▸ Mejor envido: Juan con 6 (singles, 3♥ más alto)</div>
+      <div class="row" style="color:#888;">📝 Nadie tiene cartas del mismo palo. Envidos muy bajos. Probablemente nadie cante.</div>
+    </div>
+  `;
+});
+
+S('📢 Mano 2 — Envido (todos pasan)', '', s => {
+  s.phase = 'envido';
+  s.turnPlayerId = 'p2';
+  s.scores = { team0: 0, team1: 3 };
+  s.desc = `
+    <span class="phase-tag">ENVIDO — Turno de María (mano)</span>
+    <p>María (Eq 0) es la primera en hablar. Puede cantar Envido. Pero solo envido 6.</p>
+    <div class="actions-box">
+      <div class="action-title">Opciones de María:</div>
+      <span class="action chosen">→ Pasar</span>
+    </div>
+    <p>María pasa (envido muy bajo). El resto también pasa. <strong>No hay puntos de Envido esta mano.</strong></p>
+  `;
+});
+
+S('🎯 Mano 2 — Ronda 1: empieza María (mano)', '', s => {
+  s.phase = 'playing-trick';
+  s.turnPlayerId = 'p2';
+  s.trickNumber = 1;
+  s.scores = { team0: 0, team1: 3 };
+  s.hands = {
+    p0: [{suit:'copa',number:3},{suit:'oro',number:6},{suit:'espada',number:12}],
+    p1: [{suit:'espada',number:5},{suit:'basto',number:7},{suit:'oro',number:4}],
+    p2: [{suit:'basto',number:3},{suit:'copa',number:1},{suit:'oro',number:7}],
+    p3: [{suit:'oro',number:5},{suit:'copa',number:12},{suit:'basto',number:10}]
+  };
+  // Check ranks:
+  // María p2: 3B(rank9), 1C(rank7), 7O(rank10) - strong hand!
+  // Ana p3: 5O(1), 12C(6), SotaB(4) - weak
+  // Juan p0: 3C(9), 6O(2), ReyE(6) - medium
+  // Carlos p1: 5E(1), 7B(3), 4O(0) - very weak!
+  s.desc = `
+    <span class="phase-tag">RONDA 1 — Turno de María (mano, Eq 0)</span>
+    <p>Empieza <strong class="highlight">María</strong> (Eq 0, mano). María tiene una mano muy fuerte:</p>
+    <div class="actions-box">
+      <div class="action-title">Cartas de María:</div>
+      <span class="action">[0] 3♣Basto (rank 9)</span>
+      <span class="action">[1] 1♥Copa (rank 7)</span>
+      <span class="action">[2] 7♦Oro (rank 10) ← ¡muy fuerte!</span>
+    </div>
+    <p>María podría cantar <strong>Truco</strong> antes de jugar. Tiene 7 de Oro (rank 10) y 3 de Basto (rank 9). Es una mano dominante.</p>
+    <p>Juega <span class="highlight">7 de Oro</span> (rank 10).</p>
+    <p>⚠️ CHECK UI: ¿Aparece el botón de <strong>"Truco"</strong> antes de jugar la carta? María es humano (p2 = player humano). En la UI deberían verse los botones de canto.</p>
+  `;
+});
+
+S('🎯 Mano 2 — Ronda 1: todos juegan → Eq 0 gana', '', s => {
+  s.phase = 'trick-resolving';
+  s.scores = { team0: 0, team1: 3 };
+  s.desc = `
+    <span class="phase-tag">RONDA 1 — Secuencia completa</span>
+    <div class="table-area">
+      <div class="label">🃏 Cartas jugadas (orden de juego):</div>
+      <div class="table-cards">
+        <div class="played-card-wrapper">${renderCard({suit:'oro',number:7}, {played:true})}<div class="player-tag">María · 7O (rank 10) 🏆</div></div>
+        <div class="played-card-wrapper">${renderCard({suit:'oro',number:5}, {played:true})}<div class="player-tag">Ana · 5O (rank 1)</div></div>
+        <div class="played-card-wrapper">${renderCard({suit:'copa',number:3}, {played:true})}<div class="player-tag">Juan · 3C (rank 9)</div></div>
+        <div class="played-card-wrapper">${renderCard({suit:'espada',number:5}, {played:true})}<div class="player-tag">Carlos · 5E (rank 1)</div></div>
+      </div>
+    </div>
+    <div class="envido-display">
+      <strong>Mejor carta por equipo:</strong>
+      <div class="row"><span>Eq 0 (María):</span><span>7O (rank 10) 🏆</span></div>
+      <div class="row"><span>Eq 1 (Carlos/Ana):</span><span>Ana 5O(rank 1) vs 7O(10) → pierde</span></div>
+      <div class="row winner">🏆 <strong style="color:#4fc3f7;">Gana Equipo 0 — Ronda 1!</strong></div>
+    </div>
+    <p><strong>Starter Ronda 2:</strong> María (p2, jugó la carta más alta: 7O). Si Eq 0 gana la ronda 2, se lleva la mano.</p>
+    <p>⚠️ CHECK: En la UI, cuando termina Ronda 1, ¿se ve correctamente que María es el starter de Ronda 2? Y en Ronda 2, ¿María juega de nuevo primero?</p>
+  `;
+});
+
+S('🎯 Mano 2 — Ronda 2: la contra', '', s => {
+  s.phase = 'playing-trick';
+  s.turnPlayerId = 'p2';
+  s.trickNumber = 2;
+  s.scores = { team0: 0, team1: 3 };
+  s.hands = {
+    p0: [{suit:'oro',number:6},{suit:'espada',number:12}],
+    p1: [{suit:'basto',number:7},{suit:'oro',number:4}],
+    p2: [{suit:'basto',number:3},{suit:'copa',number:1}],  // played 7O
+    p3: [{suit:'copa',number:12},{suit:'basto',number:10}]  // played 5O
+  };
+  s.desc = `
+    <span class="phase-tag">RONDA 2 — Empieza María otra vez</span>
+    <p>María empieza de nuevo (ganó Ronda 1). Si gana esta ronda, Eq 0 se lleva la mano.</p>
+    <div class="round-results">
+      <div class="round-dot team0">R1</div>
+      <div class="round-dot pending">R2</div>
+      <div class="round-dot pending">R3</div>
+    </div>
+    <div class="actions-box">
+      <div class="action-title">María tiene:</div>
+      <span class="action">[0] 3♣Basto (rank 9)</span>
+      <span class="action">[1] 1♥Copa (rank 7)</span>
+    </div>
+    <p>María juega <span class="highlight">3 de Bastos</span> (rank 9). Quiere ganar esta ronda y cerrar la mano.</p>
+    <p>Le sigue Ana (Eq 1, tiene 12C rank 6 y SotaB rank 4).</p>
+  `;
+});
+
+S('🎯 Mano 2 — Ronda 2: Eq 0 gana también', '', s => {
+  s.phase = 'trick-resolving';
+  s.scores = { team0: 1, team1: 3 };
+  s.desc = `
+    <span class="phase-tag">🔥 RONDA 2 — Eq 0 gana la mano!</span>
+    <div class="table-area">
+      <div class="label">🃏 Todas las cartas:</div>
+      <div class="table-cards">
+        <div class="played-card-wrapper">${renderCard({suit:'basto',number:3}, {played:true})}<div class="player-tag">María · 3B (rank 9) 🏆</div></div>
+        <div class="played-card-wrapper">${renderCard({suit:'copa',number:12}, {played:true})}<div class="player-tag">Ana · ReyC (rank 6)</div></div>
+        <div class="played-card-wrapper">${renderCard({suit:'oro',number:6}, {played:true})}<div class="player-tag">Juan · 6O (rank 2)</div></div>
+        <div class="played-card-wrapper">${renderCard({suit:'basto',number:7}, {played:true})}<div class="player-tag">Carlos · 7B (rank 3)</div></div>
+      </div>
+    </div>
+    <div class="envido-display">
+      <strong>Mejor carta por equipo:</strong>
+      <div class="row"><span>Eq 0 (María):</span><span>3B (rank 9) 🏆</span></div>
+      <div class="row"><span>Eq 1 (Carlos):</span><span>7B (rank 3)</span></div>
+      <div class="row winner">🏆 <strong style="color:#4fc3f7;">Gana Equipo 0 — Ronda 2!</strong></div>
+    </div>
+    <div class="hand-summary">
+      <h3>📊 Resultado de Mano 2</h3>
+      <div class="round-results">
+        <div class="round-dot team0">R1</div>
+        <div class="round-dot team0">R2</div>
+        <div class="round-dot pending">R3</div>
+      </div>
+      <p><strong>Eq 0 ganó 2 rondas seguidas (R1+R2) → GANA LA MANO</strong></p>
+      <p>No se juega Ronda 3. Puntos de mano: <strong>+1 pt para Eq 0</strong>.</p>
+    </div>
+  `;
+});
+
+// --- RESOLUCIÓN MANO 2 ---
+S('📊 Mano 2 — Resumen final', '', s => {
+  s.phase = 'round-over';
+  s.scores = { team0: 1, team1: 3 };
+  s.desc = `
+    <span class="phase-tag">📊 FIN MANO 2</span>
+    <div class="hand-summary">
+      <h3>Mano 2 — Resumen</h3>
+      <table style="width:100%;border-collapse:collapse;margin:8px 0;">
+        <tr style="border-bottom:1px solid #333;"><th style="text-align:left;padding:4px;">Concepto</th><th style="text-align:center;padding:4px;">Puntos</th></tr>
+        <tr><td style="padding:4px;">🎯 Envido (nadie cantó)</td><td style="text-align:center;">—</td></tr>
+        <tr><td style="padding:4px;">🃏 Mano (Eq 0 ganó R1+R2)</td><td style="text-align:center;color:#4fc3f7;font-weight:bold;">+1 Eq 0</td></tr>
+        <tr style="border-top:1px solid #555;"><td style="padding:4px;font-weight:bold;">Total acumulado</td><td style="text-align:center;font-weight:bold;font-size:1.1rem;">Eq 0: 1 — Eq 1: 3</td></tr>
+      </table>
+    </div>
+    <p>🔄 <strong>Próximo dealer:</strong> María (p2, siguiente de Carlos en sentido antihorario).</p>
+    <p>El juego continúa hasta que un equipo llegue a 30.</p>
+  `;
+});
+
+// ============================================================
+// Navigation & Rendering
+// ============================================================
+
+const stepSelect = document.getElementById('stepSelect');
+const stepContent = document.getElementById('stepContent');
+const stepCounter = document.getElementById('stepCounter');
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
+const team0Score = document.getElementById('team0Score');
+const team1Score = document.getElementById('team1Score');
+const commentText = document.getElementById('commentText');
+const commentMeta = document.getElementById('commentMeta');
+
+let currentStep = 0;
+
+function populateSteps() {
+  stepSelect.innerHTML = steps.map((s, i) => {
+    const label = s.title || `Paso ${i+1}`;
+    return `<option value="${i}" ${i === currentStep ? 'selected' : ''}>${i+1}. ${label}</option>`;
+  }).join('');
+}
+
+function renderStep(idx) {
+  const s = steps[idx];
+  if (!s) return;
+  currentStep = idx;
+  stepSelect.value = idx;
+  stepCounter.textContent = `Paso ${idx+1} de ${steps.length}`;
+
+  // Update scoreboard
+  if (s.scores) {
+    team0Score.textContent = s.scores.team0;
+    team1Score.textContent = s.scores.team1;
+  }
+
+  // Update comment
+  const saved = savedComments[idx];
+  if (saved !== undefined) {
+    commentText.value = saved;
+    commentMeta.textContent = `💾 Comentario guardado (${new Date().toLocaleTimeString()})`;
+  } else {
+    commentText.value = '';
+    commentMeta.textContent = 'Sin comentarios todavía. Escribí si ves algún error.';
+  }
+
+  // Render description
+  stepContent.innerHTML = `
+    <div class="step-desc">${s.desc}</div>
+  `;
+
+  // Navigation buttons
+  prevBtn.disabled = idx === 0;
+  nextBtn.disabled = idx === steps.length - 1;
+}
+
+// Event listeners
+stepSelect.addEventListener('change', () => {
+  renderStep(parseInt(stepSelect.value));
+});
+
+prevBtn.addEventListener('click', () => {
+  if (currentStep > 0) renderStep(currentStep - 1);
+});
+
+nextBtn.addEventListener('click', () => {
+  if (currentStep < steps.length - 1) renderStep(currentStep + 1);
+});
+
+commentText.addEventListener('input', () => {
+  savedComments[currentStep] = commentText.value;
+  commentMeta.textContent = '💾 Comentario guardado';
+});
+
+// Keyboard navigation
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft' && currentStep > 0) renderStep(currentStep - 1);
+  if (e.key === 'ArrowRight' && currentStep < steps.length - 1) renderStep(currentStep + 1);
+});
+
+// Initialize
+populateSteps();
+renderStep(0);
+</script>
+</body>
+</html>

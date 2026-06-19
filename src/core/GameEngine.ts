@@ -5,7 +5,8 @@ import { getCardRank, getCardName } from './Rules.js';
 import type {
   CardDef, Suit, CardNumber, PlayerCount, Difficulty,
   PlayerConfig, PlayedCard, RoundResult, PicaPicaSubmanoResult,
-  GameConfig, EnvidoState, TrucoState, GameEvent
+  GameConfig, EnvidoState, TrucoState, GameEvent,
+  HandRecord, PartidaHistory, Baza, Mano, CantoRecord, FullGameState
 } from '../types.js';
 
 export type GamePhase =
@@ -29,6 +30,18 @@ export class GameEngine {
   private config: GameConfig = { playerCount: 4, difficulty: 'normal' };
   private targetScore: number = 30;
 
+  // Partida (match) history
+  private partidaHistory: PartidaHistory = {
+    initialDealerId: '',
+    hands: [],
+    finalScores: { team0: 0, team1: 0 },
+    winningTeam: -1,
+    totalHands: 0,
+    startedAt: Date.now(),
+    endedAt: null,
+  };
+  private startedAt: number = Date.now();
+
   // Round state
   private hands: { [playerId: string]: CardDef[] } = {};
   private currentTrick: PlayedCard[] = [];
@@ -44,6 +57,7 @@ export class GameEngine {
   // Round tracking
   private currentHand: number = 0; // 0 = first hand, 1 = second hand
   private firstHandCompleted: boolean = false;
+  private gameOver: boolean = false;
   private previousStarterId: string = '';
   private roundWinnerTeam: number = -1;
   private firstTrickWinnerTeam: number = -1;
@@ -58,6 +72,7 @@ export class GameEngine {
     totalPoints: 0,
     team0Scored: 0,
     team1Scored: 0,
+    envidoWinner: null,
     team0Player0Envido: null,
     team0Player1Envido: null,
     team1Player0Envido: null,
@@ -112,8 +127,28 @@ export class GameEngine {
     this.currentHand = 0;
     this.firstHandCompleted = false;
     this.isPicaPica = this.checkPicaPica();
-    this.picaPicaHandAlternation = true; // Start with normal hand
-    this.dealerId = players[0].id;
+    this.picaPicaHandAlternation = true;
+
+    // Record match start
+    this.startedAt = Date.now();
+    this.partidaHistory = {
+      initialDealerId: '',
+      hands: [],
+      finalScores: { team0: 0, team1: 0 },
+      winningTeam: -1,
+      totalHands: 0,
+      startedAt: Date.now(),
+      endedAt: null,
+    };
+
+    // Pick random initial dealer — the first "mano" (dealer) is random
+    const randomIdx = Math.floor(Math.random() * players.length);
+    this.dealerId = players[randomIdx].id;
+    this.partidaHistory.initialDealerId = this.dealerId;
+
+    // Store initial scores snapshot
+    this.partidaHistory.finalScores = { team0: 0, team1: 0 };
+
     this.previousStarterId = this.determineStarterForFirstRound();
     this.firstTrickWinnerTeam = -1;
     this.startNewHand(true);
@@ -196,6 +231,40 @@ export class GameEngine {
     return this.previousStarterId;
   }
 
+  // ---- Card dealing (repartir cartas) ----
+
+  /**
+   * Deal 3 cards to each player from a fresh deck.
+   * Sets up the `hands` state and emits a 'dealing' event.
+   * No duplicates — each card is drawn via Deck.draw() which pops unique cards.
+   */
+  private repartirCartas(): void {
+    // Create a fresh, shuffled deck
+    this.deck = new Deck();
+
+    // Initialize hands for all players
+    this.hands = {};
+    for (const player of this.players) {
+      this.hands[player.id] = [];
+    }
+
+    // Deal 3 cards to each player (counter-clockwise round-robin)
+    for (let i = 0; i < 3; i++) {
+      for (const player of this.players) {
+        const card = this.deck.draw();
+        if (card) {
+          this.hands[player.id].push(card);
+        }
+      }
+    }
+
+    this.emit('dealing', {
+      deckRemaining: this.deck.remaining,
+      playerCount: this.players.length,
+      cardsPerPlayer: 3
+    });
+  }
+
   // ---- Hand management ----
 
   private startNewHand(skipRotation: boolean = false): void {
@@ -230,7 +299,6 @@ export class GameEngine {
     }
 
     // Reset hand state
-    this.deck = new Deck();
     this.currentHand = this.firstHandCompleted ? 1 : 0;
     this.currentRound = 0;
     this.roundResults = [];
@@ -258,20 +326,9 @@ export class GameEngine {
   private startRound(): void {
     this.currentTrick = [];
     this.currentTrickNumber = 0;
-    this.hands = {};
 
-    // Deal 3 cards to each player
-    for (const player of this.players) {
-      this.hands[player.id] = [];
-    }
-    for (let i = 0; i < 3; i++) {
-      for (const player of this.players) {
-        const card = this.deck.draw();
-        if (card) {
-          this.hands[player.id].push(card);
-        }
-      }
-    }
+    // Deal 3 cards to each player (no duplicates)
+    this.repartirCartas();
 
     // Determine starter
     // If starterId was pre-set (e.g., 2da mano), use it; otherwise calculate
@@ -311,25 +368,13 @@ export class GameEngine {
 
   private startPicaPicaHand(): void {
     // Reset hand state — deal once, all 3 submanos share the same cards
-    this.deck = new Deck();
     this.currentHand = this.firstHandCompleted ? 1 : 0;
     this.roundResults = [];
     this.picapicaResults = [];
     this.picaPicaSubmano = 0;
 
     // Deal 3 cards to each player (once for all 3 submanos)
-    this.hands = {};
-    for (const player of this.players) {
-      this.hands[player.id] = [];
-    }
-    for (let i = 0; i < 3; i++) {
-      for (const player of this.players) {
-        const card = this.deck.draw();
-        if (card) {
-          this.hands[player.id].push(card);
-        }
-      }
-    }
+    this.repartirCartas();
 
     // Start first submano
     this.startPicaPicaSubmano(0);
@@ -375,6 +420,7 @@ export class GameEngine {
       pointsAwarded: 0,
       team0Scored: 0,
       team1Scored: 0,
+      envidoWinner: null,
       team0Player0Envido: null,
       team0Player1Envido: null,
       team1Player0Envido: null,
@@ -429,7 +475,7 @@ export class GameEngine {
     });
   }
 
-  private respondEnvido(playerId: string, want: boolean, raiseTo?: 'envido' | 'envido-envido' | 'real-envido' | 'falta-envido'): void {
+  private respondEnvido(playerId: string, want: boolean | 'son-buenas', raiseTo?: 'envido' | 'envido-envido' | 'real-envido' | 'falta-envido'): void {
     if (!this.canRespondEnvido()) return;
     const player = this.getPlayerById(playerId);
     if (!player) return;
@@ -437,13 +483,36 @@ export class GameEngine {
     // Only the opponent team responds. Teammate does nothing (can't raise).
     if (player.team === this.envido.callerTeam) return;
 
+    if (want === 'son-buenas') {
+      // "Son buenas" — responder concedes without showing values.
+      // Caller wins envido points immediately.
+      this.envido.phase = 'resolution';
+      this.envido.pointsAwarded = this.envido.totalPoints;
+      const callerTeam = this.envido.callerTeam!;
+      this.agregarPuntos(callerTeam, this.envido.totalPoints);
+      this.envido.team0Scored = this.scores.team0;
+      this.envido.team1Scored = this.scores.team1;
+      this.envido.phase = 'none';
+      this.emit('envido-resolved', {
+        winnerTeam: callerTeam,
+        points: this.envido.totalPoints,
+        scores: this.getEnvidoPlayerScores(),
+        team0Best: 0,
+        team1Best: 0,
+        sonBuenas: true,
+        team0Scored: this.scores.team0,
+        team1Scored: this.scores.team1,
+        level: this.envido.level
+      });
+      return;
+    }
+
     if (!want) {
       // No quiero — caller gets 1 point (no score comparison)
       this.envido.phase = 'resolution';
       this.envido.pointsAwarded = 1;
       const callerTeam = this.envido.callerTeam!;
-      if (callerTeam === 0) this.scores.team0 += 1;
-      else this.scores.team1 += 1;
+      this.agregarPuntos(callerTeam, 1);
       this.envido.team0Scored = this.scores.team0;
       this.envido.team1Scored = this.scores.team1;
       this.envido.phase = 'none';
@@ -493,6 +562,28 @@ export class GameEngine {
 
     const scores = this.getEnvidoPlayerScores();
 
+    // Store individual envido scores for display
+    const orderedPlayers = this.getPlayingOrder();
+    for (let i = 0; i < orderedPlayers.length; i++) {
+      const pid = orderedPlayers[i];
+      const p = this.getPlayerById(pid);
+      if (!p) continue;
+      const val = scores[pid] || 0;
+      if (p.team === 0) {
+        if (i % 2 === 0) {
+          this.envido.team0Player0Envido = val;
+        } else {
+          this.envido.team0Player1Envido = val;
+        }
+      } else {
+        if (i % 2 === 0) {
+          this.envido.team1Player0Envido = val;
+        } else {
+          this.envido.team1Player1Envido = val;
+        }
+      }
+    }
+
     // Each team's best individual envido (not summed!)
     let team0Best = 0, team1Best = 0;
     const playersToCompare = this.isPicaPica
@@ -518,10 +609,11 @@ export class GameEngine {
       winnerTeam = this.getPlayerTeam(manoId);
     }
 
-    if (winnerTeam === 0) this.scores.team0 += points;
-    else this.scores.team1 += points;
+    // Use agregarPuntos to cap at targetScore and detect game-over mid-hand
+    this.agregarPuntos(winnerTeam, points);
 
     this.envido.pointsAwarded = points;
+    this.envido.envidoWinner = winnerTeam;
     this.envido.team0Scored = this.scores.team0;
     this.envido.team1Scored = this.scores.team1;
 
@@ -630,6 +722,109 @@ export class GameEngine {
     return [order[submano], order[submano + 3]];
   }
 
+  // ---- Scoring helpers (Épica 7) ----
+
+  /**
+   * agregarPuntos: Add points to a team, capping at targetScore (30).
+   * Emits 'puntosMarcados' with the points awarded and new scores.
+   * Emits 'partidaFinalizada' (alias for 'game-over') if a winner is determined.
+   * Returns the actual number of points awarded (capped).
+   */
+  public agregarPuntos(team: number, points: number): number {
+    if (this.gameOver) return 0;
+    if (team !== 0 && team !== 1) return 0;
+    if (points <= 0) return 0;
+
+    const key = team === 0 ? 'team0' : 'team1';
+    const before = this.scores[key];
+    const after = Math.min(before + points, this.targetScore);
+    const awarded = after - before;
+    this.scores[key] = after;
+
+    this.emit('puntosMarcados', {
+      team,
+      points: awarded,
+      previousScore: before,
+      newScore: after,
+      scores: { ...this.scores },
+    });
+
+    // Check if this caused a game-over
+    if (after >= this.targetScore) {
+      this.gameOver = true;
+      this.partidaHistory.winningTeam = team;
+      this.partidaHistory.endedAt = Date.now();
+      this.partidaHistory.finalScores = { ...this.scores };
+      this.emit('partidaFinalizada', {
+        winningTeam: team,
+        scores: { ...this.scores },
+        partidaHistory: this.getPartidaHistory(),
+      });
+      this.emit('game-over', {
+        winningTeam: team,
+        scores: { ...this.scores },
+        partidaHistory: this.getPartidaHistory(),
+      });
+    }
+
+    return awarded;
+  }
+
+  /**
+   * Build the list of CantoRecord for the current hand, combining envido
+   * state and truco state into a single list of shouts.
+   */
+  private buildCantosForHand(): CantoRecord[] {
+    const cantos: CantoRecord[] = [];
+
+    // Envido cantos
+    if (this.envido.pointsAwarded > 0) {
+      let envType: CantoRecord['type'] = 'envido';
+      if (this.envido.level === 'envido-envido') envType = 'envido-envido';
+      else if (this.envido.level === 'real-envido') envType = 'real-envido';
+      else if (this.envido.level === 'falta-envido') envType = 'falta-envido';
+      cantos.push({
+        type: envType,
+        callerTeam: this.envido.callerTeam ?? -1,
+        accepted: this.envido.accepted,
+        points: this.envido.pointsAwarded,
+        winnerTeam: this.getEnvidoWinnerTeam(),
+      });
+    }
+
+    // Truco cantos
+    if (this.truco.level > 0) {
+      let trucoType: CantoRecord['type'] = 'truco';
+      if (this.truco.level === 2) trucoType = 'retruco';
+      else if (this.truco.level === 3) trucoType = 'vale4';
+      const trucoWinner = this.truco.accepted
+        ? (this.truco.lastChallengerTeam ?? -1)
+        : (this.truco.lastChallengerTeam ?? -1);
+      cantos.push({
+        type: trucoType,
+        callerTeam: this.truco.lastChallengerTeam ?? -1,
+        accepted: this.truco.accepted,
+        points: this.truco.pointsAwarded,
+        winnerTeam: trucoWinner,
+      });
+    }
+
+    return cantos;
+  }
+
+  /**
+   * Determine which team won the envido based on the current envido state.
+   * Returns -1 if envido wasn't called or resolved yet.
+   */
+  private getEnvidoWinnerTeam(): number {
+    if (this.envido.pointsAwarded <= 0) return -1;
+    // If envidoWinner was explicitly set during resolution, use it
+    if (this.envido.envidoWinner !== null) return this.envido.envidoWinner;
+    // Fallback: callerTeam got the points (when rejected or 'son buenas')
+    if (this.envido.callerTeam !== null) return this.envido.callerTeam;
+    return -1;
+  }
+
   // ---- Truco ----
 
   private resetTruco(): void {
@@ -644,8 +839,27 @@ export class GameEngine {
     this.trucoWaitingForResponse = false;
   }
 
+  /**
+   * Can only challenge truco BEFORE all cards of the hand have been played.
+   * Specifically: before round 3 (baza 3) is complete. During round 0,1,2 it's allowed.
+   * Also: the team that already challenged cannot re-challenge (only the opponent team replies).
+   * No turn check — any player whose team hasn't already challenged can do so.
+   */
   private canChallengeTruco(): boolean {
-    return !this.trucoWaitingForResponse && !this.truco.accepted && this.truco.level < 3;
+    if (this.trucoWaitingForResponse) return false;
+    if (this.truco.accepted) return false;
+    if (this.truco.level >= 3) return false;
+    // Can only sing truco while the hand is still being played (rounds 0,1,2)
+    // After round 3 starts (currentRound >= 3), all cards have been played
+    if (this.currentRound >= 3) return false;
+    return true;
+  }
+
+  /** Check if the hand has already been decided (one team won 2 tricks) */
+  private isHandAlreadyDecided(): boolean {
+    const team0Wins = this.roundResults.filter(r => r.teamWinner === 0).length;
+    const team1Wins = this.roundResults.filter(r => r.teamWinner === 1).length;
+    return team0Wins >= 2 || team1Wins >= 2;
   }
 
   private challengeTruco(playerId: string): void {
@@ -743,19 +957,186 @@ export class GameEngine {
     this.truco.team0Scored = this.scores.team0;
     this.truco.team1Scored = this.scores.team1;
 
+    // If truco was rejected (not accepted), the hand ends here.
+    // Record it in partida history before emitting.
+    if (!this.truco.accepted) {
+      const envidoCalled = this.envido.phase !== 'none' || this.envido.pointsAwarded > 0;
+      const envidoWinner = this.getEnvidoWinnerTeam();
+      const envidoPoints = this.envido.pointsAwarded;
+      const cantos = this.buildCantosForHand();
+      this.partidaHistory.hands.push({
+        handNumber: this.currentHand,
+        dealerId: this.dealerId,
+        starterId: this.starterId,
+        roundResults: [...this.roundResults],
+        handWinnerTeam: winnerTeam,
+        pointsAwarded: points,
+        team0Score: this.scores.team0,
+        team1Score: this.scores.team1,
+        envidoCalled,
+        envidoWinner: envidoWinner >= 0 ? envidoWinner : null,
+        envidoPoints,
+        trucoCalled: true,
+        trucoWinner: winnerTeam,
+        trucoPoints: points,
+        cantos,
+        isPicaPica: this.isPicaPica,
+        picaPicaSubmano: this.isPicaPica ? this.picaPicaSubmano : undefined,
+      });
+      this.partidaHistory.totalHands = this.partidaHistory.hands.length;
+
+      // Check game over for truco-rejected scenario
+      if (this.scores.team0 >= this.targetScore || this.scores.team1 >= this.targetScore) {
+        this.partidaHistory.winningTeam = winnerTeam;
+        this.partidaHistory.endedAt = Date.now();
+        this.partidaHistory.finalScores = { ...this.scores };
+      }
+    }
+
     this.emit('truco-resolved', {
       winnerTeam,
       points,
       level: this.truco.level,
       team0Scored: this.scores.team0,
       team1Scored: this.scores.team1,
-      isGameOver: this.scores.team0 >= this.targetScore || this.scores.team1 >= this.targetScore
+      isGameOver: this.scores.team0 >= this.targetScore || this.scores.team1 >= this.targetScore,
+      partidaHistory: this.getPartidaHistory(),
     });
   }
 
   // ---- Card playing ----
 
+  /**
+   * Player goes to the mazo (folds/forfeits the hand).
+   * The ENTIRE TEAM forfeits (not just the individual).
+   *
+   * Flow:
+   * 1. If envido is pending (called but not resolved), resolve it FIRST
+   *    - The envido caller team gets envido points
+   * 2. Award truco/hand points to the opponent team
+   *    - If truco accepted: opponent gets truco value (2/3/4)
+   *    - If truco called but not accepted: opponent gets rejection value (1/2)
+   *    - If no truco: opponent gets 1pt (base hand value)
+   * 3. Record hand in partida history
+   * 4. Emit event, start new hand if not game over
+   */
+  public irseAlMazo(playerId: string): void {
+    const player = this.getPlayerById(playerId);
+    if (!player) return;
+    const foldingTeam = player.team;
+    const opponentTeam = foldingTeam === 0 ? 1 : 0;
+    let envidoPointsAwarded = 0;
+    let trucoPoints = 0;
+
+    // Step 1: Resolve pending envido FIRST
+    if (this.envido.phase === 'opening' && !this.envido.accepted) {
+      // The envido caller gets the envido points
+      const callerTeam = this.envido.callerTeam!;
+      envidoPointsAwarded = this.envido.totalPoints > 0 ? this.envido.totalPoints : 2;
+      if (callerTeam === 0) this.scores.team0 += envidoPointsAwarded;
+      else this.scores.team1 += envidoPointsAwarded;
+      this.envido.pointsAwarded = envidoPointsAwarded;
+      this.envido.team0Scored = this.scores.team0;
+      this.envido.team1Scored = this.scores.team1;
+      this.envido.phase = 'none';
+      this.emit('envido-resolved', {
+        winnerTeam: callerTeam,
+        points: envidoPointsAwarded,
+        scores: this.getEnvidoPlayerScores(),
+        team0Best: 0,
+        team1Best: 0,
+        sonBuenas: true,
+        team0Scored: this.scores.team0,
+        team1Scored: this.scores.team1,
+        level: this.envido.level,
+        resolvedByIrseAlMazo: true
+      });
+    }
+
+    // Step 2: Award truco/hand points to opponent
+    if (this.truco.accepted) {
+      // Truco was accepted — opponent gets the full truco value
+      const trucoValues: Record<number, number> = { 1: 2, 2: 3, 3: 4 };
+      trucoPoints = trucoValues[this.truco.level] || 2;
+    } else if (this.truco.level > 0) {
+      // Truco was called but not yet accepted — opponent gets rejection value
+      const rejectValues: Record<number, number> = { 1: 1, 2: 2, 3: 3 };
+      trucoPoints = rejectValues[this.truco.level] || 1;
+    } else {
+      // No truco — base hand value
+      trucoPoints = 1;
+    }
+
+    if (opponentTeam === 0) this.scores.team0 += trucoPoints;
+    else this.scores.team1 += trucoPoints;
+
+    this.truco.pointsAwarded = trucoPoints;
+    this.truco.team0Scored = this.scores.team0;
+    this.truco.team1Scored = this.scores.team1;
+
+    // Record hand in partida history
+    const envidoCalled = this.envido.phase !== 'none' || this.envido.pointsAwarded > 0;
+    const envidoWinner = this.getEnvidoWinnerTeam();
+    const envidoPoints = this.envido.pointsAwarded;
+    const trucoCalled = this.truco.level > 0;
+    const trucoWinner = opponentTeam;
+    const cantos = this.buildCantosForHand();
+    this.partidaHistory.hands.push({
+      handNumber: this.currentHand,
+      dealerId: this.dealerId,
+      starterId: this.starterId,
+      roundResults: [...this.roundResults],
+      handWinnerTeam: opponentTeam,
+      pointsAwarded: trucoPoints,
+      team0Score: this.scores.team0,
+      team1Score: this.scores.team1,
+      envidoCalled,
+      envidoWinner: envidoWinner >= 0 ? envidoWinner : null,
+      envidoPoints,
+      trucoCalled,
+      trucoWinner,
+      trucoPoints,
+      cantos,
+      isPicaPica: this.isPicaPica,
+      picaPicaSubmano: this.isPicaPica ? this.picaPicaSubmano : undefined,
+    });
+    this.partidaHistory.totalHands = this.partidaHistory.hands.length;
+
+    // Emit irse-al-mazo event
+    this.emit('irse-al-mazo', {
+      playerId,
+      foldingTeam,
+      opponentTeam,
+      envidoPointsAwarded,
+      trucoPoints,
+      scores: { ...this.scores },
+      isGameOver: this.scores.team0 >= this.targetScore || this.scores.team1 >= this.targetScore,
+      partidaHistory: this.getPartidaHistory(),
+    });
+
+    // Check game over
+    if (this.scores.team0 >= this.targetScore || this.scores.team1 >= this.targetScore) {
+      const winningTeam = this.scores.team0 >= this.targetScore ? 0 : 1;
+      this.partidaHistory.winningTeam = winningTeam;
+      this.partidaHistory.endedAt = Date.now();
+      this.partidaHistory.finalScores = { ...this.scores };
+
+      this.emit('game-over', {
+        winningTeam,
+        scores: { ...this.scores },
+        partidaHistory: this.getPartidaHistory(),
+      });
+      return;
+    }
+
+    // Start new hand
+    this.isPicaPica = this.checkPicaPica();
+    this.picaPicaHandAlternation = !this.picaPicaHandAlternation;
+    this.startNewHand();
+  }
+
   playCard(playerId: string, cardIndex: number): boolean {
+    if (this.gameOver) return false;
     if (this.currentTurnPlayerId !== playerId) return false;
     if (!this.hands[playerId]) return false;
     if (cardIndex < 0 || cardIndex >= this.hands[playerId].length) return false;
@@ -1005,6 +1386,35 @@ export class GameEngine {
     if (handWinnerTeam === 0) this.scores.team0 += pointsAwarded;
     else if (handWinnerTeam === 1) this.scores.team1 += pointsAwarded;
 
+    // Record this hand in partida history
+    const envidoCalled = this.envido.phase !== 'none' || this.envido.pointsAwarded > 0;
+    const envidoWinner = this.getEnvidoWinnerTeam();
+    const envidoPoints = this.envido.pointsAwarded;
+    const trucoCalled = this.truco.level > 0;
+    const trucoWinner = handWinnerTeam;
+    const trucoPoints = pointsAwarded;
+    const cantos = this.buildCantosForHand();
+    this.partidaHistory.hands.push({
+      handNumber: this.currentHand,
+      dealerId: this.dealerId,
+      starterId: this.starterId,
+      roundResults: [...this.roundResults],
+      handWinnerTeam,
+      pointsAwarded,
+      team0Score: this.scores.team0,
+      team1Score: this.scores.team1,
+      envidoCalled,
+      envidoWinner: envidoWinner >= 0 ? envidoWinner : null,
+      envidoPoints,
+      trucoCalled,
+      trucoWinner,
+      trucoPoints,
+      cantos,
+      isPicaPica: this.isPicaPica,
+      picaPicaSubmano: this.isPicaPica ? this.picaPicaSubmano : undefined,
+    });
+    this.partidaHistory.totalHands = this.partidaHistory.hands.length;
+
     this.emit('hand-resolved', {
       handNumber: this.currentHand,
       isSecondHand: this.currentHand === 1,
@@ -1015,14 +1425,21 @@ export class GameEngine {
       scores: { ...this.scores },
       roundResults: this.roundResults,
       isPicaPica: this.isPicaPica,
-      picapicaResults: this.picapicaResults
+      picapicaResults: this.picapicaResults,
+      partidaHistory: this.getPartidaHistory(),
     });
 
     // Check game over
     if (this.scores.team0 >= this.targetScore || this.scores.team1 >= this.targetScore) {
+      const winningTeam = this.scores.team0 >= this.targetScore ? 0 : 1;
+      this.partidaHistory.winningTeam = winningTeam;
+      this.partidaHistory.endedAt = Date.now();
+      this.partidaHistory.finalScores = { ...this.scores };
+
       this.emit('game-over', {
-        winningTeam: this.scores.team0 >= this.targetScore ? 0 : 1,
-        scores: { ...this.scores }
+        winningTeam,
+        scores: { ...this.scores },
+        partidaHistory: this.getPartidaHistory(),
       });
       return;
     }
@@ -1112,5 +1529,148 @@ export class GameEngine {
 
   getIsSecondHand(): boolean {
     return this.currentHand === 1;
+  }
+
+  /**
+   * Build the formal Baza (trick) model from the current internal state.
+   * Each baza corresponds to a resolved round in roundResults.
+   * Returns null if the baza index doesn't exist.
+   */
+  getBaza(bazaIndex: number): Baza | null {
+    if (bazaIndex < 0 || bazaIndex >= this.roundResults.length) return null;
+    const round = this.roundResults[bazaIndex];
+    const starterId = round.highestCardPlayerId || this.starterId;
+    const highestCard = round.highestCard || (round.cards.length > 0 ? round.cards[0].card : null);
+    return {
+      bazaNumber: bazaIndex,
+      starterPlayerId: starterId,
+      cards: [...round.cards],
+      winnerId: round.highestCardPlayerId || '',
+      winnerTeam: round.teamWinner,
+      winningCard: highestCard || { suit: 'espada', number: 1 as CardNumber, valorEnvido: 0, valorTruco: 0, nombreDisplay: '', estado: 'en_mano' as const },
+      highestCardRank: highestCard ? getCardRank(highestCard) : 0,
+    };
+  }
+
+  /**
+   * Get all completed bazas (tricks) as formal Baza objects.
+   * Each Baza captures the full sequence of cards played in that trick.
+   */
+  getBazas(): Baza[] {
+    return this.roundResults.map((round, i) => {
+      const starterId = round.highestCardPlayerId || this.starterId;
+      const highestCard = round.highestCard || (round.cards.length > 0 ? round.cards[0].card : null);
+      return {
+        bazaNumber: i,
+        starterPlayerId: starterId,
+        cards: [...round.cards],
+        winnerId: round.highestCardPlayerId || '',
+        winnerTeam: round.teamWinner,
+        winningCard: highestCard || { suit: 'espada', number: 1 as CardNumber, valorEnvido: 0, valorTruco: 0, nombreDisplay: '', estado: 'en_mano' as const },
+        highestCardRank: highestCard ? getCardRank(highestCard) : 0,
+      };
+    });
+  }
+
+  /**
+   * Build the formal Mano (hand) model from the current game state.
+   * A Mano has up to 3 bazas (tricks), each with its own set of played cards.
+   * Returns null if no rounds have been resolved yet.
+   */
+  getMano(): Mano | null {
+    if (this.roundResults.length === 0) return null;
+    const bazas = this.getBazas();
+
+    // Determine hand winner using same logic as resolveHand()
+    const validRounds = this.roundResults.filter(r => r.teamWinner !== -1);
+    const team0TricksValid = validRounds.filter(r => r.teamWinner === 0).length;
+    const team1TricksValid = validRounds.filter(r => r.teamWinner === 1).length;
+    let handWinnerTeam: number = -1;
+    if (team0TricksValid > team1TricksValid) {
+      handWinnerTeam = 0;
+    } else if (team1TricksValid > team0TricksValid) {
+      handWinnerTeam = 1;
+    } else {
+      // Balanced or all tied — first trick winner breaks the tie
+      handWinnerTeam = this.firstTrickWinnerTeam !== -1
+        ? this.firstTrickWinnerTeam
+        : this.getPlayerTeam(this.previousStarterId);
+    }
+
+    return {
+      handNumber: this.currentHand,
+      dealerId: this.dealerId,
+      starterId: this.starterId,
+      bazas,
+      handWinnerTeam,
+      pointsAwarded: 0,
+      team0Score: this.scores.team0,
+      team1Score: this.scores.team1,
+      envidoCalled: this.envido.phase !== 'none' || this.envido.pointsAwarded > 0,
+      trucoCalled: this.truco.level > 0,
+      isPicaPica: this.isPicaPica,
+      picaPicaSubmano: this.isPicaPica ? this.picaPicaSubmano : undefined,
+      isSecondHand: this.currentHand === 1,
+    };
+  }
+
+  /**
+   * Get the formal PartidaHistory, enriched with Baza and Mano types.
+   */
+  getPartidaHistory(): PartidaHistory {
+    return {
+      ...this.partidaHistory,
+      hands: [...this.partidaHistory.hands.map(h => ({ ...h, roundResults: [...h.roundResults] }))],
+    };
+  }
+
+  /**
+   * Derive the current GamePhase from the engine's internal state.
+   */
+  private getPhase(): GamePhase {
+    if (this.gameOver) return 'game-over';
+    if (this.envido.phase === 'opening') return 'envido-opening';
+    if (this.envido.phase === 'response') return 'envido-response';
+    if (this.envido.phase === 'resolution') return 'envido-resolving';
+    if (this.isPicaPica && this.picaPicaSubmano >= 0 && this.picaPicaSubmano <= 2) {
+      if (this.roundResults.length >= 3) return 'picapica-resolving';
+      return 'picapica-submano';
+    }
+    if (this.currentRound >= 3 || this.isHandAlreadyDecided()) return 'round-resolving';
+    if (this.currentTrick.length > 0 && this.currentTrick.length < this.getActivePlayerCount()) return 'playing-trick';
+    if (this.currentTrick.length >= this.getActivePlayerCount()) return 'trick-resolving';
+    return 'playing-trick';
+  }
+
+  /**
+   * Get the complete serializable game state (US-13 / T-033).
+   * Includes all fields needed to fully reconstruct the game.
+   */
+  getState(): FullGameState {
+    return {
+      players: [...this.players],
+      scores: { ...this.scores },
+      targetScore: this.targetScore,
+      currentHand: this.currentHand,
+      currentRound: this.currentRound,
+      currentTrickNumber: this.currentTrickNumber,
+      dealerId: this.dealerId,
+      starterId: this.starterId,
+      currentTurnPlayerId: this.currentTurnPlayerId,
+      hands: Object.fromEntries(
+        Object.entries(this.hands).map(([k, v]) => [k, [...v]])
+      ),
+      currentTrick: [...this.currentTrick],
+      roundResults: this.roundResults.map(r => ({ ...r, cards: [...r.cards] })),
+      envido: { ...this.envido },
+      truco: { ...this.truco },
+      isPicaPica: this.isPicaPica,
+      picaPicaSubmano: this.picaPicaSubmano,
+      picapicaResults: this.picapicaResults.map(r => ({ ...r, cards: [...r.cards] })),
+      firstHandCompleted: this.firstHandCompleted,
+      gameOver: this.gameOver,
+      partidaHistory: this.getPartidaHistory(),
+      phase: this.getPhase(),
+    };
   }
 }

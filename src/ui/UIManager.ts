@@ -2,7 +2,8 @@
 
 import type {
   CardDef, PlayerConfig, PlayedCard, RoundResult,
-  PicaPicaSubmanoResult, EnvidoState, TrucoState
+  PicaPicaSubmanoResult, EnvidoState, TrucoState,
+  HandRecord, PartidaHistory
 } from '../types.js';
 
 interface UICallbacks {
@@ -13,6 +14,7 @@ interface UICallbacks {
   onEnvidoOpen: () => void;
   onEnvidoOpenType: (level: 'envido' | 'real-envido' | 'falta-envido') => void;
   onEnvidoWant: () => void;
+  onEnvidoSonBuenas: () => void;
   onEnvidoNoWant: () => void;
   onEnvidoRaise: (level: 'envido' | 'real-envido' | 'falta-envido') => void;
   onTrucoChallenge: () => void;
@@ -20,6 +22,7 @@ interface UICallbacks {
   onTrucoDecline: () => void;
   onTrucoRaise: () => void;
   onContinueAfterNotification: () => void;
+  onIrseAlMazo: () => void;
 }
 
 interface RenderParams {
@@ -46,6 +49,7 @@ interface RenderParams {
   gameOverWinner: number | null;
   gameOverScores: { team0: number; team1: number };
   piePlayerId: string;
+  partidaHistory: PartidaHistory;
 }
 
 export class UIManager {
@@ -536,6 +540,7 @@ export class UIManager {
       if (opponentCalled) {
         html += `<div class="response-buttons">
           <button class="btn-accept" onclick="window._uiCallbacks?.onEnvidoWant()">Quiero</button>
+          <button class="btn-son-buenas" onclick="window._uiCallbacks?.onEnvidoSonBuenas()">Son buenas</button>
           <button class="btn-reject" onclick="window._uiCallbacks?.onEnvidoNoWant()">No quiero</button>
         </div>`;
       } else {
@@ -547,6 +552,7 @@ export class UIManager {
         html += `<div class="response-buttons">
           <button class="btn-falta" onclick="window._uiCallbacks?.onEnvidoRaise('real-envido')">Subir a Real Envido</button>
           <button class="btn-accept" onclick="window._uiCallbacks?.onEnvidoWant()">Quiero</button>
+          <button class="btn-son-buenas" onclick="window._uiCallbacks?.onEnvidoSonBuenas()">Son buenas</button>
           <button class="btn-reject" onclick="window._uiCallbacks?.onEnvidoNoWant()">No quiero</button>
         </div>`;
       } else {
@@ -610,13 +616,15 @@ export class UIManager {
     gameOverWinner: number | null;
     gameOverScores: { team0: number; team1: number };
     currentRound: number;
+    partidaHistory: PartidaHistory;
   }): void {
     document.querySelectorAll('.round-over-panel, .game-over-panel').forEach(el => el.remove());
 
     if (params.isGameOver) {
       this.renderGameOverPanel({
         gameOverWinner: params.gameOverWinner,
-        gameOverScores: params.gameOverScores
+        gameOverScores: params.gameOverScores,
+        partidaHistory: params.partidaHistory
       });
       return;
     }
@@ -663,8 +671,27 @@ export class UIManager {
   private renderGameOverPanel(params: {
     gameOverWinner: number | null;
     gameOverScores: { team0: number; team1: number };
+    partidaHistory: PartidaHistory;
   }): void {
     if (params.gameOverWinner === null) return;
+    const history = params.partidaHistory;
+    const totalHands = history.hands.length;
+    let handSummaryHtml = '<div class="hand-history">';
+    for (let i = 0; i < totalHands; i++) {
+      const h = history.hands[i];
+      const winnerLabel = h.handWinnerTeam >= 0
+        ? `Equipo ${h.handWinnerTeam + 1}`
+        : 'Empate';
+      handSummaryHtml += `
+        <div class="hand-entry" style="margin: 4px 0; padding: 4px 8px; background: rgba(255,255,255,0.05); border-radius: 4px; display: flex; justify-content: space-between; font-size: 12px;">
+          <span>Mano ${i + 1}: ${winnerLabel} (${h.pointsAwarded} pts)</span>
+          <span style="color: ${h.handWinnerTeam === 0 ? '#4caf50' : '#2196f3'}">
+            ${h.team0Score} - ${h.team1Score}
+          </span>
+        </div>`;
+    }
+    handSummaryHtml += '</div>';
+
     const panel = document.createElement('div');
     panel.className = 'game-over-panel';
     panel.style.display = 'flex';
@@ -673,6 +700,13 @@ export class UIManager {
       <div class="round-over-scores">
         <span>Equipo 1: ${params.gameOverScores.team0}</span>
         <span>Equipo 2: ${params.gameOverScores.team1}</span>
+      </div>
+      <div class="hand-history-header" style="margin: 12px 0 4px; font-size: 14px; font-weight: 700; color: #ffd700;">📋 Historial de la partida</div>
+      ${handSummaryHtml}
+      <div class="match-meta" style="margin-top: 8px; font-size: 11px; color: #888;">
+        <span>Mano inicial: ${history.initialDealerId} (aleatorio)</span>
+        <span>· ${totalHands} manos jugadas</span>
+        <span>· Iniciado: ${new Date(history.startedAt).toLocaleTimeString()}</span>
       </div>
       <button class="btn-new-game" onclick="window._uiCallbacks?.onNewGame()">NUEVO JUEGO</button>
     `;
@@ -763,6 +797,22 @@ export class UIManager {
       btnTruco.textContent = '🔥 Truco';
       btnTruco.addEventListener('click', () => this.callbacks.onTrucoChallenge());
       controls.appendChild(btnTruco);
+    }
+
+    // Irse al Mazo — show when it's the human's turn (not on round 0 envido opening phase)
+    const canIrseAlMazo = isHumanTurn
+      && !params.isGameOver
+      && !(params.firstHandCompleted && params.currentRound >= 3);
+
+    if (canIrseAlMazo) {
+      const btnMazo = document.createElement('button');
+      btnMazo.textContent = '🏳️ Irse al Mazo';
+      btnMazo.style.borderColor = '#ff4444';
+      btnMazo.style.color = '#ff6666';
+      btnMazo.style.fontSize = '12px';
+      btnMazo.style.padding = '6px 12px';
+      btnMazo.addEventListener('click', () => this.callbacks.onIrseAlMazo());
+      controls.appendChild(btnMazo);
     }
 
     // Response panels (envido/truco pending from opponent)
