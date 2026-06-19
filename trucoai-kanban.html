@@ -387,7 +387,7 @@
     <h1>♠️ TrucoAI · Kanban de Desarrollo</h1>
     <div style="color:#8b949e;font-size:13px;margin-top:4px;">
       Proyecto en <code style="background:#21262d;padding:1px 6px;border-radius:4px;">/Users/emmanuelvaldez/GameDev/TrucoAI</code>
-      · TypeScript + Vite · 3,749 LOC · Último fix: 14 bugs (commit 288b802)
+      · TypeScript + Vite · 3,749 LOC · Mergeado con Excel Backlog (22 US → 41 US) · Tests: 287 ✅
     </div>
   </div>
   <div class="subtitle">
@@ -413,8 +413,8 @@
 
 <!-- QA Status -->
 <div class="qa-failures" id="qa-status" style="background:rgba(63,185,80,0.08);border-color:rgba(63,185,80,0.3);">
-  <h3 style="color:#3fb950;">✅ QA Status: 170 passed, 0 failed</h3>
-  <p style="font-size:13px;color:#8b949e;">Todos los tests del QA suite pasan después de los fixes de esta iteración.</p>
+  <h3 style="color:#3fb950;">✅ QA Status: 287 passed, 0 failed</h3>
+  <p style="font-size:13px;color:#8b949e;">Todos los tests del QA suite pasan. 41 User Stories en el tablero (13 done + 28 backlog).</p>
 </div>
 
 <!-- Filters -->
@@ -641,11 +641,17 @@ const US = [
     comments: []
   },
   {
-    id: 'US-025', title: 'AI Difficulty Levels (Fácil/Medio/Difícil)',
+    id: 'US-025', title: 'AI Difficulty Levels + Heurísticas (Fácil/Medio/Difícil)',
     priority: 'medium', category: 'feature', status: 'backlog',
     tags: ['ai', 'feature', 'ui'],
-    body: 'La AI actual usa <code>Math.random()</code> para decisiones simples. Crear 3 niveles: Fácil (random), Medio (heurísticas básicas), Difícil (CFR agent). Menú de selección al inicio.',
-    acceptance: ['3 niveles seleccionables desde menú', 'Fácil pierde seguido', 'Difícil gana >60% vs jugador novato'],
+    body: 'Crear 3 niveles de IA con heurísticas específicas para cada decisión. <strong>Carta a jugar:</strong> jugar más baja si vamos ganando baza, más alta si vamos perdiendo. <strong>Cantar Truco:</strong> si tiene ≥1 carta con valorTruco≥10, y no cantar si va ganando por +10pts. <strong>Cantar Envido:</strong> si puntaje ≥27, Real Envido si ≥30, Falta si muy abajo. <strong>Irse al mazo:</strong> si 3 cartas ≤4 o perdió 2 bazas con truco cantado. Ver Excel US-14/US-15/US-16/US-17.',
+    acceptance: ['3 niveles seleccionables (Fácil=random, Medio=heurísticas, Difícil=CFR)',
+      'Heurística carta: weakest si oponente gana baza, strongest si podemos ganar',
+      'Heurística truco: cantar con 1 carta ≥10, responder según calidad de mano',
+      'Heurística envido: cantar con ≥27pts, Real Envido con ≥30',
+      'Heurística irse al mazo: con mano muy mala o perdiendo 2 bazas con truco',
+      'AI no canta si va ganando por +10pts (conservador), sí si pierde por +10pts (agresivo)',
+      'AI usa delays realistas (800-2000ms) con variación aleatoria'],
     comments: []
   },
 
@@ -667,11 +673,15 @@ const US = [
     comments: []
   },
   {
-    id: 'US-028', title: 'Historial de mano (log de acciones)',
-    priority: 'low', category: 'feature', status: 'backlog',
-    tags: ['feature', 'ui'],
-    body: 'Panel lateral o inferior que muestre un log con timestamp de todas las acciones: cartas jugadas, envidos, trucos, puntos. Útil para debugging y aprendizaje.',
-    acceptance: ['Log visible durante la partida', 'Muestra todas las acciones cronológicamente', 'Se limpia entre manos'],
+    id: 'US-028', title: 'Historial de mano y estado serializable (T-032/T-033)',
+    priority: 'medium', category: 'feature', status: 'backlog',
+    tags: ['feature', 'ui', 'game-engine'],
+    body: 'Panel lateral o inferior con log de acciones (cartas jugadas, envidos, trucos, puntos). <strong>T-032:</strong> Cada mano registra: número, ganadorTruco, puntajeTruco, ganadorEnvido, puntajeEnvido, cartasJugadas, cantos realizados. <strong>T-033:</strong> Exponer estado completo serializable: puntajeEquipos, manoActual, turnoActual, estadoTruco, estadoEnvido, cartasEnMesa, jugadorMano. Útil para save/load y renderizado.',
+    acceptance: ['Log visible durante la partida con todas las acciones cronológicamente',
+      'Se limpia entre manos',
+      'Cada mano registra: ganadorTruco, puntajeTruco, ganadorEnvido, puntajeEnvido, cartasJugadas, cantos',
+      'Estado completo de partida serializable (idempotente) para save/load',
+      'Estado incluye: puntajeEquipos, manoActual, turnoActual, estadoTruco, estadoEnvido, cartasEnMesa, jugadorMano'],
     comments: []
   },
   {
@@ -752,6 +762,59 @@ const US = [
     tags: ['docs', 'done', 'testing'],
     body: 'Documento docs/partida-guia.html con simulación completa de partida a 30 puntos con envido, truco, IA.',
     acceptance: ['Documento creado y verificado'],
+    comments: []
+  },
+
+  // ═══════ GAME ENGINE (mergeadas del Excel Backlog) ═══════
+  {
+    id: 'US-038', title: '[GE] Resolución de mano con 7 combinaciones de bazas + early termination',
+    priority: 'high', category: 'feature', status: 'backlog',
+    tags: ['feature', 'game-engine', 'test'],
+    body: 'Implementar las 7 combinaciones de resolución de mano según las reglas del truco argentino. <strong>T-013:</strong> Gana 2 de 3 bazas. Casos: (1) gana b1+b2 → mano resuelta sin b3. (2) Parda b1, gana b2 → gana b2. (3) Gana b1, parda b2 → gana b1. (4) Parda b1+b2 → gana MANO. (5) Parda b1, gana b2, gana b3 → gana b3. (6) Parda b1+b2+b3 → gana MANO. (7) Gana b1, pierde b2, gana b3 → gana b1+b3. <strong>T-014:</strong> Optimización: detectar mano resuelta antes de baza3. Ver Excel US-07.',
+    acceptance: ['7 combinaciones de bazas implementadas correctamente',
+      'Si un equipo gana b1+b2: mano termina sin jugar b3',
+      'Si parda b1+b2: gana el equipo del MANO',
+      'No terminar prematuramente en otros casos',
+      'Test unitario para cada combinación',
+      'Early termination: baza3 solo se juega cuando es necesaria'],
+    comments: []
+  },
+  {
+    id: 'US-039', title: '[GE] Validaciones centralizadas con mensajes de error descriptivos',
+    priority: 'high', category: 'feature', status: 'backlog',
+    tags: ['feature', 'game-engine', 'test'],
+    body: 'Centralizar todas las validaciones de acciones en el engine con mensajes de error claros. <strong>T-044:</strong> Validar: es turno del jugador, acción válida en estado actual, cantos en orden correcto, etc. Retornar errores descriptivos (no excepciones). <strong>T-045:</strong> Test de integración: simular 100 partidas completas IA vs IA sin errores ni loops infinitos. Ver Excel US-19.',
+    acceptance: ['Validación centralizada: turno del jugador, estado actual, orden de cantos',
+      'Errores descriptivos: "No es tu turno", "Envido ya resuelto", "No puedes cantar truco ahora"',
+      'No lanzar excepciones en flujo normal (retornar {ok, error})',
+      'Test: cada acción inválida posible retorna error descriptivo',
+      'Test de integración: 100 partidas IA vs IA completas sin errores'],
+    comments: []
+  },
+  {
+    id: 'US-040', title: '[GE] Coexistencia de truco y envido pendientes (envido va primero)',
+    priority: 'high', category: 'feature', status: 'backlog',
+    tags: ['feature', 'game-engine', 'envido', 'truco'],
+    body: 'Manejar correctamente cuando truco y envido están pendientes simultáneamente. <strong>Regla clave:</strong> envido tiene prioridad, se resuelve primero. <strong>canChallengeTruco()</strong> debe agregar guard: si envido.phase !== "none", no se puede cantar truco. <strong>T-046:</strong> Escenario: se canta truco, luego alguien canta envido (o viceversa) → envido se resuelve primero, luego se retoma el truco. <strong>T-047:</strong> Bloquear envido si ya se jugó primera carta de segunda baza. Ver Excel US-20.',
+    acceptance: ['Si hay truco y envido pendientes, envido se resuelve PRIMERO',
+      'canChallengeTruco rechaza si envido.phase !== "none"',
+      'Después de resolver envido, el truco sigue pendiente (no se pierde)',
+      'No se puede cantar envido si ya empezó la segunda baza',
+      'Test: intentar cantar envido en segunda baza → error descriptivo',
+      'Test: cantar ambos, resolver envido, verificar que truco sigue activo'],
+    comments: []
+  },
+  {
+    id: 'US-041', title: '[GE] Test exhaustivo de todos los escenarios de parda',
+    priority: 'high', category: 'test', status: 'backlog',
+    tags: ['test', 'game-engine', 'bug-prevention'],
+    body: 'Test unitario y de integración para todos los escenarios de empate (parda) en bazas. Verificar asignación correcta del MANO como desempate supremo. <strong>T-049:</strong> Parda b1→gana b2→fin. Parda b1→parda b2→gana MANO. Parda b1→parda b2→parda b3→gana MANO. Gana b1→parda b2→gana b1 la mano. Parda b1→gana b2→parda b3→gana b2. Ver Excel US-22.',
+    acceptance: ['Test: parda b1 + gana b2 → fin de mano (gana b2)',
+      'Test: parda b1 + parda b2 → gana MANO',
+      'Test: parda b1 + parda b2 + parda b3 → gana MANO',
+      'Test: gana b1 + parda b2 → gana b1 la mano',
+      'Test: parda b1 + gana b2 + parda b3 → gana b2',
+      'Test unitario para CADA uno de los 6 casos de parda'],
     comments: []
   },
 ];

@@ -852,14 +852,45 @@ export class GameEngine {
     // Can only sing truco while the hand is still being played (rounds 0,1,2)
     // After round 3 starts (currentRound >= 3), all cards have been played
     if (this.currentRound >= 3) return false;
+    // US-040: Envido takes priority — cannot call truco while envido is pending
+    if (this.envido.phase !== 'none' && !this.envido.accepted) return false;
     return true;
   }
 
-  /** Check if the hand has already been decided (one team won 2 tricks) */
+  /** Check if the hand has already been decided based on Truco rules */
   private isHandAlreadyDecided(): boolean {
+    /*****************************************************************
+     * Truco rule — 7 cases for hand resolution (best of 3 tricks):
+     *
+     *  1. Gana b1+b2               → gana sin jugar b3 ✅
+     *  2. Parda b1, gana b2        → gana quien ganó b2 ✅
+     *  3. Gana b1, parda b2        → gana quien ganó b1 ✅
+     *  4. Parda b1+b2              → gana el MANO        ✅
+     *  5. Parda b1, gana b2, b3    → gana b3             ✅ (normal flow)
+     *  6. Parda b1+b2+b3           → gana el MANO        ✅ (normal flow)
+     *  7. Gana b1, pierde b2, b3   → gana b1+b3          ✅ (normal flow)
+     *
+     * After 2 tricks played: only need trick 3 if team 0 won 1 AND team 1 won 1.
+     * All other outcomes after 2 tricks are conclusive.
+     *****************************************************************/
     const team0Wins = this.roundResults.filter(r => r.teamWinner === 0).length;
     const team1Wins = this.roundResults.filter(r => r.teamWinner === 1).length;
-    return team0Wins >= 2 || team1Wins >= 2;
+    const roundsPlayed = this.roundResults.length;
+
+    // Case 1: one team has 2 non-tied wins
+    if (team0Wins >= 2 || team1Wins >= 2) return true;
+
+    // Case 4: all tied after 2 rounds → MANO wins (no need for round 3)
+    if (roundsPlayed >= 2 && team0Wins === 0 && team1Wins === 0) return true;
+
+    // Cases 2 & 3: after 2 rounds, one team has 1 win and the other 0.
+    // The leader wins regardless of round 3 outcome (Truco normative rule:
+    // ties in round 3 are still a win for the leader, and even if the
+    // trailing team wins round 3, the first-trick winner breaks the tie).
+    if (roundsPlayed >= 2 && team0Wins !== team1Wins) return true;
+
+    // After 3 rounds (all played), hand is always decided
+    return roundsPlayed >= 3;
   }
 
   private challengeTruco(playerId: string): void {
@@ -1135,14 +1166,12 @@ export class GameEngine {
     this.startNewHand();
   }
 
-  playCard(playerId: string, cardIndex: number): boolean {
-    if (this.gameOver) return false;
-    if (this.currentTurnPlayerId !== playerId) return false;
-    if (!this.hands[playerId]) return false;
-    if (cardIndex < 0 || cardIndex >= this.hands[playerId].length) return false;
+  playCard(playerId: string, cardIndex: number): { ok: boolean; error?: string } {
+    const validation = this.validateAction(playerId, 'playCard', { cardIndex });
+    if (!validation.ok) return validation;
 
     const card = this.hands[playerId].splice(cardIndex, 1)[0];
-    if (!card) return false;
+    if (!card) return { ok: false, error: 'No se pudo jugar la carta indicada' };
 
     this.currentTrick.push({ card, playerId });
     this.currentTrickNumber = this.currentRound;
@@ -1168,7 +1197,7 @@ export class GameEngine {
       this.resolveTrick();
     }
 
-    return true;
+    return { ok: true };
   }
 
   private nextTurn(): void {
@@ -1284,12 +1313,10 @@ export class GameEngine {
 
     this.currentTrick = [];
 
-    // Check if one team already won 2 tricks (best of 3 — no need for 3rd)
-    const team0Wins = this.roundResults.filter(r => r.teamWinner === 0).length;
-    const team1Wins = this.roundResults.filter(r => r.teamWinner === 1).length;
-    const handOverEarly = team0Wins >= 2 || team1Wins >= 2;
+    // Check if the hand is already decided (early termination)
+    const handOverEarly = this.isHandAlreadyDecided();
 
-    if (handOverEarly || this.currentRound >= 3) {
+    if (handOverEarly) {
       // Hand is decided — resolve
       this.resolveHand();
     } else {
@@ -1640,6 +1667,81 @@ export class GameEngine {
     if (this.currentTrick.length > 0 && this.currentTrick.length < this.getActivePlayerCount()) return 'playing-trick';
     if (this.currentTrick.length >= this.getActivePlayerCount()) return 'trick-resolving';
     return 'playing-trick';
+  }
+
+  /**
+   * US-039: Centralized action validation with descriptive error messages.
+   * Validates that an action is legal in the current game state.
+   * Returns { ok: false, error: '...' } if invalid, { ok: true } if valid.
+   */
+  private validateAction(
+    playerId: string,
+    action: 'playCard' | 'challengeTruco' | 'respondTruco' | 'openEnvido' | 'respondEnvido' | 'irseAlMazo',
+    params?: { cardIndex?: number; level?: string; want?: boolean }
+  ): { ok: boolean; error?: string } {
+    if (this.gameOver) return { ok: false, error: 'La partida ya terminó' };
+
+    const player = this.getPlayerById(playerId);
+    if (!player) return { ok: false, error: 'Jugador no encontrado' };
+
+    switch (action) {
+      case 'playCard': {
+        if (this.currentTurnPlayerId !== playerId) return { ok: false, error: 'No es tu turno' };
+        if (!this.hands[playerId] || this.hands[playerId].length === 0) return { ok: false, error: 'No tienes cartas en la mano' };
+        const idx = params?.cardIndex;
+        if (idx === undefined || idx < 0 || idx >= (this.hands[playerId]?.length || 0)) return { ok: false, error: 'Índice de carta inválido' };
+        return { ok: true };
+      }
+      case 'challengeTruco': {
+        if (this.envido.phase !== 'none' && !this.envido.accepted) return { ok: false, error: 'No puedes cantar truco mientras hay un envido pendiente' };
+        if (this.trucoWaitingForResponse) return { ok: false, error: 'Ya hay un truco pendiente de respuesta' };
+        if (this.truco.accepted) return { ok: false, error: 'El truco ya fue aceptado' };
+        if (this.truco.level >= 3) return { ok: false, error: 'Ya se llegó al máximo nivel de truco (Vale Cuatro)' };
+        if (this.truco.lastChallengerTeam !== null && player.team === this.truco.lastChallengerTeam) return { ok: false, error: 'Tu equipo ya cantó truco, espera la respuesta' };
+        return { ok: true };
+      }
+      case 'respondTruco': {
+        if (this.truco.level === 0) return { ok: false, error: 'No hay truco que responder' };
+        if (this.truco.accepted) return { ok: false, error: 'El truco ya fue respondido' };
+        if (player.team === this.truco.lastChallengerTeam) return { ok: false, error: 'Tu equipo cantó truco — el rival debe responder' };
+        return { ok: true };
+      }
+      case 'openEnvido': {
+        if (this.currentRound !== 0) return { ok: false, error: 'Solo se puede cantar envido en la primera baza' };
+        if (this.envido.phase !== 'none') return { ok: false, error: 'Ya hay un envido en curso' };
+        if (this.envido.pointsAwarded > 0) return { ok: false, error: 'El envido ya fue resuelto en esta mano' };
+        if (this.isPicaPica && !this.picaPicaActivePairIds.includes(playerId)) return { ok: false, error: 'En Pica-Pica, solo la pareja activa puede cantar envido' };
+        return { ok: true };
+      }
+      case 'respondEnvido': {
+        if (this.envido.phase !== 'opening') return { ok: false, error: 'No hay envido que responder' };
+        if (this.envido.accepted) return { ok: false, error: 'El envido ya fue resuelto' };
+        if (player.team === this.envido.callerTeam) return { ok: false, error: 'Tu equipo cantó envido — espera la respuesta del rival' };
+        return { ok: true };
+      }
+      case 'irseAlMazo': {
+        // irse al mazo is always technically possible, but envido must be resolved first
+        if (this.envido.phase === 'opening' && !this.envido.accepted) return { ok: false, error: 'Debes resolver el envido pendiente antes de irte al mazo' };
+        return { ok: true };
+      }
+    }
+    return { ok: true };
+  }
+
+  /**
+   * US-039: Get all current validation errors for a player as a string array.
+   * Useful for the UI to show all blocked actions at once.
+   */
+  getBlockedActions(playerId: string): string[] {
+    const blocked: string[] = [];
+    const actions: Array<'playCard' | 'challengeTruco' | 'respondTruco' | 'openEnvido' | 'respondEnvido' | 'irseAlMazo'> = [
+      'playCard', 'challengeTruco', 'respondTruco', 'openEnvido', 'respondEnvido', 'irseAlMazo'
+    ];
+    for (const action of actions) {
+      const result = this.validateAction(playerId, action);
+      if (!result.ok) blocked.push(`${action}: ${result.error}`);
+    }
+    return blocked;
   }
 
   /**
