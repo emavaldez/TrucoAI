@@ -224,17 +224,24 @@ export class UIManager {
   private renderGameBoard(playerCount: number): void {
     const board = document.createElement('div');
     board.className = 'game-board';
+    // For 6 players, wrap side slots in a container so grid alignment works
+    const sideLeftHtml = playerCount === 6
+      ? '<div class="side-player-area side-left-6"><div class="side-left-top"></div><div class="side-left-bottom"></div></div>'
+      : '<div class="side-player-area side-left"></div>';
+    const sideRightHtml = playerCount === 6
+      ? '<div class="side-player-area side-right-6"><div class="side-right-top"></div><div class="side-right-bottom"></div></div>'
+      : '<div class="side-player-area side-right"></div>';
     board.innerHTML = `
       <div class="scoreboard"></div>
       <div class="circle-seating" id="circle-seating" data-count="${playerCount}">
         <div class="opponents-area"></div>
         <div class="middle-area">
-          <div class="side-player-area side-left"></div>
+          ${sideLeftHtml}
           <div class="table-area">
             <div class="played-cards"></div>
             <div class="message-area"></div>
           </div>
-          <div class="side-player-area side-right"></div>
+          ${sideRightHtml}
         </div>
         <div class="human-area"></div>
       </div>
@@ -346,19 +353,32 @@ export class UIManager {
         }
 
       } else if (playerCount === 6) {
-        // Teams: team0=[0,1,2], team1=[3,4,5]
-        // Positions:
-        //   0 = human (bottom center)
-        //   1 = teammate (bottom left) → humanArea
-        //   2 = teammate (bottom right) → humanArea
-        //   3 = opponent top-left → opponentsArea
-        //   4 = opponent top-center → opponentsArea
-        //   5 = opponent top-right → opponentsArea
+        // Teams: team0=[0,2,4], team1=[1,3,5]
+        // Layout: bottom-center = human(0), top-center = opponent(1),
+        //         left-top = teammate(2), left-bottom = opponent(3),
+        //         right-top = teammate(4), right-bottom = opponent(5)
         const pos = player.position;
-        if (pos === 0 || pos === 1 || pos === 2) {
+        const team = player.team;
+        if (pos === 0) {
           humanArea.appendChild(playerEl);
-        } else {
+        } else if (pos === 1) {
           opponentsArea.appendChild(playerEl);
+        } else if (pos === 2) {
+          const leftTop = seating.querySelector('.side-left-top');
+          if (leftTop) leftTop.appendChild(playerEl);
+          else sideLeft.appendChild(playerEl);
+        } else if (pos === 3) {
+          const leftBottom = seating.querySelector('.side-left-bottom');
+          if (leftBottom) leftBottom.appendChild(playerEl);
+          else sideLeft.appendChild(playerEl);
+        } else if (pos === 4) {
+          const rightTop = seating.querySelector('.side-right-top');
+          if (rightTop) rightTop.appendChild(playerEl);
+          else sideRight.appendChild(playerEl);
+        } else if (pos === 5) {
+          const rightBottom = seating.querySelector('.side-right-bottom');
+          if (rightBottom) rightBottom.appendChild(playerEl);
+          else sideRight.appendChild(playerEl);
         }
       }
     }
@@ -746,10 +766,11 @@ export class UIManager {
     const isHumanTurn = params.currentTurnPlayerId === humanPlayer.id;
 
     // Envido: ANY player can call envido in round 0 before playing
+    // Also available when truco is pending ("envido va primero")
     const showEnvido = params.currentRound === 0
       && params.envido.phase === 'none'
       && params.envido.pointsAwarded === 0
-      && isHumanTurn;
+      && (isHumanTurn || (params.truco.level > 0 && !params.truco.accepted));
 
     if (showEnvido) {
       const envidoGroup = document.createElement('div');

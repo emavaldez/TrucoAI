@@ -220,6 +220,24 @@ html, body {
   padding: 0.25rem;
 }
 
+/* 6-player side containers — vertical layout for top+bottom slots */
+.side-left-6, .side-right-6 {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  min-height: 100%;
+}
+.side-left-top, .side-left-bottom,
+.side-right-top, .side-right-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
 /* Human player area (bottom row) */
 .circle-seating .human-area {
   grid-row: 3;

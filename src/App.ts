@@ -61,7 +61,7 @@ export class App {
       const winnerTeam = data.winnerTeam;
       const winnerLabel = winnerTeam >= 0 ? `Equipo ${winnerTeam + 1}` : 'Parda (empate)';
       this.uiManager.showNotification(
-        `✅ Baza ${data.trickNumber + 1} — Ganó ${winnerLabel}`,
+        `✅ Mano ${data.trickNumber + 1} — Ganó ${winnerLabel}`,
         '',
         'info'
       ).then(() => {
@@ -365,23 +365,8 @@ export class App {
     if (this.gameEngine.getCurrentRound() !== 0) return;
     const humanPlayer = this.players[0];
     if (!humanPlayer) return;
-    const dealerId = this.gameEngine.getDealerId();
-    const pieId = this.getPiePlayerId();
-    if (humanPlayer.id === dealerId || humanPlayer.id === pieId) {
-      // Human IS the pie or dealer → call envido directly
-      this.gameEngine['openEnvido'](humanPlayer.id);
-    } else {
-      // Human is NOT pie/dealer → request the AI teammate (team pie) to call envido
-      const humanTeam = humanPlayer.team;
-      const teammatePie = this.findPiePlayer(humanTeam);
-      if (teammatePie) {
-        const piePlayer = this.players.find(p => p.id === teammatePie);
-        if (piePlayer && piePlayer.isAI) {
-          // Trigger AI teammate to call envido on their turn
-          this.gameEngine['openEnvido'](teammatePie);
-        }
-      }
-    }
+    // Any player can call envido directly (no dealer/pie restriction)
+    this.gameEngine['openEnvido'](humanPlayer.id);
   }
 
   private handleEnvidoWant(): void {
