@@ -55,17 +55,17 @@ export class App {
     // When a trick is resolved, pause for the human to see the result
     this.gameEngine.on('trick-resolved', (data: any) => {
       this.renderGameState();
-      // Show "Continuar" button after each trick (unless game over / truco rejection)
       const scores = this.gameEngine.getScores();
-      if (scores.team0 >= 30 || scores.team1 >= 30) return; // Game over, no need to pause
+      if (scores.team0 >= 30 || scores.team1 >= 30) return;
       this._waitingForContinue = true;
+      const winnerTeam = data.winnerTeam;
+      const winnerLabel = winnerTeam >= 0 ? `Equipo ${winnerTeam + 1}` : 'Parda (empate)';
       this.uiManager.showNotification(
-        '✅ Baza completada',
-        data.cards.map((p: any) => `${p.card.number} de ${p.card.suit}`).join(', '),
+        `✅ Baza ${data.trickNumber + 1} — Ganó ${winnerLabel}`,
+        '',
         'info'
       ).then(() => {
         this._waitingForContinue = false;
-        // Execute any deferred AI turn
         if (this._pendingAiTurn) {
           const pending = this._pendingAiTurn;
           this._pendingAiTurn = null;
@@ -583,8 +583,25 @@ export class App {
 
   private renderGameState(): void {
     const scores = this.gameEngine.getScores();
-    const isGameOver = scores.team0 >= 30 || scores.team1 >= 30;
-    const gameOverWinner = isGameOver ? (scores.team0 >= 30 ? 0 : 1) : null;
+    const state = this.gameEngine.getState();
+    const isGameOver = state.gameOver;
+    const gameOverWinner = isGameOver ? (state.partidaHistory.winningTeam >= 0 ? state.partidaHistory.winningTeam : (scores.team0 >= 30 ? 0 : 1)) : null;
+    const isHandOver = state.phase === 'round-resolving' || state.phase === 'round-over' || state.phase === 'game-over';
+    const roundResults = this.gameEngine.getRoundResults();
+
+    // Determine hand winner from round results
+    let handWinnerTeam = -1;
+    if (isHandOver) {
+      const t0 = roundResults.filter(r => r.teamWinner === 0).length;
+      const t1 = roundResults.filter(r => r.teamWinner === 1).length;
+      if (t0 > t1) handWinnerTeam = 0;
+      else if (t1 > t0) handWinnerTeam = 1;
+      // If tied, first trick winner (or mano) wins
+      else if (roundResults.length > 0) {
+        const firstNonTie = roundResults.find(r => r.teamWinner !== -1);
+        handWinnerTeam = firstNonTie ? firstNonTie.teamWinner : 0;
+      }
+    }
 
     this.uiManager.renderGame({
       players: this.players,
@@ -599,13 +616,13 @@ export class App {
       scores,
       envido: this.gameEngine.getEnvidoState(),
       truco: this.gameEngine.getTrucoState(),
-      roundResults: this.gameEngine.getRoundResults(),
+      roundResults,
       isPicaPica: this.gameEngine.getIsPicaPica(),
       picaPicaSubmano: this.gameEngine.getPicaPicaSubmano(),
       picapicaResults: this.gameEngine.getPicapicaResults(),
       firstHandCompleted: this.gameEngine.isFirstHandCompleted(),
       isSecondHand: this.gameEngine.getIsSecondHand(),
-      handWinnerTeam: -1,
+      handWinnerTeam,
       isGameOver,
       gameOverWinner,
       gameOverScores: scores,

@@ -629,7 +629,8 @@ export class UIManager {
       return;
     }
 
-    if (params.firstHandCompleted && params.currentRound >= 3) {
+    // Show round-over panel if hand is resolved (regardless of currentRound)
+    if (params.firstHandCompleted && params.handWinnerTeam >= 0) {
       this.showRoundOverPanel({
         handWinnerTeam: params.handWinnerTeam,
         scores: params.scores,
@@ -724,6 +725,7 @@ export class UIManager {
     firstHandCompleted: boolean;
     isSecondHand: boolean;
     isGameOver: boolean;
+    handWinnerTeam: number;
     players: PlayerConfig[];
     piePlayerId: string;
     starterId: string;
@@ -734,10 +736,9 @@ export class UIManager {
 
     controls.innerHTML = '';
 
+    // Hide controls when showing round-over panel (hand is resolved)
+    if (params.firstHandCompleted && params.handWinnerTeam >= 0) return;
     if (params.isGameOver) return;
-
-    // Hide controls when showing round-over panel (all 3 tricks done)
-    if (params.firstHandCompleted && params.currentRound >= 3) return;
 
     const humanPlayer = params.players.find(p => p.isHuman);
     if (!humanPlayer) return;
