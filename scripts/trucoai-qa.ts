@@ -1533,6 +1533,161 @@ section('us-041-parda-exhaustive', () => {
   );
 });
 
+// ─── Simulación de partidas completas 2/4/6 jugadores ─────────────────
+// Juega partidas enteras con movimientos aleatorios para detectar freezes
+
+section('simulacion-partidas', () => {
+  const MAX_ACTIONS = 500;
+
+  function simulateFullGame(playerCount: 2 | 4 | 6, difficulty: 'easy' | 'normal' | 'hard' = 'normal'): { ok: boolean; rounds: number; error?: string } {
+    const { engine, players } = createTestGame(playerCount);
+    const e = engine as any;
+
+    for (const p of players) {
+      p.difficulty = difficulty;
+    }
+
+    const config: GameConfig = { playerCount, difficulty };
+    engine.startGame(players, config);
+
+    let actionCount = 0;
+    let stalledCount = 0;
+    let lastStateKey = '';
+
+    while (actionCount < MAX_ACTIONS) {
+      actionCount++;
+      const state = engine.getState();
+
+      if (state.gameOver) {
+        return { ok: true, rounds: state.partidaHistory.hands.length };
+      }
+
+      const stateKey = `${state.phase}|${state.currentTurnPlayerId}|${state.currentRound}`;
+
+      // Phase: round-resolving → need to advance to next hand
+      if (state.phase === 'round-resolving' || state.phase === 'round-over') {
+        e.startNewHand();
+        continue;
+      }
+
+      // Phase: envido → handle it
+      if (state.envido.phase === 'opening' && !state.envido.accepted) {
+        const humanTeam = players[0].team;
+        const isHumanCaller = state.envido.callerTeam === humanTeam;
+        if (isHumanCaller) {
+          // AI opponent responds
+          const aiResponder = players.find(p => p.isAI && p.team === (humanTeam === 0 ? 1 : 0));
+          if (aiResponder) {
+            if (Math.random() < 0.6) {
+              e.respondEnvido(aiResponder.id, true);
+            } else {
+              e.respondEnvido(aiResponder.id, false);
+            }
+          }
+        } else {
+          // Human responds
+          if (Math.random() < 0.6) {
+            e.respondEnvido(players[0].id, true);
+          } else {
+            e.respondEnvido(players[0].id, false);
+          }
+        }
+        continue;
+      }
+
+      // Truco response needed
+      if (state.truco.level > 0 && !state.truco.accepted) {
+        const humanTeam = players[0].team;
+        const isHumanChallenged = state.truco.lastChallengerTeam !== humanTeam;
+        if (isHumanChallenged) {
+          const roll = Math.random();
+          if (roll < 0.5) e.respondTruco(players[0].id, true);
+          else if (roll < 0.8) e.respondTruco(players[0].id, false);
+          else e.respondTruco(players[0].id, true, true);
+        } else {
+          const aiResp = players.find(p => p.isAI && p.team !== humanTeam);
+          if (aiResp) {
+            const roll = Math.random();
+            if (roll < 0.5) e.respondTruco(aiResp.id, true);
+            else if (roll < 0.8) e.respondTruco(aiResp.id, false);
+            else e.respondTruco(aiResp.id, true, true);
+          }
+        }
+        continue;
+      }
+
+      const currentPlayerId = state.currentTurnPlayerId;
+      if (!currentPlayerId) {
+        stalledCount++;
+        if (stalledCount > 5) return { ok: false, rounds: state.partidaHistory.hands.length, error: `No current player in phase=${state.phase} after ${actionCount} actions` };
+        continue;
+      }
+
+      const hand = engine.getHands()[currentPlayerId] || [];
+
+      // Try to play a card
+      if (hand.length > 0) {
+        // Maybe call envido or truco
+        if (state.currentRound === 0 && state.envido.phase === 'none' && state.truco.level === 0) {
+          if (currentPlayerId === players[0].id && Math.random() < 0.1) {
+            e.openEnvido(players[0].id);
+            continue;
+          }
+          const cp = players.find(p => p.id === currentPlayerId);
+          if (cp && cp.isAI && Math.random() < 0.08) {
+            e.openEnvido(currentPlayerId);
+            continue;
+          }
+          if (Math.random() < 0.1) {
+            e.challengeTruco(currentPlayerId);
+            continue;
+          }
+        }
+
+        const cardIdx = Math.floor(Math.random() * hand.length);
+        const result = engine.playCard(currentPlayerId, cardIdx);
+        if (result && !result.ok) {
+          // Card play failed — state might have changed
+          stalledCount++;
+          if (stalledCount > 10) {
+            return { ok: false, rounds: state.partidaHistory.hands.length, error: `playCard failed after ${actionCount} actions: ${result.error}. Turn=${currentPlayerId} phase=${state.phase}` };
+          }
+          continue;
+        }
+        stalledCount = 0;
+        lastStateKey = stateKey;
+        continue;
+      }
+
+      // No cards. If same state, we're stuck
+      if (stateKey === lastStateKey) {
+        stalledCount++;
+        if (stalledCount > 5) {
+          return { ok: false, rounds: state.partidaHistory.hands.length, error: `Stuck: no cards for ${currentPlayerId}, phase=${state.phase}, turn=${state.currentTurnPlayerId}` };
+        }
+      }
+      lastStateKey = stateKey;
+    }
+
+    return { ok: false, rounds: -1, error: `Exceeded max actions (${MAX_ACTIONS}). Scores: ${JSON.stringify(engine.getScores())}` };
+  }
+
+  for (const pc of [2, 4, 6] as const) {
+    const result = simulateFullGame(pc, 'normal');
+    assert(`Simulación ${pc} jugadores: partida completa sin freezes`,
+      result.ok,
+      result.error || ''
+    );
+    if (result.ok) console.log(`  → ${result.rounds} manos`);
+  }
+
+  const easyResult = simulateFullGame(2, 'easy');
+  assert(`Simulación 2 jugadores (fácil): partida completa`, easyResult.ok, easyResult.error || '');
+
+  const hardResult = simulateFullGame(2, 'hard');
+  assert(`Simulación 2 jugadores (difícil): partida completa`, hardResult.ok, hardResult.error || '');
+});
+
 // ─── Results ─────────────────────────────────────────────────────────────
 
 console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);

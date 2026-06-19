@@ -42,7 +42,7 @@ export class App {
 
   private setupEventListeners(): void {
     const renderHandlers = [
-      'round-start', 'card-played', 'trick-resolved',
+      'round-start', 'card-played',
       'hand-resolved', 'round-over', 'game-over',
       'envido-raised', 'envido-resolved',
       'truco-accepted', 'truco-resolved',
@@ -51,6 +51,30 @@ export class App {
     for (const event of renderHandlers) {
       this.gameEngine.on(event, () => this.renderGameState());
     }
+
+    // When a trick is resolved, pause for the human to see the result
+    this.gameEngine.on('trick-resolved', (data: any) => {
+      this.renderGameState();
+      // Show "Continuar" button after each trick (unless game over / truco rejection)
+      const scores = this.gameEngine.getScores();
+      if (scores.team0 >= 30 || scores.team1 >= 30) return; // Game over, no need to pause
+      this._waitingForContinue = true;
+      this.uiManager.showNotification(
+        '✅ Baza completada',
+        data.cards.map((p: any) => `${p.card.number} de ${p.card.suit}`).join(', '),
+        'info'
+      ).then(() => {
+        this._waitingForContinue = false;
+        // Execute any deferred AI turn
+        if (this._pendingAiTurn) {
+          const pending = this._pendingAiTurn;
+          this._pendingAiTurn = null;
+          this.handleAiTurn(pending);
+        } else {
+          this.renderGameState();
+        }
+      });
+    });
 
     // When envido is opened, AI responds (only if human's team called)
     this.gameEngine.on('envido-opened', (data: any) => {
@@ -86,7 +110,6 @@ export class App {
     this.gameEngine.on('envido-resolved', (data: any) => {
       this.renderGameState();
       if (data && data.sonBuenas) {
-        // "Son buenas" — show a compact message
         const wTeam = data.winnerTeam;
         const title = wTeam === 0 ? 'Equipo 1 gana el Envido' : 'Equipo 2 gana el Envido';
         this.uiManager.showNotification(title, 'El rival dijo "Son buenas". Envido para tu equipo.', 'success');
@@ -95,13 +118,8 @@ export class App {
       if (data && data.team0Best !== undefined) {
         const wTeam = data.winnerTeam;
         const title = wTeam === 0 ? 'Equipo 1 gana el Envido' : 'Equipo 2 gana el Envido';
-        // Build individual player scores message (mostrar tantos)
-        const scores = data.scores || {};
-        const playerLines = this.players.map(p => {
-          const pts = scores[p.id];
-          return `${p.name}: ${pts !== undefined ? pts + ' pts' : '—'}`;
-        }).join(' · ');
-        const msg = `Equipo 1: ${data.team0Best} pts — Equipo 2: ${data.team1Best} pts\n${playerLines}`;
+        const winnerPoints = wTeam === 0 ? data.team0Best : data.team1Best;
+        const msg = `Equipo ${wTeam + 1} gana con ${winnerPoints} pts — se lleva ${data.points} pts`;
         this.uiManager.showNotification(title, msg, 'info');
       } else {
         setTimeout(() => this.resumeCurrentTurn(), 300);
@@ -153,7 +171,14 @@ export class App {
       // If AI raised (data.team !== humanTeam), human sees response panel via renderGameState
     });
 
-    this.gameEngine.on('ai-turn', (data: any) => this.handleAiTurn(data));
+    this.gameEngine.on('ai-turn', (data: any) => {
+      // If waiting for "Continuar" click, defer the AI turn
+      if (this._waitingForContinue) {
+        this._pendingAiTurn = data;
+        return;
+      }
+      this.handleAiTurn(data);
+    });
   }
 
   private renderInitialMenu(): void {
@@ -461,6 +486,11 @@ export class App {
   // Pending actions that wait for notification OK click
   private _pendingEnvidoAction: (() => void) | null = null;
   private _pendingTrucoAction: (() => void) | null = null;
+  private _waitingForContinue: boolean = false;
+  private _pendingAiTurn: any = null;
+
+  // Temporary builder state (not persisted)
+  private _tempEnvidoLevel: string | null = null;
 
   /**
    * Called after player clicks OK on a notification overlay.

@@ -744,58 +744,50 @@ export class UIManager {
 
     const isHumanTurn = params.currentTurnPlayerId === humanPlayer.id;
 
-    // Envido: ONLY in round 0, before any card played, before truco
-    // Only the "pie" (last player of team in playing order) can sing envido
-    // Show envido options when applicable (round 0, no truco called yet)
+    // Envido: ANY player can call envido in round 0 before playing
     const showEnvido = params.currentRound === 0
       && params.envido.phase === 'none'
-      && params.envido.pointsAwarded === 0;
+      && params.envido.pointsAwarded === 0
+      && isHumanTurn;
 
-    if (showEnvido && isHumanTurn) {
-      const isDealerOrPie = humanPlayer && (
-        humanPlayer.id === params.dealerId || humanPlayer.id === params.piePlayerId
-      );
-
+    if (showEnvido) {
       const envidoGroup = document.createElement('div');
       envidoGroup.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;';
-      
-      if (isDealerOrPie) {
-        // Can call envido directly
-        const b1 = document.createElement('button');
-        b1.textContent = '🎯 Envido'; b1.style.borderColor = '#4caf50'; b1.style.color = '#4caf50';
-        b1.addEventListener('click', () => this.callbacks.onEnvidoOpen());
-        envidoGroup.appendChild(b1);
-        const b2 = document.createElement('button');
-        b2.textContent = 'Real Envido'; b2.style.fontSize = '11px'; b2.style.padding = '6px 8px';
-        b2.style.borderColor = '#ff9800'; b2.style.color = '#ff9800';
-        b2.addEventListener('click', () => this.callbacks.onEnvidoOpenType('real-envido'));
-        envidoGroup.appendChild(b2);
-        const b3 = document.createElement('button');
-        b3.textContent = 'Falta Envido'; b3.style.fontSize = '11px'; b3.style.padding = '6px 8px';
-        b3.style.borderColor = '#f44336'; b3.style.color = '#f44336';
-        b3.addEventListener('click', () => this.callbacks.onEnvidoOpenType('falta-envido'));
-        envidoGroup.appendChild(b3);
-      } else {
-        const bp = document.createElement('button');
-        bp.textContent = '📣 Pedir Envido';
-        bp.style.borderColor = '#9c27b0'; bp.style.color = '#ce93d8';
-        bp.style.fontSize = '12px'; bp.style.padding = '6px 12px';
-        bp.addEventListener('click', () => this.callbacks.onEnvidoOpen());
-        envidoGroup.appendChild(bp);
-      }
+      const b1 = document.createElement('button');
+      b1.textContent = '🎯 Envido'; b1.style.borderColor = '#4caf50'; b1.style.color = '#4caf50';
+      b1.addEventListener('click', () => this.callbacks.onEnvidoOpen());
+      envidoGroup.appendChild(b1);
+      const b2 = document.createElement('button');
+      b2.textContent = 'Real Envido'; b2.style.fontSize = '11px'; b2.style.padding = '6px 8px';
+      b2.style.borderColor = '#ff9800'; b2.style.color = '#ff9800';
+      b2.addEventListener('click', () => this.callbacks.onEnvidoOpenType('real-envido'));
+      envidoGroup.appendChild(b2);
+      const b3 = document.createElement('button');
+      b3.textContent = 'Falta Envido'; b3.style.fontSize = '11px'; b3.style.padding = '6px 8px';
+      b3.style.borderColor = '#f44336'; b3.style.color = '#f44336';
+      b3.addEventListener('click', () => this.callbacks.onEnvidoOpenType('falta-envido'));
+      envidoGroup.appendChild(b3);
       controls.appendChild(envidoGroup);
     }
 
-    // Truco: only show when no truco is pending/active, envido not pending, and it's the human's turn
-    const canCallTruco = params.envido.phase === 'none'
-      && params.truco.level === 0
-      && isHumanTurn
+    // Truco button: always show appropriate level when it's human's turn
+    // and no envido pending and truco not already accepted at max level
+    const showTrucoBtn = isHumanTurn
+      && params.envido.phase === 'none'
+      && !params.truco.accepted
+      && params.truco.level < 3
       && !params.isGameOver;
 
-    if (canCallTruco) {
+    if (showTrucoBtn) {
+      const levelNames: { [level: number]: string } = { 0: '🔥 Truco', 1: '🔥 Retruco', 2: '🔥 Vale 4' };
       const btnTruco = document.createElement('button');
-      btnTruco.textContent = '🔥 Truco';
-      btnTruco.addEventListener('click', () => this.callbacks.onTrucoChallenge());
+      btnTruco.textContent = levelNames[params.truco.level] || '🔥 Truco';
+      // If level > 0 but last challenger is NOT the human's team, it's a raise button
+      if (params.truco.level > 0 && params.truco.lastChallengerTeam !== humanPlayer?.team) {
+        btnTruco.addEventListener('click', () => this.callbacks.onTrucoRaise());
+      } else {
+        btnTruco.addEventListener('click', () => this.callbacks.onTrucoChallenge());
+      }
       controls.appendChild(btnTruco);
     }
 

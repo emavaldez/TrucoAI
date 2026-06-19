@@ -981,8 +981,9 @@ export class GameEngine {
       return;
     }
 
-    if (winnerTeam === 0) this.scores.team0 += points;
-    else this.scores.team1 += points;
+    if (winnerTeam === 0 || winnerTeam === 1) {
+      this.agregarPuntos(winnerTeam, points);
+    }
 
     this.truco.pointsAwarded = points;
     this.truco.team0Scored = this.scores.team0;
@@ -991,6 +992,8 @@ export class GameEngine {
     // If truco was rejected (not accepted), the hand ends here.
     // Record it in partida history before emitting.
     if (!this.truco.accepted) {
+      // Already handled by agregarPuntos if game over
+      if (this.gameOver) return;
       const envidoCalled = this.envido.phase !== 'none' || this.envido.pointsAwarded > 0;
       const envidoWinner = this.getEnvidoWinnerTeam();
       const envidoPoints = this.envido.pointsAwarded;
@@ -1016,11 +1019,21 @@ export class GameEngine {
       });
       this.partidaHistory.totalHands = this.partidaHistory.hands.length;
 
-      // Check game over for truco-rejected scenario
-      if (this.scores.team0 >= this.targetScore || this.scores.team1 >= this.targetScore) {
+      // Check game over for truco-rejected scenario (agregarPuntos already handled it)
+      if (this.gameOver) {
         this.partidaHistory.winningTeam = winnerTeam;
         this.partidaHistory.endedAt = Date.now();
         this.partidaHistory.finalScores = { ...this.scores };
+        this.emit('truco-resolved', {
+          winnerTeam,
+          points,
+          level: this.truco.level,
+          team0Scored: this.scores.team0,
+          team1Scored: this.scores.team1,
+          isGameOver: true,
+          partidaHistory: this.getPartidaHistory(),
+        });
+        return;
       }
     }
 
@@ -1061,11 +1074,9 @@ export class GameEngine {
 
     // Step 1: Resolve pending envido FIRST
     if (this.envido.phase === 'opening' && !this.envido.accepted) {
-      // The envido caller gets the envido points
       const callerTeam = this.envido.callerTeam!;
       envidoPointsAwarded = this.envido.totalPoints > 0 ? this.envido.totalPoints : 2;
-      if (callerTeam === 0) this.scores.team0 += envidoPointsAwarded;
-      else this.scores.team1 += envidoPointsAwarded;
+      this.agregarPuntos(callerTeam, envidoPointsAwarded);
       this.envido.pointsAwarded = envidoPointsAwarded;
       this.envido.team0Scored = this.scores.team0;
       this.envido.team1Scored = this.scores.team1;
@@ -1098,8 +1109,9 @@ export class GameEngine {
       trucoPoints = 1;
     }
 
-    if (opponentTeam === 0) this.scores.team0 += trucoPoints;
-    else this.scores.team1 += trucoPoints;
+    if (opponentTeam === 0 || opponentTeam === 1) {
+      this.agregarPuntos(opponentTeam, trucoPoints);
+    }
 
     this.truco.pointsAwarded = trucoPoints;
     this.truco.team0Scored = this.scores.team0;
@@ -1141,24 +1153,12 @@ export class GameEngine {
       envidoPointsAwarded,
       trucoPoints,
       scores: { ...this.scores },
-      isGameOver: this.scores.team0 >= this.targetScore || this.scores.team1 >= this.targetScore,
+      isGameOver: this.gameOver,
       partidaHistory: this.getPartidaHistory(),
     });
 
-    // Check game over
-    if (this.scores.team0 >= this.targetScore || this.scores.team1 >= this.targetScore) {
-      const winningTeam = this.scores.team0 >= this.targetScore ? 0 : 1;
-      this.partidaHistory.winningTeam = winningTeam;
-      this.partidaHistory.endedAt = Date.now();
-      this.partidaHistory.finalScores = { ...this.scores };
-
-      this.emit('game-over', {
-        winningTeam,
-        scores: { ...this.scores },
-        partidaHistory: this.getPartidaHistory(),
-      });
-      return;
-    }
+    // Check game over (agregarPuntos already handled it)
+    if (this.gameOver) return;
 
     // Start new hand
     this.isPicaPica = this.checkPicaPica();
@@ -1410,8 +1410,9 @@ export class GameEngine {
       }
     }
 
-    if (handWinnerTeam === 0) this.scores.team0 += pointsAwarded;
-    else if (handWinnerTeam === 1) this.scores.team1 += pointsAwarded;
+    if (handWinnerTeam >= 0 && pointsAwarded > 0) {
+      this.agregarPuntos(handWinnerTeam, pointsAwarded);
+    }
 
     // Record this hand in partida history
     const envidoCalled = this.envido.phase !== 'none' || this.envido.pointsAwarded > 0;
@@ -1456,20 +1457,8 @@ export class GameEngine {
       partidaHistory: this.getPartidaHistory(),
     });
 
-    // Check game over
-    if (this.scores.team0 >= this.targetScore || this.scores.team1 >= this.targetScore) {
-      const winningTeam = this.scores.team0 >= this.targetScore ? 0 : 1;
-      this.partidaHistory.winningTeam = winningTeam;
-      this.partidaHistory.endedAt = Date.now();
-      this.partidaHistory.finalScores = { ...this.scores };
-
-      this.emit('game-over', {
-        winningTeam,
-        scores: { ...this.scores },
-        partidaHistory: this.getPartidaHistory(),
-      });
-      return;
-    }
+    // Check game over (agregarPuntos already handled it)
+    if (this.gameOver) return;
 
     // Next hand
     this.isPicaPica = this.checkPicaPica();
