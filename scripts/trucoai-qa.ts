@@ -1565,7 +1565,7 @@ section('simulacion-partidas', () => {
       const stateKey = `${state.phase}|${state.currentTurnPlayerId}|${state.currentRound}`;
 
       // Phase: round-resolving → need to advance to next hand
-      if (state.phase === 'round-resolving' || state.phase === 'round-over') {
+      if (state.phase === 'round-resolving' || state.phase === 'round-over' || state.phase === 'picapica-resolving') {
         e.startNewHand();
         continue;
       }

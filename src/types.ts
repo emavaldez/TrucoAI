@@ -203,6 +203,7 @@ export interface FullGameState {
   envido: EnvidoState;
   truco: TrucoState;
   isPicaPica: boolean;
+  inPicaPicaHand: boolean;
   picaPicaSubmano: number;
   picapicaResults: PicaPicaSubmanoResult[];
   firstHandCompleted: boolean;

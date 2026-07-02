@@ -602,7 +602,7 @@ export class App {
       envido: this.gameEngine.getEnvidoState(),
       truco: this.gameEngine.getTrucoState(),
       roundResults,
-      isPicaPica: this.gameEngine.getIsPicaPica(),
+      isPicaPica: this.gameEngine.getInPicaPicaHand(),
       picaPicaSubmano: this.gameEngine.getPicaPicaSubmano(),
       picapicaResults: this.gameEngine.getPicapicaResults(),
       firstHandCompleted: this.gameEngine.isFirstHandCompleted(),

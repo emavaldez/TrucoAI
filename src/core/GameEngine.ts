@@ -93,7 +93,8 @@ export class GameEngine {
   private trucoWaitingForResponse: boolean = false;
 
   // Pica-Pica state
-  private isPicaPica: boolean = false;
+  private isPicaPica: boolean = false;          // true = pica-pica MODE is active (scores 5-25 in 6p)
+  private inPicaPicaHand: boolean = false;       // true = the CURRENT hand is a pica-pica hand (not normal)
   private picaPicaSubmano: number = 0; // 0, 1, 2
   private picaPicaHandAlternation: boolean = false; // true = normal hand, false = picapica hand
   private picapicaResults: PicaPicaSubmanoResult[] = [];
@@ -275,12 +276,15 @@ export class GameEngine {
     if (this.isPicaPica) {
       if (this.picaPicaHandAlternation) {
         // Normal hand
+        this.inPicaPicaHand = false;
         this.startNormalHand(skipRotation);
       } else {
         // Pica-Pica hand
+        this.inPicaPicaHand = true;
         this.startPicaPicaHand();
       }
     } else {
+      this.inPicaPicaHand = false;
       this.startNormalHand(skipRotation);
     }
   }
@@ -437,7 +441,7 @@ export class GameEngine {
     if (this.envido.pointsAwarded > 0) return false; // Already resolved this round
     const alreadyPlayed = this.currentTrick.some(p => p.playerId === playerId);
     if (alreadyPlayed) return false;
-    if (this.isPicaPica) {
+    if (this.inPicaPicaHand) {
       // In Pica-Pica 1v1, any of the 2 paired players can call envido
       return this.picaPicaActivePairIds.includes(playerId);
     }
@@ -586,7 +590,7 @@ export class GameEngine {
 
     // Each team's best individual envido (not summed!)
     let team0Best = 0, team1Best = 0;
-    const playersToCompare = this.isPicaPica
+    const playersToCompare = this.inPicaPicaHand
       ? this.players.filter(p => this.picaPicaActivePairIds.includes(p.id))
       : this.players;
     for (const player of playersToCompare) {
@@ -709,7 +713,7 @@ export class GameEngine {
    * In Pica-Pica, only the 2 paired players play per submano.
    */
   private getActivePlayerCount(): number {
-    if (this.isPicaPica) return 2;
+    if (this.inPicaPicaHand) return 2;
     return this.players.length;
   }
 
@@ -1014,10 +1018,10 @@ export class GameEngine {
         trucoWinner: winnerTeam,
         trucoPoints: points,
         cantos,
-        isPicaPica: this.isPicaPica,
-        picaPicaSubmano: this.isPicaPica ? this.picaPicaSubmano : undefined,
-      });
-      this.partidaHistory.totalHands = this.partidaHistory.hands.length;
+      isPicaPica: this.inPicaPicaHand,
+      picaPicaSubmano: this.inPicaPicaHand ? this.picaPicaSubmano : undefined,
+    });
+    this.partidaHistory.totalHands = this.partidaHistory.hands.length;
 
       // Check game over for truco-rejected scenario (agregarPuntos already handled it)
       if (this.gameOver) {
@@ -1140,8 +1144,8 @@ export class GameEngine {
       trucoWinner,
       trucoPoints,
       cantos,
-      isPicaPica: this.isPicaPica,
-      picaPicaSubmano: this.isPicaPica ? this.picaPicaSubmano : undefined,
+      isPicaPica: this.inPicaPicaHand,
+      picaPicaSubmano: this.inPicaPicaHand ? this.picaPicaSubmano : undefined,
     });
     this.partidaHistory.totalHands = this.partidaHistory.hands.length;
 
@@ -1162,6 +1166,7 @@ export class GameEngine {
 
     // Start new hand
     this.isPicaPica = this.checkPicaPica();
+    this.inPicaPicaHand = false;
     this.picaPicaHandAlternation = !this.picaPicaHandAlternation;
     this.startNewHand();
   }
@@ -1184,7 +1189,7 @@ export class GameEngine {
       handNumber: this.currentHand,
       deckRemaining: this.deck.remaining,
       scores: { ...this.scores },
-      isPicaPica: this.isPicaPica,
+      isPicaPica: this.inPicaPicaHand,
       picaPicaSubmano: this.picaPicaSubmano
     });
 
@@ -1202,7 +1207,7 @@ export class GameEngine {
 
   private nextTurn(): void {
     let nextId: string;
-    if (this.isPicaPica) {
+    if (this.inPicaPicaHand) {
       // Pica-Pica: cycle between the 2 paired players
       const idx0 = this.picaPicaActivePairIds[0];
       const idx1 = this.picaPicaActivePairIds[1];
@@ -1368,7 +1373,7 @@ export class GameEngine {
       }
     }
 
-    if (this.isPicaPica) {
+    if (this.inPicaPicaHand) {
       // Pica-Pica: this was a submano, not a full hand
       this.picapicaResults.push({
         submanoNumber: this.picaPicaSubmano,
@@ -1398,7 +1403,7 @@ export class GameEngine {
     // Award points
     let pointsAwarded = 0;
     if (handWinnerTeam !== -1) {
-      if (this.isPicaPica) {
+      if (this.inPicaPicaHand) {
         // Pica-Pica: base 1 point + truco bonus
         pointsAwarded = this.truco.accepted ? (this.truco.level + 1) : 1;
       } else if (this.truco.accepted) {
@@ -1438,8 +1443,8 @@ export class GameEngine {
       trucoWinner,
       trucoPoints,
       cantos,
-      isPicaPica: this.isPicaPica,
-      picaPicaSubmano: this.isPicaPica ? this.picaPicaSubmano : undefined,
+      isPicaPica: this.inPicaPicaHand,
+      picaPicaSubmano: this.inPicaPicaHand ? this.picaPicaSubmano : undefined,
     });
     this.partidaHistory.totalHands = this.partidaHistory.hands.length;
 
@@ -1452,7 +1457,7 @@ export class GameEngine {
       pointsAwarded,
       scores: { ...this.scores },
       roundResults: this.roundResults,
-      isPicaPica: this.isPicaPica,
+      isPicaPica: this.inPicaPicaHand,
       picapicaResults: this.picapicaResults,
       partidaHistory: this.getPartidaHistory(),
     });
@@ -1462,8 +1467,10 @@ export class GameEngine {
 
     // Next hand
     this.isPicaPica = this.checkPicaPica();
+    this.inPicaPicaHand = false; // will be set by startNewHand if needed
     if (!this.firstHandCompleted) {
       this.firstHandCompleted = true;
+      this.picaPicaHandAlternation = !this.picaPicaHandAlternation;
       this.emit('round-over', {
         isSecondHand: false,
         handWinnerTeam,
@@ -1529,6 +1536,10 @@ export class GameEngine {
 
   getIsPicaPica(): boolean {
     return this.isPicaPica;
+  }
+
+  getInPicaPicaHand(): boolean {
+    return this.inPicaPicaHand;
   }
 
   getPicaPicaSubmano(): number {
@@ -1624,8 +1635,8 @@ export class GameEngine {
       team1Score: this.scores.team1,
       envidoCalled: this.envido.phase !== 'none' || this.envido.pointsAwarded > 0,
       trucoCalled: this.truco.level > 0,
-      isPicaPica: this.isPicaPica,
-      picaPicaSubmano: this.isPicaPica ? this.picaPicaSubmano : undefined,
+      isPicaPica: this.inPicaPicaHand,
+      picaPicaSubmano: this.inPicaPicaHand ? this.picaPicaSubmano : undefined,
       isSecondHand: this.currentHand === 1,
     };
   }
@@ -1648,7 +1659,7 @@ export class GameEngine {
     if (this.envido.phase === 'opening') return 'envido-opening';
     if (this.envido.phase === 'response') return 'envido-response';
     if (this.envido.phase === 'resolution') return 'envido-resolving';
-    if (this.isPicaPica && this.picaPicaSubmano >= 0 && this.picaPicaSubmano <= 2) {
+    if (this.inPicaPicaHand) {
       if (this.roundResults.length >= 3) return 'picapica-resolving';
       return 'picapica-submano';
     }
@@ -1699,7 +1710,7 @@ export class GameEngine {
         if (this.currentRound !== 0) return { ok: false, error: 'Solo se puede cantar envido en la primera baza' };
         if (this.envido.phase !== 'none') return { ok: false, error: 'Ya hay un envido en curso' };
         if (this.envido.pointsAwarded > 0) return { ok: false, error: 'El envido ya fue resuelto en esta mano' };
-        if (this.isPicaPica && !this.picaPicaActivePairIds.includes(playerId)) return { ok: false, error: 'En Pica-Pica, solo la pareja activa puede cantar envido' };
+        if (this.inPicaPicaHand && !this.picaPicaActivePairIds.includes(playerId)) return { ok: false, error: 'En Pica-Pica, solo la pareja activa puede cantar envido' };
         return { ok: true };
       }
       case 'respondEnvido': {
@@ -1756,6 +1767,7 @@ export class GameEngine {
       envido: { ...this.envido },
       truco: { ...this.truco },
       isPicaPica: this.isPicaPica,
+      inPicaPicaHand: this.inPicaPicaHand,
       picaPicaSubmano: this.picaPicaSubmano,
       picapicaResults: this.picapicaResults.map(r => ({ ...r, cards: [...r.cards] })),
       firstHandCompleted: this.firstHandCompleted,
