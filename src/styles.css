@@ -609,14 +609,20 @@ html, body {
 .response-panel {
   display: none;
   position: absolute;
-  bottom: 90px;
+  top: 50%;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
   flex-direction: column;
   align-items: center;
   gap: 10px;
   z-index: 25;
   max-width: 90vw;
+  background: rgba(0,0,0,0.85);
+  padding: 20px 30px;
+  border-radius: 16px;
+  border: 2px solid rgba(255,215,0,0.5);
+  box-shadow: 0 0 30px rgba(0,0,0,0.8);
+  backdrop-filter: blur(8px);
 }
 
 .response-label {
@@ -771,7 +777,7 @@ html, body {
   .menu-container h1 { font-size: 2.5rem; }
   .menu-options { padding: 1.5rem; }
   .round-over-panel, .game-over-panel { padding: 24px; }
-  .response-panel { bottom: 70px; }
+  .response-panel { padding: 16px 20px; max-width: 95vw; }
 }
 
 @media (max-width: 768px) {
