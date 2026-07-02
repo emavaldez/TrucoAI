@@ -52,22 +52,17 @@ export class App {
       this.gameEngine.on(event, () => this.renderGameState());
     }
 
-    // When a trick is resolved, pause for the human to see the result
+    // When a trick is resolved, just re-render (no popup per round)
     this.gameEngine.on('trick-resolved', (data: any) => {
       this.renderGameState();
       const scores = this.gameEngine.getScores();
       if (scores.team0 >= 30 || scores.team1 >= 30) return;
-      // Don't show notification if the hand is already over (round-over panel will show)
+      // Don't block if the hand is already over (round-over panel will show)
       const state = this.gameEngine.getState();
       if (state.phase === 'round-resolving' || state.phase === 'round-over' || state.phase === 'picapica-resolving') return;
+      // Brief delay so player can see the played cards, then continue
       this._waitingForContinue = true;
-      const winnerTeam = data.winnerTeam;
-      const winnerLabel = winnerTeam >= 0 ? `Equipo ${winnerTeam + 1}` : 'Parda (empate)';
-      this.uiManager.showNotification(
-        `✅ Mano ${data.trickNumber + 1} — Ganó ${winnerLabel}`,
-        '',
-        'info'
-      ).then(() => {
+      setTimeout(() => {
         this._waitingForContinue = false;
         if (this._pendingAiTurn) {
           const pending = this._pendingAiTurn;
@@ -76,7 +71,7 @@ export class App {
         } else {
           this.renderGameState();
         }
-      });
+      }, 1200);
     });
 
     // When envido is opened, AI responds (only if human's team called)
@@ -165,7 +160,9 @@ export class App {
           const aiWants = Math.random() < 0.65;
           const aiRaises = Math.random() < 0.3 && data.level < 3;
           if (aiRaises) {
-            this.handleAiTrucoResponse(true, true);
+            // AI raises by calling challengeTruco (not respondTruco)
+            const aiResp = this.players.find(p => p.isAI && p.team !== humanTeam);
+            if (aiResp) this.gameEngine['challengeTruco'](aiResp.id);
           } else {
             this.handleAiTrucoResponse(aiWants);
           }
@@ -433,7 +430,8 @@ export class App {
     if (aiPlayers.length === 0) return;
     const aiPlayer = aiPlayers[0];
     if (raise) {
-      this.gameEngine['respondTruco'](aiPlayer.id, true, true);
+      // AI raises by calling challengeTruco (the accepting team raises)
+      this.gameEngine['challengeTruco'](aiPlayer.id);
       return;
     }
     // Store pending action, show notification first
@@ -525,7 +523,8 @@ export class App {
   }
 
   private handleTrucoRaise(): void {
-    this.gameEngine['respondTruco'](this.players[0].id, true, true);
+    // Raise = challenge the next level. The accepting team uses challengeTruco.
+    this.gameEngine['challengeTruco'](this.players[0].id);
   }
 
   // ---- Irse al Mazo Handler ----

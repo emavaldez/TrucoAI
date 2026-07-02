@@ -161,6 +161,20 @@ export class GameEngine {
            this.scores.team1 >= 5 && this.scores.team1 <= 25;
   }
 
+  /**
+   * Re-evaluate pica-pica status and reset alternation if needed.
+   * Called after every hand resolution.
+   */
+  private updatePicaPicaStatus(): void {
+    const wasPicaPica = this.isPicaPica;
+    this.isPicaPica = this.checkPicaPica();
+    // If pica-pica just deactivated, reset alternation for next time
+    if (wasPicaPica && !this.isPicaPica) {
+      this.picaPicaHandAlternation = true; // next pica-pica activation starts with normal hand
+    }
+    this.inPicaPicaHand = false; // will be set by startNewHand if needed
+  }
+
   // ---- Player ordering (counter-clockwise) ----
 
   /**
@@ -849,20 +863,27 @@ export class GameEngine {
   }
 
   /**
-   * Can only challenge truco BEFORE all cards of the hand have been played.
-   * Specifically: before round 3 (baza 3) is complete. During round 0,1,2 it's allowed.
-   * Also: the team that already challenged cannot re-challenge (only the opponent team replies).
-   * No turn check — any player whose team hasn't already challenged can do so.
+   * Can challenge/raise truco:
+   * - If no truco active (level=0): anyone can call Truco
+   * - If truco accepted (level>0, accepted=true): the team that ACCEPTED can raise
+   * - If truco pending (level>0, accepted=false): nobody can challenge (must respond first)
+   * - Max level is 3 (Vale 4)
+   * - Only while hand is being played (rounds 0,1,2)
+   * - No envido pending
    */
   private canChallengeTruco(): boolean {
     if (this.trucoWaitingForResponse) return false;
-    if (this.truco.accepted) return false;
     if (this.truco.level >= 3) return false;
-    // Can only sing truco while the hand is still being played (rounds 0,1,2)
-    // After round 3 starts (currentRound >= 3), all cards have been played
     if (this.currentRound >= 3) return false;
-    // US-040: Envido takes priority — cannot call truco while envido is pending
     if (this.envido.phase !== 'none' && !this.envido.accepted) return false;
+    // If truco was accepted, only the accepting team (NOT lastChallenger) can raise
+    if (this.truco.accepted && this.truco.level > 0) {
+      // accepted = true means someone accepted; the acceptor is the opposite of lastChallenger
+      // canChallengeTruco doesn't know who is calling — the team check is in challengeTruco()
+      return true;
+    }
+    // If truco not accepted and level > 0, it's pending response — can't challenge
+    if (this.truco.level > 0 && !this.truco.accepted) return false;
     return true;
   }
 
@@ -907,10 +928,17 @@ export class GameEngine {
     const player = this.getPlayerById(playerId);
     if (!player) return;
 
-    // Only opponents of the last challenger can call truco (or anyone if no prior challenge)
-    if (this.truco.lastChallengerTeam !== null && player.team === this.truco.lastChallengerTeam) {
-      return;
+    // Team check:
+    // - If no truco active (level=0): anyone can call
+    // - If truco accepted (level>0, accepted=true): only the ACCEPTING team (opposite of lastChallenger) can raise
+    // - lastChallenger team cannot raise their own challenge
+    if (this.truco.level > 0 && this.truco.accepted) {
+      // The team that accepted is the opposite of lastChallenger
+      // Only they can raise. The lastChallenger cannot raise their own bet.
+      if (player.team === this.truco.lastChallengerTeam) return;
     }
+    // If no truco or truco accepted, proceed
+    if (this.truco.level > 0 && !this.truco.accepted) return; // pending response
 
     const nextLevel = this.truco.level + 1;
     if (nextLevel > 3) return; // Max vale 4
@@ -1170,8 +1198,7 @@ export class GameEngine {
     if (this.gameOver) return;
 
     // Start new hand
-    this.isPicaPica = this.checkPicaPica();
-    this.inPicaPicaHand = false;
+    this.updatePicaPicaStatus();
     this.picaPicaHandAlternation = !this.picaPicaHandAlternation;
     this.startNewHand();
   }
@@ -1481,8 +1508,7 @@ export class GameEngine {
     if (this.gameOver) return;
 
     // Next hand
-    this.isPicaPica = this.checkPicaPica();
-    this.inPicaPicaHand = false; // will be set by startNewHand if needed
+    this.updatePicaPicaStatus();
     if (!this.firstHandCompleted) {
       this.firstHandCompleted = true;
       this.picaPicaHandAlternation = !this.picaPicaHandAlternation;
@@ -1710,9 +1736,11 @@ export class GameEngine {
       case 'challengeTruco': {
         if (this.envido.phase !== 'none' && !this.envido.accepted) return { ok: false, error: 'No puedes cantar truco mientras hay un envido pendiente' };
         if (this.trucoWaitingForResponse) return { ok: false, error: 'Ya hay un truco pendiente de respuesta' };
-        if (this.truco.accepted) return { ok: false, error: 'El truco ya fue aceptado' };
         if (this.truco.level >= 3) return { ok: false, error: 'Ya se llegó al máximo nivel de truco (Vale Cuatro)' };
-        if (this.truco.lastChallengerTeam !== null && player.team === this.truco.lastChallengerTeam) return { ok: false, error: 'Tu equipo ya cantó truco, espera la respuesta' };
+        // If truco accepted, only the accepting team (opposite of lastChallenger) can raise
+        if (this.truco.level > 0 && this.truco.accepted && player.team === this.truco.lastChallengerTeam) return { ok: false, error: 'Tu equipo cantó truco — el equipo que aceptó puede subir' };
+        // If truco pending (not accepted), can't challenge
+        if (this.truco.level > 0 && !this.truco.accepted) return { ok: false, error: 'El truco está pendiente de respuesta' };
         return { ok: true };
       }
       case 'respondTruco': {

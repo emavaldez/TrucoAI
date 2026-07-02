@@ -793,14 +793,17 @@ export class UIManager {
     }
 
     // Truco button: show when it's human's turn and no envido pending
-    // If opponent challenged, show as "raise" button. If nobody challenged, show "Truco".
-    // Don't show if our team already challenged (can't re-challenge).
+    // If truco was accepted, the ACCEPTING team can raise (not the challenger)
+    // If no truco active, anyone can call Truco
+    const humanCanRaiseTruco = params.truco.level > 0
+      && params.truco.accepted
+      && params.truco.lastChallengerTeam !== humanPlayer?.team
+      && params.truco.level < 3;
+    const humanCanCallTruco = params.truco.level === 0;
     const showTrucoBtn = isHumanTurn
       && params.envido.phase === 'none'
-      && !params.truco.accepted
-      && params.truco.level < 3
       && !params.isGameOver
-      && !(params.truco.level > 0 && params.truco.lastChallengerTeam === humanPlayer?.team);
+      && (humanCanRaiseTruco || humanCanCallTruco);
 
     if (showTrucoBtn) {
       const btnTruco = document.createElement('button');

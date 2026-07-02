@@ -362,13 +362,16 @@ section('truco', () => {
   assert('Truco level becomes 1', trucoState.level === 1, `got level ${trucoState.level}`);
   assert('Truco challenger team set', trucoState.lastChallengerTeam === players[0].team);
 
-  // Test retruco (level 2) — opponent accepts and raises
-  engineAny.respondTruco(players[1].id, true, true);
+  // Test retruco (level 2) — opponent accepts, then raises
+  engineAny.respondTruco(players[1].id, true); // accept truco
+  // After accepting, the accepting team (player 1) can raise to retruco
+  engineAny.challengeTruco(players[1].id);
   const trucoState2 = engine.getTrucoState();
   assert('Retruco level becomes 2', trucoState2.level === 2, `got level ${trucoState2.level}`);
 
-  // Test vale4 (level 3) — first player raises again
-  engineAny.challengeTruco(players[0].id);
+  // Test vale4 (level 3) — original team accepts, then raises
+  engineAny.respondTruco(players[0].id, true); // accept retruco
+  engineAny.challengeTruco(players[0].id); // raise to vale4
   const trucoState3 = engine.getTrucoState();
   assert('Vale4 level becomes 3', trucoState3.level === 3, `got level ${trucoState3.level}`);
 
@@ -718,10 +721,12 @@ section('us-08-truco-completo', () => {
     cannotEscalate === false,
     `canChallengeTruco returned ${cannotEscalate}`
   );
-  // Opponent can raise (respond with raise)
-  engineAny.respondTruco(players[1].id, true, true); // accept and raise to retruco (level 2)
+  // Opponent accepts, then raises to retruco
+  engineAny.respondTruco(players[1].id, true); // accept truco
+  engineAny.challengeTruco(players[1].id); // raise to retruco (level 2)
   assert('T-016: retruco level 2 after opponent raises', engine.getTrucoState().level === 2);
-  // Original team can now raise again to vale4
+  // Original team accepts, then raises to vale4
+  engineAny.respondTruco(players[0].id, true); // accept retruco
   engineAny.challengeTruco(players[0].id); // raise to vale4 (level 3)
   assert('T-016: vale4 level 3 after original team escalates', engine.getTrucoState().level === 3);
   // Max level reached - no more raises
