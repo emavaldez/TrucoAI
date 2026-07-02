@@ -792,22 +792,25 @@ export class UIManager {
       controls.appendChild(envidoGroup);
     }
 
-    // Truco button: always show appropriate level when it's human's turn
-    // and no envido pending and truco not already accepted at max level
+    // Truco button: show when it's human's turn and no envido pending
+    // If opponent challenged, show as "raise" button. If nobody challenged, show "Truco".
+    // Don't show if our team already challenged (can't re-challenge).
     const showTrucoBtn = isHumanTurn
       && params.envido.phase === 'none'
       && !params.truco.accepted
       && params.truco.level < 3
-      && !params.isGameOver;
+      && !params.isGameOver
+      && !(params.truco.level > 0 && params.truco.lastChallengerTeam === humanPlayer?.team);
 
     if (showTrucoBtn) {
-      const levelNames: { [level: number]: string } = { 0: '🔥 Truco', 1: '🔥 Retruco', 2: '🔥 Vale 4' };
       const btnTruco = document.createElement('button');
-      btnTruco.textContent = levelNames[params.truco.level] || '🔥 Truco';
-      // If level > 0 but last challenger is NOT the human's team, it's a raise button
-      if (params.truco.level > 0 && params.truco.lastChallengerTeam !== humanPlayer?.team) {
+      // If we get here with level > 0, it means opponent challenged and we can raise
+      if (params.truco.level > 0) {
+        const levelNames: { [level: number]: string } = { 1: 'Retruco', 2: 'Vale 4' };
+        btnTruco.textContent = `🔥 Subir a ${levelNames[params.truco.level] || 'Truco'}`;
         btnTruco.addEventListener('click', () => this.callbacks.onTrucoRaise());
       } else {
+        btnTruco.textContent = '🔥 Truco';
         btnTruco.addEventListener('click', () => this.callbacks.onTrucoChallenge());
       }
       controls.appendChild(btnTruco);

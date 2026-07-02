@@ -57,6 +57,9 @@ export class App {
       this.renderGameState();
       const scores = this.gameEngine.getScores();
       if (scores.team0 >= 30 || scores.team1 >= 30) return;
+      // Don't show notification if the hand is already over (round-over panel will show)
+      const state = this.gameEngine.getState();
+      if (state.phase === 'round-resolving' || state.phase === 'round-over' || state.phase === 'picapica-resolving') return;
       this._waitingForContinue = true;
       const winnerTeam = data.winnerTeam;
       const winnerLabel = winnerTeam >= 0 ? `Equipo ${winnerTeam + 1}` : 'Parda (empate)';
@@ -381,9 +384,7 @@ export class App {
     if (this.gameEngine.getCurrentRound() !== 0) return;
     const humanPlayer = this.players[0];
     if (!humanPlayer) return;
-    const dealerId = this.gameEngine.getDealerId();
-    const pieId = this.getPiePlayerId();
-    if (humanPlayer.id !== dealerId && humanPlayer.id !== pieId) return;
+    // Any player can call envido in round 0 (no dealer/pie restriction)
     this.gameEngine['openEnvido'](humanPlayer.id);
     const eng = this.gameEngine as any;
     if (level === 'real-envido') {
@@ -482,11 +483,14 @@ export class App {
    * Executes the pending action and resumes the turn.
    */
   private handleContinueAfterNotification(): void {
+    // Execute only ONE pending action per notification click
     if (this._pendingEnvidoAction) {
       this._pendingEnvidoAction();
+      return;
     }
     if (this._pendingTrucoAction) {
       this._pendingTrucoAction();
+      return;
     }
     this.resumeCurrentTurn();
   }
@@ -571,7 +575,7 @@ export class App {
     const state = this.gameEngine.getState();
     const isGameOver = state.gameOver;
     const gameOverWinner = isGameOver ? (state.partidaHistory.winningTeam >= 0 ? state.partidaHistory.winningTeam : (scores.team0 >= 30 ? 0 : 1)) : null;
-    const isHandOver = state.phase === 'round-resolving' || state.phase === 'round-over' || state.phase === 'game-over';
+    const isHandOver = state.phase === 'round-resolving' || state.phase === 'round-over' || state.phase === 'picapica-resolving' || state.phase === 'game-over';
     const roundResults = this.gameEngine.getRoundResults();
 
     // Determine hand winner from round results

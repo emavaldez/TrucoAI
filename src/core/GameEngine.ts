@@ -605,12 +605,17 @@ export class GameEngine {
     } else if (team1Best > team0Best) {
       winnerTeam = 1;
     } else {
-      // Tie: el MANO (right of dealer, primer jugador) gana
-      const order = this.getPlayingOrder();
-      const dealerIdx = order.indexOf(this.dealerId);
-      const manoIdx = (dealerIdx + 1) % order.length;
-      const manoId = order[manoIdx];
-      winnerTeam = this.getPlayerTeam(manoId);
+      // Tie: el MANO gana. In pica-pica, mano = starter of the active pair.
+      // In normal play, mano = right of dealer (first in playing order after dealer).
+      if (this.inPicaPicaHand) {
+        winnerTeam = this.getPlayerTeam(this.starterId);
+      } else {
+        const order = this.getPlayingOrder();
+        const dealerIdx = order.indexOf(this.dealerId);
+        const manoIdx = (dealerIdx + 1) % order.length;
+        const manoId = order[manoIdx];
+        winnerTeam = this.getPlayerTeam(manoId);
+      }
     }
 
     // Use agregarPuntos to cap at targetScore and detect game-over mid-hand
@@ -1396,6 +1401,16 @@ export class GameEngine {
         else if (sr.teamWinner === 1) picaTeam1Wins++;
       }
       handWinnerTeam = picaTeam0Wins >= 2 ? 0 : (picaTeam1Wins >= 2 ? 1 : -1);
+      // If tied in pica-pica, the winner of the first submano wins
+      if (handWinnerTeam === -1 && this.picapicaResults.length > 0) {
+        const firstWinner = this.picapicaResults[0].teamWinner;
+        if (firstWinner >= 0) {
+          handWinnerTeam = firstWinner;
+        } else {
+          // All submanos tied — first submano's starter team wins
+          handWinnerTeam = this.getPlayerTeam(this.picaPicaActivePairIds[0]);
+        }
+      }
     } else {
       // Normal hand — handWinnerTeam already determined above
     }
