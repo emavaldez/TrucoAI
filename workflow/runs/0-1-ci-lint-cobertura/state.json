@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "0-1-ci-lint-cobertura",
+  "title": "CI, lint y cobertura",
+  "status": "draft",
+  "branch": "task/0-1-ci-lint-cobertura",
+  "worktree": null,
+  "correctionCycle": 0,
+  "dispatch": {
+    "approved": false,
+    "approvedBy": null,
+    "approvedAt": null
+  },
+  "implementation": {
+    "completed": false,
+    "commit": null
+  },
+  "audit": {
+    "decision": "pending",
+    "auditedBy": null,
+    "auditedAt": null
+  },
+  "merge": {
+    "approved": false,
+    "approvedBy": null,
+    "approvedAt": null,
+    "commit": null
+  },
+  "timestamps": {
+    "createdAt": "2026-09-23T14:40:08.091541+00:00",
+    "updatedAt": "2026-09-23T14:40:08.091541+00:00"
+  },
+  "scope": {
+    "allow": [
+      ".github/*",
+      "package.json",
+      "package-lock.json",
+      "eslint.config.js",
+      "vitest.config.ts",
+      "vite.config.ts",
+      ".nvmrc",
+      ".gitignore",
+      "public/*",
+      "index.html",
+      "README.md",
+      "scripts/sim.ts",
+      "scripts/arena.ts",
+      "docs/stories/0-1-ci-lint-cobertura.md"
+    ]
+  },
+  "kind": "mecanico"
+}

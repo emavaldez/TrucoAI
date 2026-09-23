@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "baseBranch": "main",
+  "workerAgent": "hermes-headless",
+  "workerProfile": "trucoai",
+  "humanName": "Emmanuel",
+  "mergeStrategy": "squash",
+  "maxCorrectionCycles": 3,
+  "requireHumanDispatchApproval": true,
+  "requireHumanMergeApproval": true,
+  "worktreeDir": "../.worktrees",
+  "preset": "node-ts",
+  "smoke": {
+    "cmd": "npx --no-install vite preview --port {port} --strictPort",
+    "routes": [
+      "/"
+    ],
+    "timeout": 60
+  },
+  "gates": [
+    {
+      "id": "alcance",
+      "run": "@alcance"
+    },
+    {
+      "id": "tipos",
+      "run": "npx --no-install tsc --noEmit"
+    },
+    {
+      "id": "tests",
+      "run": "npm test --silent"
+    },
+    {
+      "id": "build",
+      "run": "npm run build --silent"
+    },
+    {
+      "id": "arranque",
+      "run": "@arranque"
+    }
+  ],
+  "_nota": "El gate 'lint' se agrega cuando se mergea 0-1; 'e2e' con 4-1. El worker debe correr 'npm ci' en el worktree antes de verificar."
+}

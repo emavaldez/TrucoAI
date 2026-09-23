@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "1-2-bazas-y-resolucion",
+  "title": "Motor v2: bazas y resolución de la mano",
+  "status": "draft",
+  "branch": "task/1-2-bazas-y-resolucion",
+  "worktree": null,
+  "correctionCycle": 0,
+  "dispatch": {
+    "approved": false,
+    "approvedBy": null,
+    "approvedAt": null
+  },
+  "implementation": {
+    "completed": false,
+    "commit": null
+  },
+  "audit": {
+    "decision": "pending",
+    "auditedBy": null,
+    "auditedAt": null
+  },
+  "merge": {
+    "approved": false,
+    "approvedBy": null,
+    "approvedAt": null,
+    "commit": null
+  },
+  "timestamps": {
+    "createdAt": "2026-09-23T14:40:08.154455+00:00",
+    "updatedAt": "2026-09-23T14:40:08.154455+00:00"
+  },
+  "scope": {
+    "allow": [
+      "src/engine/*",
+      "docs/stories/1-2-bazas-y-resolucion.md"
+    ]
+  },
+  "kind": "default"
+}
