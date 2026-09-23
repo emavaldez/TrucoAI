@@ -2,14 +2,14 @@
   "schemaVersion": 1,
   "id": "0-1-ci-lint-cobertura",
   "title": "CI, lint y cobertura",
-  "status": "draft",
+  "status": "ready",
   "branch": "task/0-1-ci-lint-cobertura",
   "worktree": null,
   "correctionCycle": 0,
   "dispatch": {
-    "approved": false,
-    "approvedBy": null,
-    "approvedAt": null
+    "approved": true,
+    "approvedBy": "Emmanuel (vía Claude, 2026-09-23)",
+    "approvedAt": "2026-09-23T15:22:25.635952+00:00"
   },
   "implementation": {
     "completed": false,
@@ -28,7 +28,7 @@
   },
   "timestamps": {
     "createdAt": "2026-09-23T14:40:08.091541+00:00",
-    "updatedAt": "2026-09-23T14:40:08.091541+00:00"
+    "updatedAt": "2026-09-23T15:22:25.636078+00:00"
   },
   "scope": {
     "allow": [
