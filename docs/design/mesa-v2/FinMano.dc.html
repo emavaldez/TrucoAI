@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Resumen de la mano</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;1,9..144,600&amp;family=Figtree:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0C1310}
+.act{cursor:pointer;transition:transform .12s ease}
+.act:hover{transform:translateY(-2px)}
+.act:focus-visible{outline:3px solid #E9C46A;outline-offset:3px}
+</style>
+</helmet>
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #0C1310; font-family: Figtree, system-ui, sans-serif; color: #EDE6D6">
+<div style="position: absolute; left: 0; top: 0; width: 1440px; height: 72px; background: #09100D; border-bottom: 1px solid #1E2B25"></div>
+<div style="position: absolute; left: 120px; top: 112px; width: 1200px; height: 540px; border-radius: 50%; background: #5A3920"></div>
+<div style="position: absolute; left: 138px; top: 130px; width: 1164px; height: 504px; border-radius: 50%; background: radial-gradient(ellipse at 50% 45%, #246B4F 0%, #1A523C 58%, #133D2D 100%)"></div>
+<div style="position: absolute; inset: 0; background: rgba(4,9,7,.74)"></div>
+
+<div role="dialog" aria-labelledby="fm-title" style="position: absolute; left: 400px; top: 110px; width: 640px; box-sizing: border-box; padding: 28px 32px; border-radius: 24px; background: #F7F1E3; color: #1A140A; box-shadow: 0 30px 80px rgba(0,0,0,.6); display: flex; flex-direction: column; gap: 20px">
+<div style="display: flex; align-items: baseline; justify-content: space-between">
+<div>
+<div style="font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #6B6150">Mano 7 · dio Rival 2</div>
+<div id="fm-title" style="margin-top: 4px; font-family: Fraunces, Georgia, serif; font-size: 34px; font-weight: 700">La mano es de Nosotros</div>
+</div>
+<div style="padding: 8px 14px; border-radius: 12px; background: #1F5A43; color: #F7F1E3; font-family: Fraunces, Georgia, serif; font-size: 26px; font-weight: 700">+2</div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
+<sc-for list="{{tricks}}" as="t" hint-placeholder-count="3">
+<div style="padding: 12px; border-radius: 14px; background: #EFE6D2; border: 1px solid #DCCFB1; display: flex; flex-direction: column; align-items: center; gap: 10px">
+<div style="display: flex; align-items: center; justify-content: space-between; align-self: stretch; font-size: 12px; font-weight: 700">
+<span style="letter-spacing: .08em; text-transform: uppercase; color: #6B6150">{{t.name}}</span>
+<span style="color: {{t.ink}}">{{t.result}}</span>
+</div>
+<div style="display: flex; gap: 6px">
+<dc-import name="Card" number="{{t.a.n}}" suit="{{t.a.s}}" size="sm" state="{{t.a.st}}" tag="Ganó" hint-size="64px,96px"></dc-import>
+<dc-import name="Card" number="{{t.b.n}}" suit="{{t.b.s}}" size="sm" state="{{t.b.st}}" tag="Ganó" hint-size="64px,96px"></dc-import>
+</div>
+<div style="font-size: 12px; color: #4A4234; text-align: center">{{t.note}}</div>
+</div>
+</sc-for>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 8px; font-size: 15px">
+<div style="display: flex; justify-content: space-between"><span>Truco querido (cantó Rival 2)</span><span style="font-weight: 700; color: #1F5A43">+2 Nosotros</span></div>
+<div style="display: flex; justify-content: space-between"><span>Envido no querido</span><span style="font-weight: 700; color: #9B4A16">+1 Ellos</span></div>
+<div style="height: 1px; background: #DCCFB1"></div>
+<div style="display: flex; justify-content: space-between; font-weight: 700"><span>Marcador</span><span><span style="color: #1F5A43">Nosotros 19</span> · <span style="color: #9B4A16">Ellos 15</span></span></div>
+</div>
+
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 16px">
+<label style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: #4A4234"><input type="checkbox" style="width: 18px; height: 18px; accent-color: #1F5A43">Pasar solo a la próxima mano</label>
+<button class="act" style="height: 52px; padding: 0 26px; border-radius: 14px; border: 0; background: #1F5A43; color: #F7F1E3; font-family: Figtree, sans-serif; font-size: 17px; font-weight: 700">Siguiente mano <span style="font-size: 12px; opacity: .7">Enter</span></button>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      tricks: [
+        { name: '1ª baza', result: 'Nosotros', ink: '#1F5A43', note: 'Tu 7 de espada le ganó al 3', a: { n: '7', s: 'espada', st: 'winner' }, b: { n: '3', s: 'oro', st: 'normal' } },
+        { name: '2ª baza', result: 'Ellos', ink: '#9B4A16', note: 'El 7 de oro ganó la baza', a: { n: '4', s: 'copa', st: 'normal' }, b: { n: '7', s: 'oro', st: 'winner' } },
+        { name: '3ª baza', result: 'Nosotros', ink: '#1F5A43', note: 'El ancho de espada la cerró', a: { n: '1', s: 'espada', st: 'winner' }, b: { n: '12', s: 'basto', st: 'normal' } }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

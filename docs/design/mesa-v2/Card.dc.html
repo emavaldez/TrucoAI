@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Carta española</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&amp;family=Figtree:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div style="position: relative; width: {{w}}px; height: {{h}}px; font-family: Figtree, system-ui, sans-serif; transform: {{lift}}; transition: transform .18s ease">
+<sc-if value="{{isBack}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; inset: 0; border-radius: {{r}}px; background-color: #173F31; background-image: repeating-linear-gradient(45deg, rgba(233,196,106,.22) 0 2px, transparent 2px 9px), repeating-linear-gradient(-45deg, rgba(233,196,106,.22) 0 2px, transparent 2px 9px); border: 2px solid #C9A24B; box-shadow: 0 6px 14px rgba(0,0,0,.45); box-sizing: border-box"></div>
+</sc-if>
+<sc-if value="{{isFace}}" hint-placeholder-val="{{true}}">
+<div style="position: absolute; inset: 0; border-radius: {{r}}px; background: #F7F1E3; border: 1px solid #D9CCAE; box-shadow: {{shadow}}; overflow: hidden; filter: {{filter}}; box-sizing: border-box">
+<div style="position: absolute; inset: {{frame}}px; border: 1.5px solid {{soft}}; border-radius: {{r2}}px"></div>
+<div style="position: absolute; left: {{pad}}px; top: {{padT}}px; display: flex; flex-direction: column; align-items: center; line-height: 1">
+<div style="font-family: Fraunces, Georgia, serif; font-weight: 700; font-size: {{num}}px; color: {{ink}}">{{number}}</div>
+<sc-if value="{{hasFig}}" hint-placeholder-val="{{false}}">
+<div style="margin-top: 2px; font-size: {{fig}}px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: {{ink}}">{{figLabel}}</div>
+</sc-if>
+</div>
+<div style="position: absolute; right: {{pad}}px; bottom: {{padT}}px; transform: rotate(180deg); font-family: Fraunces, Georgia, serif; font-weight: 700; font-size: {{num}}px; line-height: 1; color: {{ink}}">{{number}}</div>
+<div style="position: absolute; left: 50%; top: 54%; transform: translate(-50%, -50%); width: {{pip}}px; height: {{pip}}px">
+<sc-if value="{{isOro}}" hint-placeholder-val="{{false}}">
+<svg width="{{pip}}" height="{{pip}}" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="19" fill="#E3B24A" stroke="#8A5D10" stroke-width="2"></circle><circle cx="24" cy="24" r="12.5" fill="none" stroke="#8A5D10" stroke-width="1.6"></circle><circle cx="24" cy="24" r="5" fill="#B7811F" stroke="#8A5D10" stroke-width="1.4"></circle><path d="M24 5.5v5M24 37.5v5M5.5 24h5M37.5 24h5M10.9 10.9l3.5 3.5M33.6 33.6l3.5 3.5M37.1 10.9l-3.5 3.5M14.4 33.6l-3.5 3.5" stroke="#8A5D10" stroke-width="1.6" stroke-linecap="round"></path></svg>
+</sc-if>
+<sc-if value="{{isCopa}}" hint-placeholder-val="{{false}}">
+<svg width="{{pip}}" height="{{pip}}" viewBox="0 0 48 48" aria-hidden="true"><path d="M11 6h26c0 11-5.5 18.5-13 19.5C16.5 24.5 11 17 11 6z" fill="#C4473F" stroke="#6E1F1B" stroke-width="2" stroke-linejoin="round"></path><path d="M13.5 10h21" stroke="#F2C27A" stroke-width="2" stroke-linecap="round"></path><rect x="21.5" y="25" width="5" height="10" rx="1.5" fill="#E3B24A" stroke="#8A5D10" stroke-width="1.6"></rect><ellipse cx="24" cy="38.5" rx="10" ry="3.8" fill="#E3B24A" stroke="#8A5D10" stroke-width="1.6"></ellipse></svg>
+</sc-if>
+<sc-if value="{{isEspada}}" hint-placeholder-val="{{false}}">
+<svg width="{{pip}}" height="{{pip}}" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 3l4.2 27H19.8L24 3z" fill="#D5DEE8" stroke="#2F4E6E" stroke-width="1.8" stroke-linejoin="round"></path><path d="M24 7v22" stroke="#8FA5BD" stroke-width="1.3"></path><rect x="13" y="29.5" width="22" height="4.5" rx="2.2" fill="#2F5D8A" stroke="#1E3C5A" stroke-width="1.4"></rect><rect x="21.5" y="34" width="5" height="8" rx="1.5" fill="#7A5230" stroke="#3F2A15" stroke-width="1.3"></rect><circle cx="24" cy="44" r="2.8" fill="#2F5D8A" stroke="#1E3C5A" stroke-width="1.2"></circle></svg>
+</sc-if>
+<sc-if value="{{isBasto}}" hint-placeholder-val="{{false}}">
+<svg width="{{pip}}" height="{{pip}}" viewBox="0 0 48 48" aria-hidden="true"><path d="M20.5 45l-2.5-27c-.8-8 3.4-13.5 8.2-13.2 5.3.3 7.3 6.2 5.3 13.4L27.5 45z" fill="#8C5E36" stroke="#3F2A15" stroke-width="1.8" stroke-linejoin="round"></path><ellipse cx="25.5" cy="15" rx="2.4" ry="1.5" fill="#5C3C1F"></ellipse><ellipse cx="23" cy="26" rx="2" ry="1.3" fill="#5C3C1F"></ellipse><ellipse cx="25.8" cy="35" rx="1.8" ry="1.2" fill="#5C3C1F"></ellipse><path d="M29.5 9c4-3 8-2.5 9.5-1-2 3.6-5.5 4.6-9.5 3.4" fill="#4F8A3E" stroke="#2C5222" stroke-width="1.3" stroke-linejoin="round"></path></svg>
+</sc-if>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{isWinner}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; inset: -5px; border-radius: {{rw}}px; border: 3px solid #E9C46A; box-shadow: 0 0 18px rgba(233,196,106,.55); pointer-events: none"></div>
+<div style="position: absolute; left: 50%; top: -13px; transform: translateX(-50%); padding: 3px 9px; border-radius: 999px; background: #E9C46A; color: #1A140A; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap">{{tag}}</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"number":{"editor":"enum","options":["1","2","3","4","5","6","7","10","11","12"],"default":"1"},"suit":{"editor":"enum","options":["espada","basto","oro","copa"],"default":"espada"},"size":{"editor":"enum","options":["xl","lg","md","sm","xs"],"default":"xl"},"state":{"editor":"enum","options":["normal","playable","disabled","winner","back"],"default":"normal"},"tag":{"editor":"text","default":"Va ganando"},"$preview":{"width":124,"height":186}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const sizes = {
+      xl: { w: 124, h: 186, num: 34, pip: 84, fig: 10, pad: 10, r: 12 },
+      lg: { w: 104, h: 156, num: 29, pip: 70, fig: 9, pad: 9, r: 11 },
+      md: { w: 84, h: 126, num: 24, pip: 56, fig: 8, pad: 7, r: 10 },
+      sm: { w: 64, h: 96, num: 19, pip: 42, fig: 7, pad: 6, r: 8 },
+      xs: { w: 30, h: 44, num: 11, pip: 18, fig: 0, pad: 3, r: 5 }
+    };
+    const inks = { oro: '#8A5D10', copa: '#A3302A', espada: '#244A70', basto: '#3F6B2F' };
+    const softs = { oro: 'rgba(138,93,16,.28)', copa: 'rgba(163,48,42,.28)', espada: 'rgba(36,74,112,.28)', basto: 'rgba(63,107,47,.28)' };
+    const figs = { '10': 'Sota', '11': 'Caballo', '12': 'Rey' };
+    const size = sizes[this.props.size] ? this.props.size : 'xl';
+    const s = sizes[size];
+    const suit = inks[this.props.suit] ? this.props.suit : 'espada';
+    const number = String(this.props.number ?? '1');
+    const state = this.props.state ?? 'normal';
+    const isBack = state === 'back';
+    const shadow = state === 'playable'
+      ? '0 12px 26px rgba(0,0,0,.5), 0 0 0 2px rgba(233,196,106,.85)'
+      : '0 6px 16px rgba(0,0,0,.42)';
+    return {
+      w: s.w, h: s.h, num: s.num, pip: s.pip, fig: s.fig, pad: s.pad, padT: s.pad - 2, r: s.r, r2: Math.max(s.r - 4, 3),
+      rw: s.r + 5, frame: Math.round(s.pad / 2) + 1,
+      number, ink: inks[suit], soft: softs[suit],
+      figLabel: figs[number] || '', hasFig: Boolean(figs[number]) && s.fig > 0,
+      isBack, isFace: !isBack,
+      isOro: suit === 'oro', isCopa: suit === 'copa', isEspada: suit === 'espada', isBasto: suit === 'basto',
+      isWinner: state === 'winner', tag: String(this.props.tag ?? 'Va ganando'),
+      shadow,
+      filter: state === 'disabled' ? 'saturate(.35) brightness(.72)' : 'none',
+      lift: state === 'playable' ? 'translateY(-6px)' : 'none'
+    };
+  }
+}
+</script>
+</body>
+</html>

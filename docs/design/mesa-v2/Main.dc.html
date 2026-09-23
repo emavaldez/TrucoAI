@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Mesa de 4 — tu turno</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;1,9..144,600&amp;family=Figtree:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0C1310}
+a{color:#E9C46A}a:hover{color:#F4D98F}
+.hand-btn{background:none;border:0;padding:0;cursor:pointer;border-radius:12px;transition:transform .18s ease}
+.hand-btn:hover{transform:translateY(-14px)}
+.hand-btn:focus-visible{outline:3px solid #E9C46A;outline-offset:6px}
+.act{cursor:pointer;transition:transform .12s ease, background .12s ease}
+.act:hover{transform:translateY(-2px)}
+.act:focus-visible{outline:3px solid #E9C46A;outline-offset:3px}
+</style>
+</helmet>
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #0C1310; font-family: Figtree, system-ui, sans-serif; color: #EDE6D6">
+
+<div style="position: absolute; left: 0; top: 0; width: 1440px; height: 72px; box-sizing: border-box; padding: 0 32px; display: flex; align-items: center; justify-content: space-between; background: #09100D; border-bottom: 1px solid #1E2B25">
+<div style="display: flex; align-items: baseline; gap: 6px; width: 300px">
+<span style="font-family: Fraunces, Georgia, serif; font-style: italic; font-weight: 600; font-size: 30px; color: #F7F1E3">Truco</span>
+<span style="font-size: 12px; font-weight: 700; letter-spacing: .18em; color: #E9C46A">AI</span>
+</div>
+<dc-import name="Score" nos="{{nos}}" ellos="{{ellos}}" hint-size="620px,56px"></dc-import>
+<div style="display: flex; align-items: center; justify-content: flex-end; gap: 10px; width: 300px">
+<span style="padding: 7px 12px; border-radius: 999px; background: #15201B; border: 1px solid #26372F; font-size: 13px; font-weight: 600; color: #CFE3D8">Mano 7</span>
+<span style="padding: 7px 12px; border-radius: 999px; background: rgba(233,196,106,.12); border: 1px solid rgba(233,196,106,.45); font-size: 13px; font-weight: 700; color: #E9C46A">Truco querido · vale 2</span>
+<button class="act" aria-label="Menú de la partida" style="width: 44px; height: 44px; border-radius: 12px; border: 1px solid #26372F; background: #15201B; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#CFE3D8" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"></path></svg></button>
+</div>
+</div>
+
+<div style="position: absolute; left: 120px; top: 112px; width: 1200px; height: 540px; border-radius: 50%; background: #5A3920; box-shadow: 0 34px 70px rgba(0,0,0,.55), inset 0 2px 0 rgba(255,255,255,.08), inset 0 -3px 0 rgba(0,0,0,.35)"></div>
+<div style="position: absolute; left: 138px; top: 130px; width: 1164px; height: 504px; border-radius: 50%; background: {{felt}}; box-shadow: inset 0 0 0 2px rgba(201,162,75,.4), inset 0 0 90px rgba(0,0,0,.38)"></div>
+
+<div style="position: absolute; left: 620px; top: 80px"><dc-import name="Seat" label="Compañero" team="nos" cards="{{one}}" hint-size="200px,72px"></dc-import></div>
+<div style="position: absolute; left: 832px; top: 86px; padding: 8px 14px; border-radius: 14px 14px 14px 4px; background: #F7F1E3; color: #1A140A; font-family: Fraunces, Georgia, serif; font-weight: 700; font-size: 17px; box-shadow: 0 8px 20px rgba(0,0,0,.4)">¡Quiero!</div>
+<div style="position: absolute; left: 24px; top: 346px"><dc-import name="Seat" label="Rival 1" team="ellos" cards="{{one}}" mano="{{yes}}" hint-size="200px,72px"></dc-import></div>
+<div style="position: absolute; left: 1216px; top: 346px"><dc-import name="Seat" label="Rival 2" team="ellos" cards="{{one}}" dealer="{{yes}}" hint-size="200px,72px"></dc-import></div>
+
+<div style="position: absolute; left: 678px; top: 190px"><dc-import name="Card" number="3" suit="copa" size="md" state="normal" hint-size="84px,126px"></dc-import></div>
+<div style="position: absolute; left: 330px; top: 319px"><dc-import name="Card" number="7" suit="oro" size="md" state="{{rivalState}}" hint-size="84px,126px"></dc-import></div>
+<div style="position: absolute; left: 1026px; top: 319px"><dc-import name="Card" number="4" suit="copa" size="md" state="normal" hint-size="84px,126px"></dc-import></div>
+
+<sc-if value="{{notPlayed}}" hint-placeholder-val="{{true}}">
+<div style="position: absolute; left: 678px; top: 452px; width: 84px; height: 126px; box-sizing: border-box; border-radius: 10px; border: 2px dashed rgba(233,196,106,.55); display: flex; align-items: center; justify-content: center; text-align: center; font-size: 12px; font-weight: 600; color: rgba(247,241,227,.7); line-height: 1.3">Tu<br>carta</div>
+</sc-if>
+<sc-if value="{{played}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; left: 678px; top: 452px"><dc-import name="Card" number="{{playedN}}" suit="{{playedS}}" size="md" state="{{mineState}}" hint-size="84px,126px"></dc-import></div>
+</sc-if>
+
+<div style="position: absolute; left: 520px; top: 364px; width: 400px; height: 44px; box-sizing: border-box; padding: 0 16px; display: flex; align-items: center; justify-content: center; gap: 14px; border-radius: 999px; background: rgba(8,20,15,.55); border: 1px solid rgba(233,196,106,.25); font-size: 13px; font-weight: 600; color: #DDE8E1">
+<span style="display: flex; align-items: center; gap: 6px"><span style="width: 10px; height: 10px; border-radius: 50%; background: #8CCBF2"></span>1ª Nosotros</span>
+<span style="width: 1px; height: 18px; background: rgba(255,255,255,.18)"></span>
+<span style="display: flex; align-items: center; gap: 6px"><span style="width: 10px; height: 10px; border-radius: 50%; background: {{secondDot}}; border: 1.5px solid {{secondRing}}"></span>{{secondLabel}}</span>
+<span style="width: 1px; height: 18px; background: rgba(255,255,255,.18)"></span>
+<span style="display: flex; align-items: center; gap: 6px; color: #93A69C"><span style="width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid #5E7368"></span>3ª</span>
+</div>
+
+<div style="position: absolute; left: 560px; top: 596px; width: 320px; height: 34px; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: 999px; background: {{statusBg}}; font-size: 14px; font-weight: 700; color: {{statusInk}}">
+<span style="width: 8px; height: 8px; border-radius: 50%; background: {{statusInk}}"></span>{{statusText}}
+</div>
+
+<div style="position: absolute; left: 40px; top: 704px"><dc-import name="Seat" label="Vos" team="nos" cards="{{zero}}" active="{{yourTurn}}" you="{{yes}}" hint-size="200px,72px"></dc-import></div>
+<div style="position: absolute; left: 40px; top: 792px; width: 380px; box-sizing: border-box; padding: 12px 14px; border-radius: 14px; background: #111A16; border: 1px solid #1E2B25; display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #B9C9C0">
+<div style="font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #6F8F80">En esta mano</div>
+<div><span style="color: #F0A35E; font-weight: 600">Rival 2</span> cantó <span style="color: #F7F1E3; font-weight: 600">Truco</span> · <span style="color: #8CCBF2; font-weight: 600">Compañero</span>: quiero</div>
+<div><span style="color: #8CCBF2; font-weight: 600">Nosotros</span> ganó la 1ª con el 7 de espada</div>
+</div>
+
+<div style="position: absolute; left: 470px; top: 690px; width: 500px; height: 200px; display: flex; justify-content: center; align-items: flex-start; gap: 16px">
+<sc-for list="{{hand}}" as="c" hint-placeholder-count="2">
+<button class="hand-btn" onClick="{{c.play}}" aria-label="{{c.label}}"><dc-import name="Card" number="{{c.n}}" suit="{{c.s}}" size="xl" state="playable" hint-size="124px,186px"></dc-import></button>
+</sc-for>
+</div>
+
+<div style="position: absolute; left: 1010px; top: 704px; width: 390px; display: flex; flex-direction: column; gap: 10px">
+<div style="font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #6F8F80">Cantar</div>
+<div style="display: flex; gap: 10px">
+<button class="act" style="flex-grow: 1; height: 56px; border-radius: 14px; border: 0; background: #E9C46A; color: #1A140A; font-family: Figtree, sans-serif; font-size: 17px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px">Quiero retruco<span style="font-size: 12px; font-weight: 600; opacity: .7">vale 3</span></button>
+</div>
+<button class="act" style="height: 48px; border-radius: 14px; border: 1px solid #3A4A42; background: transparent; color: #CFE3D8; font-family: Figtree, sans-serif; font-size: 15px; font-weight: 600">Irse al mazo <span style="color: #93A69C; font-weight: 500">· Ellos suman 2</span></button>
+<div style="font-size: 12px; color: #6F8F80">Envido cerrado: ya pasó la primera baza.</div>
+</div>
+
+<button class="act" onClick="{{reset}}" style="position: absolute; right: 24px; bottom: 16px; padding: 6px 10px; border-radius: 8px; border: 1px solid #26372F; background: #111A16; color: #93A69C; font-family: Figtree, sans-serif; font-size: 12px">Reiniciar demo</button>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"pano":{"editor":"enum","options":["verde","azul","bordo"],"default":"verde","section":"Mesa"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { played: null }; }
+  renderVals() {
+    const felts = {
+      verde: 'radial-gradient(ellipse at 50% 45%, #246B4F 0%, #1A523C 58%, #133D2D 100%)',
+      azul: 'radial-gradient(ellipse at 50% 45%, #22557C 0%, #1A4262 58%, #123049 100%)',
+      bordo: 'radial-gradient(ellipse at 50% 45%, #6E2733 0%, #561D27 58%, #3F151C 100%)'
+    };
+    const all = [
+      { id: '1e', n: '1', s: 'espada', label: 'Jugar el 1 de espada (ancho de espada)' },
+      { id: '5b', n: '5', s: 'basto', label: 'Jugar el 5 de basto' }
+    ];
+    const played = all.find((c) => c.id === this.state.played) || null;
+    const wins = played !== null && played.id === '1e';
+    return {
+      felt: felts[this.props.pano] || felts.verde,
+      nos: 17, ellos: 14, yes: true, one: 1, zero: played ? 1 : 2,
+      hand: all.filter((c) => c.id !== this.state.played).map((c) => ({ ...c, play: () => this.setState({ played: c.id }) })),
+      played: played !== null, notPlayed: played === null,
+      playedN: played ? played.n : '1', playedS: played ? played.s : 'espada',
+      mineState: wins ? 'winner' : 'normal',
+      rivalState: wins ? 'normal' : 'winner',
+      yourTurn: played === null,
+      secondLabel: played === null ? '2ª en juego' : (wins ? '2ª Nosotros' : '2ª Ellos'),
+      secondDot: played === null ? 'transparent' : (wins ? '#8CCBF2' : '#F0A35E'),
+      secondRing: played === null ? '#E9C46A' : (wins ? '#8CCBF2' : '#F0A35E'),
+      statusText: played === null ? 'Te toca · 2ª baza' : (wins ? '¡Ganaste la mano! +2' : 'Baza para Ellos · va la 3ª'),
+      statusBg: played === null ? 'rgba(233,196,106,.16)' : (wins ? 'rgba(140,203,242,.18)' : 'rgba(240,163,94,.18)'),
+      statusInk: played === null ? '#E9C46A' : (wins ? '#8CCBF2' : '#F0A35E'),
+      reset: () => this.setState({ played: null })
+    };
+  }
+}
+</script>
+</body>
+</html>

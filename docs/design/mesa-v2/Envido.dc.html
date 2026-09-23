@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Envido resuelto</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;1,9..144,600&amp;family=Figtree:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0C1310}
+.act{cursor:pointer;transition:transform .12s ease}
+.act:hover{transform:translateY(-2px)}
+.act:focus-visible{outline:3px solid #E9C46A;outline-offset:3px}
+</style>
+</helmet>
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #0C1310; font-family: Figtree, system-ui, sans-serif; color: #EDE6D6">
+
+<div style="position: absolute; left: 0; top: 0; width: 1440px; height: 72px; box-sizing: border-box; padding: 0 32px; display: flex; align-items: center; justify-content: space-between; background: #09100D; border-bottom: 1px solid #1E2B25">
+<div style="display: flex; align-items: baseline; gap: 6px; width: 300px"><span style="font-family: Fraunces, Georgia, serif; font-style: italic; font-weight: 600; font-size: 30px; color: #F7F1E3">Truco</span><span style="font-size: 12px; font-weight: 700; letter-spacing: .18em; color: #E9C46A">AI</span></div>
+<dc-import name="Score" nos="{{nos}}" ellos="{{ellos}}" hint-size="620px,56px"></dc-import>
+<div style="display: flex; align-items: center; justify-content: flex-end; gap: 10px; width: 300px"><span style="padding: 7px 12px; border-radius: 999px; background: #15201B; border: 1px solid #26372F; font-size: 13px; font-weight: 600; color: #CFE3D8">Mano 9</span></div>
+</div>
+
+<div style="position: absolute; left: 120px; top: 112px; width: 1200px; height: 540px; border-radius: 50%; background: #5A3920; box-shadow: 0 34px 70px rgba(0,0,0,.55)"></div>
+<div style="position: absolute; left: 138px; top: 130px; width: 1164px; height: 504px; border-radius: 50%; background: radial-gradient(ellipse at 50% 45%, #246B4F 0%, #1A523C 58%, #133D2D 100%); box-shadow: inset 0 0 0 2px rgba(201,162,75,.4), inset 0 0 90px rgba(0,0,0,.38)"></div>
+
+<div style="position: absolute; left: 620px; top: 80px"><dc-import name="Seat" label="Compañero" team="nos" cards="{{three}}" hint-size="200px,72px"></dc-import></div>
+<div style="position: absolute; left: 24px; top: 346px"><dc-import name="Seat" label="Rival 1" team="ellos" cards="{{three}}" hint-size="200px,72px"></dc-import></div>
+<div style="position: absolute; left: 236px; top: 296px; padding: 8px 14px; border-radius: 14px 14px 14px 4px; background: #F7F1E3; color: #1A140A; font-family: Fraunces, Georgia, serif; font-weight: 700; font-size: 18px; box-shadow: 0 8px 20px rgba(0,0,0,.4)">Son buenas</div>
+<div style="position: absolute; left: 1216px; top: 346px"><dc-import name="Seat" label="Rival 2" team="ellos" cards="{{three}}" dealer="{{yes}}" hint-size="200px,72px"></dc-import></div>
+<div style="position: absolute; left: 1084px; top: 296px; padding: 8px 14px; border-radius: 14px 14px 4px 14px; background: #F7F1E3; color: #1A140A; font-family: Fraunces, Georgia, serif; font-weight: 700; font-size: 18px; box-shadow: 0 8px 20px rgba(0,0,0,.4)">Son buenas</div>
+
+<div style="position: absolute; left: 490px; top: 300px; width: 460px; box-sizing: border-box; padding: 20px 22px; border-radius: 20px; background: rgba(8,20,15,.78); border: 1px solid rgba(140,203,242,.45); display: flex; flex-direction: column; align-items: center; gap: 12px">
+<div style="font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #8CCBF2">Envido para Nosotros</div>
+<div style="display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: #CFE3D8">
+<span style="padding: 4px 10px; border-radius: 999px; background: rgba(140,203,242,.16); color: #8CCBF2">Vos: Envido</span>
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6F8F80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+<span style="padding: 4px 10px; border-radius: 999px; background: rgba(240,163,94,.16); color: #F0A35E">Rival 1: Quiero</span>
+</div>
+<div style="display: flex; align-items: center; gap: 18px">
+<div style="display: flex; gap: 6px">
+<dc-import name="Card" number="7" suit="espada" size="sm" state="normal" hint-size="64px,96px"></dc-import>
+<dc-import name="Card" number="6" suit="espada" size="sm" state="normal" hint-size="64px,96px"></dc-import>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<div style="font-family: Fraunces, Georgia, serif; font-size: 44px; font-weight: 700; line-height: 1; color: #F7F1E3">33</div>
+<div style="font-size: 13px; color: #B9C9C0">20 + 7 + 6 de espada</div>
+</div>
+<div style="padding: 8px 14px; border-radius: 12px; background: #8CCBF2; color: #0B1A24; font-family: Fraunces, Georgia, serif; font-size: 24px; font-weight: 700">+2</div>
+</div>
+</div>
+
+<div style="position: absolute; left: 678px; top: 474px; width: 84px; height: 126px; box-sizing: border-box; border-radius: 10px; border: 2px dashed rgba(233,196,106,.55); display: flex; align-items: center; justify-content: center; text-align: center; font-size: 12px; font-weight: 600; color: rgba(247,241,227,.7); line-height: 1.3">Tu<br>carta</div>
+<div style="position: absolute; left: 790px; top: 520px; padding: 8px 14px; border-radius: 14px 14px 14px 4px; background: #F7F1E3; color: #1A140A; font-family: Fraunces, Georgia, serif; font-weight: 700; font-size: 18px; box-shadow: 0 8px 20px rgba(0,0,0,.4)">Tengo 33</div>
+
+<div style="position: absolute; left: 560px; top: 612px; width: 320px; height: 34px; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: 999px; background: rgba(233,196,106,.16); font-size: 14px; font-weight: 700; color: #E9C46A"><span style="width: 8px; height: 8px; border-radius: 50%; background: #E9C46A"></span>Sos mano · abrí la 1ª baza</div>
+
+<div style="position: absolute; left: 40px; top: 704px"><dc-import name="Seat" label="Vos" team="nos" cards="{{zero}}" mano="{{yes}}" active="{{yes}}" you="{{yes}}" hint-size="200px,72px"></dc-import></div>
+<div style="position: absolute; left: 40px; top: 792px; width: 380px; box-sizing: border-box; padding: 12px 14px; border-radius: 14px; background: #111A16; border: 1px solid #1E2B25; display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #B9C9C0">
+<div style="font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #6F8F80">En esta mano</div>
+<div>Cantaste <span style="color: #F7F1E3; font-weight: 600">Envido</span> · <span style="color: #F0A35E; font-weight: 600">Rival 1</span>: quiero</div>
+<div><span style="color: #8CCBF2; font-weight: 600">Nosotros</span> +2 con 33 · el resto: son buenas</div>
+</div>
+
+<div style="position: absolute; left: 450px; top: 690px; width: 540px; display: flex; justify-content: center; gap: 14px">
+<button class="act" aria-label="Jugar el 7 de espada" style="background: none; border: 0; padding: 0"><dc-import name="Card" number="7" suit="espada" size="xl" state="playable" hint-size="124px,186px"></dc-import></button>
+<button class="act" aria-label="Jugar el 6 de espada" style="background: none; border: 0; padding: 0"><dc-import name="Card" number="6" suit="espada" size="xl" state="playable" hint-size="124px,186px"></dc-import></button>
+<button class="act" aria-label="Jugar el 12 de oro" style="background: none; border: 0; padding: 0"><dc-import name="Card" number="12" suit="oro" size="xl" state="playable" hint-size="124px,186px"></dc-import></button>
+</div>
+
+<div style="position: absolute; left: 1010px; top: 704px; width: 390px; display: flex; flex-direction: column; gap: 10px">
+<div style="font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #6F8F80">Cantar</div>
+<button class="act" style="height: 56px; border-radius: 14px; border: 0; background: #E9C46A; color: #1A140A; font-family: Figtree, sans-serif; font-size: 17px; font-weight: 700">Truco <span style="font-size: 12px; font-weight: 600; opacity: .7">vale 2</span></button>
+<button class="act" style="height: 48px; border-radius: 14px; border: 1px solid #3A4A42; background: transparent; color: #CFE3D8; font-family: Figtree, sans-serif; font-size: 15px; font-weight: 600">Irse al mazo <span style="color: #93A69C; font-weight: 500">· Ellos suman 1</span></button>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return { nos: 21, ellos: 15, yes: true, three: 3, zero: 3 }; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Fin de la partida</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;1,9..144,600&amp;family=Figtree:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0C1310}
+.act{cursor:pointer;transition:transform .12s ease}
+.act:hover{transform:translateY(-2px)}
+.act:focus-visible{outline:3px solid #E9C46A;outline-offset:3px}
+</style>
+</helmet>
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #0C1310; font-family: Figtree, system-ui, sans-serif; color: #EDE6D6">
+<div style="position: absolute; left: 120px; top: 112px; width: 1200px; height: 540px; border-radius: 50%; background: #5A3920"></div>
+<div style="position: absolute; left: 138px; top: 130px; width: 1164px; height: 504px; border-radius: 50%; background: radial-gradient(ellipse at 50% 45%, #246B4F 0%, #1A523C 58%, #133D2D 100%)"></div>
+<div style="position: absolute; inset: 0; background: rgba(4,9,7,.8)"></div>
+
+<div role="dialog" aria-labelledby="fp-title" style="position: absolute; left: 340px; top: 60px; width: 760px; height: 780px; box-sizing: border-box; padding: 36px 40px; border-radius: 28px; background: #F7F1E3; color: #1A140A; box-shadow: 0 30px 80px rgba(0,0,0,.6); display: flex; flex-direction: column; gap: 22px">
+<div style="display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center">
+<div style="font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #6B6150">Partida a 30 · 4 jugadores · Normal</div>
+<div id="fp-title" style="font-family: Fraunces, Georgia, serif; font-style: italic; font-size: 60px; font-weight: 700; line-height: 1.05">¡Ganamos!</div>
+<div style="display: flex; align-items: baseline; gap: 16px; font-family: Fraunces, Georgia, serif; font-weight: 700">
+<span style="font-size: 44px; color: #1F5A43">30</span><span style="font-size: 18px; color: #6B6150">a</span><span style="font-size: 44px; color: #9B4A16">24</span>
+</div>
+<div style="font-size: 14px; color: #4A4234">Nosotros ganó en la mano 18, con un truco querido.</div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
+<div style="padding: 12px 14px; border-radius: 14px; background: #EFE6D2"><div style="font-size: 12px; color: #6B6150">Manos ganadas</div><div style="font-family: Fraunces, Georgia, serif; font-size: 26px; font-weight: 700">11 de 18</div></div>
+<div style="padding: 12px 14px; border-radius: 14px; background: #EFE6D2"><div style="font-size: 12px; color: #6B6150">Envidos ganados</div><div style="font-family: Fraunces, Georgia, serif; font-size: 26px; font-weight: 700">4 de 6</div></div>
+<div style="padding: 12px 14px; border-radius: 14px; background: #EFE6D2"><div style="font-size: 12px; color: #6B6150">Trucos querido</div><div style="font-family: Fraunces, Georgia, serif; font-size: 26px; font-weight: 700">5</div></div>
+</div>
+
+<div style="flex-grow: 1; min-height: 0; display: flex; flex-direction: column; border: 1px solid #DCCFB1; border-radius: 14px; overflow: hidden">
+<div style="display: grid; grid-template-columns: 70px minmax(0, 1fr) 90px 120px; gap: 8px; padding: 10px 16px; background: #EFE6D2; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #6B6150">
+<span>Mano</span><span>Qué pasó</span><span>Puntos</span><span style="text-align: right">Marcador</span>
+</div>
+<div style="flex-grow: 1; overflow-y: auto">
+<sc-for list="{{rows}}" as="r" hint-placeholder-count="8">
+<div style="display: grid; grid-template-columns: 70px minmax(0, 1fr) 90px 120px; gap: 8px; padding: 9px 16px; border-top: 1px solid #E4D9C1; font-size: 14px">
+<span style="color: #6B6150">{{r.n}}</span><span>{{r.what}}</span><span style="font-weight: 700; color: {{r.ink}}">{{r.pts}}</span><span style="text-align: right; font-variant-numeric: tabular-nums">{{r.score}}</span>
+</div>
+</sc-for>
+</div>
+</div>
+
+<div style="display: flex; justify-content: center; gap: 12px">
+<button class="act" style="height: 54px; padding: 0 30px; border-radius: 14px; border: 0; background: #1F5A43; color: #F7F1E3; font-family: Figtree, sans-serif; font-size: 17px; font-weight: 700">Jugar otra</button>
+<button class="act" style="height: 54px; padding: 0 24px; border-radius: 14px; border: 1.5px solid #1A140A; background: transparent; color: #1A140A; font-family: Figtree, sans-serif; font-size: 16px; font-weight: 700">Cambiar reglas</button>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const N = '#1F5A43', E = '#9B4A16';
+    return {
+      rows: [
+        { n: '18', what: 'Truco querido, ganamos 2 bazas a 1', pts: '+2 Nos.', ink: N, score: '30 – 24' },
+        { n: '17', what: 'Envido querido (Rival 1 con 31)', pts: '+2 Ellos', ink: E, score: '28 – 24' },
+        { n: '16', what: 'Retruco no querido', pts: '+2 Nos.', ink: N, score: '28 – 22' },
+        { n: '15', what: 'Mano ganada en la 1ª y la 2ª', pts: '+1 Nos.', ink: N, score: '26 – 22' },
+        { n: '14', what: 'Rival 2 se fue al mazo', pts: '+1 Nos.', ink: N, score: '25 – 22' },
+        { n: '13', what: 'Falta envido querido', pts: '+7 Ellos', ink: E, score: '24 – 22' },
+        { n: '12', what: 'Pica-pica: 2 submanos a 1', pts: '+2 Nos.', ink: N, score: '24 – 15' },
+        { n: '11', what: 'Vale cuatro querido', pts: '+4 Nos.', ink: N, score: '22 – 15' },
+        { n: '10', what: 'Envido no querido', pts: '+1 Ellos', ink: E, score: '18 – 15' },
+        { n: '9', what: 'Envido querido, vos con 33', pts: '+2 Nos.', ink: N, score: '18 – 14' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

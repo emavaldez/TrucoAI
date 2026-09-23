@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Asiento de jugador</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&amp;family=Figtree:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div style="position: relative; width: {{w}}px; height: {{h}}px; box-sizing: border-box; padding: {{padY}}px {{padX}}px; display: flex; align-items: center; gap: {{gap}}px; background: #131E19; border: 1.5px solid {{border}}; border-radius: {{radius}}px; box-shadow: {{glow}}; opacity: {{op}}; font-family: Figtree, system-ui, sans-serif; color: #EDE6D6">
+<div style="flex-shrink: 0; width: {{av}}px; height: {{av}}px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: {{teamSoft}}; border: 2px solid {{teamColor}}; font-family: Fraunces, Georgia, serif; font-weight: 700; font-size: {{avFont}}px; color: {{teamColor}}">{{initials}}</div>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px">
+<div style="font-size: {{nameSize}}px; font-weight: 600; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{label}}</div>
+<div style="display: flex; align-items: center; gap: 5px; flex-wrap: nowrap">
+<span style="font-size: {{tagSize}}px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: {{teamColor}}">{{teamName}}</span>
+<sc-if value="{{mano}}" hint-placeholder-val="{{false}}">
+<span style="padding: 1px 6px; border-radius: 999px; border: 1px solid #6F8F80; font-size: {{tagSize}}px; font-weight: 600; color: #CFE3D8">Mano</span>
+</sc-if>
+<sc-if value="{{dealer}}" hint-placeholder-val="{{false}}">
+<span style="padding: 1px 6px; border-radius: 999px; border: 1px solid #6F8F80; font-size: {{tagSize}}px; font-weight: 600; color: #CFE3D8">Da</span>
+</sc-if>
+</div>
+</div>
+<div style="flex-shrink: 0; display: flex; align-items: center">
+<sc-for list="{{backs}}" as="b" hint-placeholder-count="3">
+<div style="width: {{bw}}px; height: {{bh}}px; margin-left: {{b.ml}}px; border-radius: 3px; background-color: #173F31; background-image: repeating-linear-gradient(45deg, rgba(233,196,106,.3) 0 1px, transparent 1px 5px); border: 1px solid #C9A24B; box-shadow: 0 2px 4px rgba(0,0,0,.4); transform: rotate({{b.rot}}deg)"></div>
+</sc-for>
+</div>
+<sc-if value="{{active}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; top: -11px; left: 50%; transform: translateX(-50%); padding: 3px 10px; border-radius: 999px; background: #E9C46A; color: #1A140A; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap">{{activeLabel}}</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"label":{"editor":"text","default":"Rival 1"},"team":{"editor":"enum","options":["nos","ellos"],"default":"ellos"},"cards":{"editor":"int","min":0,"max":3,"default":3},"mano":{"editor":"boolean","default":false},"dealer":{"editor":"boolean","default":false},"active":{"editor":"boolean","default":false},"dim":{"editor":"boolean","default":false},"compact":{"editor":"boolean","default":false},"you":{"editor":"boolean","default":false},"$preview":{"width":200,"height":72}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const nos = (this.props.team ?? 'ellos') === 'nos';
+    const compact = Boolean(this.props.compact);
+    const active = Boolean(this.props.active);
+    const label = String(this.props.label ?? 'Rival 1');
+    const words = label.split(/\s+/);
+    const initials = (words.length > 1 && /\d/.test(words[1]) ? words[0][0] + words[1] : words.map((x) => x[0]).join('').slice(0, 2)).toUpperCase();
+    const n = Math.max(0, Math.min(3, Number(this.props.cards ?? 3)));
+    const rots = n === 3 ? [-10, 0, 10] : n === 2 ? [-6, 6] : [0];
+    const teamColor = nos ? '#8CCBF2' : '#F0A35E';
+    return {
+      w: compact ? 118 : 200, h: compact ? 54 : 72,
+      padX: compact ? 8 : 12, padY: compact ? 6 : 10, gap: compact ? 7 : 10, radius: compact ? 14 : 16,
+      av: compact ? 30 : 44, avFont: compact ? 13 : 17, nameSize: compact ? 12.5 : 15, tagSize: compact ? 9.5 : 10.5,
+      bw: compact ? 9 : 14, bh: compact ? 13 : 20,
+      label, initials: this.props.you ? 'VOS' : initials,
+      teamName: nos ? 'Nosotros' : 'Ellos',
+      teamColor, teamSoft: nos ? 'rgba(140,203,242,.14)' : 'rgba(240,163,94,.14)',
+      mano: Boolean(this.props.mano), dealer: Boolean(this.props.dealer),
+      active, activeLabel: this.props.you ? 'Tu turno' : 'Juega',
+      border: active ? '#E9C46A' : '#26372F',
+      glow: active ? '0 0 0 3px rgba(233,196,106,.25), 0 8px 24px rgba(0,0,0,.45)' : '0 6px 18px rgba(0,0,0,.35)',
+      op: this.props.dim ? 0.42 : 1,
+      backs: n === 0 ? [] : rots.slice(0, n).map((rot, i) => ({ rot, ml: i === 0 ? 0 : (compact ? -4 : -6) }))
+    };
+  }
+}
+</script>
+</body>
+</html>

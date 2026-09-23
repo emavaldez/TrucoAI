@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Menú de inicio</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;1,9..144,600;1,9..144,700&amp;family=Figtree:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0C1310}
+.opt{cursor:pointer;transition:background .12s ease, border-color .12s ease}
+.opt:focus-visible{outline:3px solid #E9C46A;outline-offset:3px}
+.go{cursor:pointer;transition:transform .12s ease}
+.go:hover{transform:translateY(-2px)}
+.go:focus-visible{outline:3px solid #F7F1E3;outline-offset:3px}
+</style>
+</helmet>
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #0C1310; font-family: Figtree, system-ui, sans-serif; color: #EDE6D6">
+
+<div style="position: absolute; left: 700px; top: 110px; width: 820px; height: 680px; border-radius: 50%; background: #5A3920; box-shadow: 0 40px 80px rgba(0,0,0,.55)"></div>
+<div style="position: absolute; left: 718px; top: 128px; width: 784px; height: 644px; border-radius: 50%; background: radial-gradient(ellipse at 45% 45%, #246B4F 0%, #1A523C 58%, #133D2D 100%); box-shadow: inset 0 0 0 2px rgba(201,162,75,.4), inset 0 0 90px rgba(0,0,0,.4)"></div>
+<div style="position: absolute; left: 880px; top: 300px; transform: rotate(-14deg)"><dc-import name="Card" number="1" suit="espada" size="xl" state="normal" hint-size="124px,186px"></dc-import></div>
+<div style="position: absolute; left: 1010px; top: 272px"><dc-import name="Card" number="1" suit="basto" size="xl" state="normal" hint-size="124px,186px"></dc-import></div>
+<div style="position: absolute; left: 1140px; top: 300px; transform: rotate(14deg)"><dc-import name="Card" number="7" suit="espada" size="xl" state="normal" hint-size="124px,186px"></dc-import></div>
+<div style="position: absolute; left: 930px; top: 540px; width: 360px; text-align: center; font-family: Fraunces, Georgia, serif; font-style: italic; font-size: 20px; color: rgba(247,241,227,.75)">El ancho de espada, el de basto y el siete bravo.</div>
+
+<div style="position: absolute; left: 96px; top: 96px; width: 560px; display: flex; flex-direction: column; gap: 28px">
+<div>
+<div style="display: flex; align-items: baseline; gap: 10px"><span style="font-family: Fraunces, Georgia, serif; font-style: italic; font-weight: 700; font-size: 96px; line-height: .95; color: #F7F1E3">Truco</span><span style="font-size: 16px; font-weight: 700; letter-spacing: .24em; color: #E9C46A">AI</span></div>
+<div style="margin-top: 10px; font-size: 18px; line-height: 1.45; color: #B9C9C0">Truco argentino contra la computadora. A 30 puntos, en malas y buenas.</div>
+</div>
+
+<fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 10px">
+<legend style="padding: 0; margin-bottom: 10px; font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #6F8F80">Jugadores</legend>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">
+<sc-for list="{{players}}" as="p" hint-placeholder-count="3">
+<button class="opt" onClick="{{p.pick}}" aria-pressed="{{p.pressed}}" style="height: 84px; border-radius: 16px; border: 2px solid {{p.border}}; background: {{p.bg}}; color: #EDE6D6; font-family: Figtree, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px">
+<span style="font-family: Fraunces, Georgia, serif; font-size: 28px; font-weight: 700; color: {{p.ink}}">{{p.n}}</span>
+<span style="font-size: 13px; color: #B9C9C0">{{p.desc}}</span>
+</button>
+</sc-for>
+</div>
+</fieldset>
+
+<fieldset style="margin: 0; padding: 0; border: 0">
+<legend style="padding: 0; margin-bottom: 10px; font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #6F8F80">Dificultad</legend>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">
+<sc-for list="{{levels}}" as="l" hint-placeholder-count="3">
+<button class="opt" onClick="{{l.pick}}" aria-pressed="{{l.pressed}}" style="height: 52px; border-radius: 14px; border: 2px solid {{l.border}}; background: {{l.bg}}; color: {{l.ink}}; font-family: Figtree, sans-serif; font-size: 16px; font-weight: 700">{{l.name}}</button>
+</sc-for>
+</div>
+<div style="margin-top: 8px; font-size: 14px; color: #93A69C">{{levelDesc}}</div>
+</fieldset>
+
+<fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 10px">
+<legend style="padding: 0; margin-bottom: 10px; font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #6F8F80">Reglas</legend>
+<label style="display: flex; align-items: center; justify-content: space-between; min-height: 48px; padding: 0 16px; border-radius: 14px; background: #111A16; border: 1px solid #1E2B25; font-size: 15px"><span>Jugar con flor</span><input type="checkbox" style="width: 22px; height: 22px; accent-color: #E9C46A"></label>
+<label style="display: flex; align-items: center; justify-content: space-between; min-height: 48px; padding: 0 16px; border-radius: 14px; background: #111A16; border: 1px solid #1E2B25; font-size: 15px; opacity: {{ppOpacity}}"><span>Pica-pica <span style="color: #93A69C">· solo con 6</span></span><input type="checkbox" checked="{{ppChecked}}" disabled="{{ppDisabled}}" style="width: 22px; height: 22px; accent-color: #E9C46A"></label>
+</fieldset>
+
+<button class="go" style="height: 64px; border-radius: 18px; border: 0; background: #E9C46A; color: #1A140A; font-family: Figtree, sans-serif; font-size: 20px; font-weight: 700">Repartir</button>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { players: 4, level: 'normal' }; }
+  renderVals() {
+    const sel = (on) => ({ border: on ? '#E9C46A' : '#26372F', bg: on ? 'rgba(233,196,106,.1)' : '#111A16', ink: on ? '#E9C46A' : '#EDE6D6', pressed: on ? 'true' : 'false' });
+    const descs = { 2: 'mano a mano', 4: 'dos contra dos', 6: 'tres contra tres' };
+    const levelDescs = {
+      easy: 'Canta poco y a veces se equivoca. Ideal para aprender.',
+      normal: 'Juega en equipo y canta con criterio.',
+      hard: 'Lee las cartas vistas, miente con el truco y aprieta con el marcador.'
+    };
+    const names = { easy: 'Fácil', normal: 'Normal', hard: 'Difícil' };
+    const six = this.state.players === 6;
+    return {
+      players: [2, 4, 6].map((n) => ({ n, desc: descs[n], ...sel(this.state.players === n), pick: () => this.setState({ players: n }) })),
+      levels: ['easy', 'normal', 'hard'].map((k) => ({ name: names[k], ...sel(this.state.level === k), pick: () => this.setState({ level: k }) })),
+      levelDesc: levelDescs[this.state.level],
+      ppOpacity: six ? 1 : 0.45, ppChecked: six, ppDisabled: !six
+    };
+  }
+}
+</script>
+</body>
+</html>

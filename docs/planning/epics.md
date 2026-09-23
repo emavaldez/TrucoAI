@@ -74,6 +74,11 @@ Excepción acotada al ADR-1: el juego publicado se traba en 6p (pica-pica) y "Nu
 - **AC** Submanos de pica-pica disparan el turno de la IA **[UI-02, AI-04]**; nuevo juego limpio **[UI-01, ENG-01]**; timers viejos descartados **[UI-08]**.
 - **AC** `test:partidas` verde con 10 semillas por modo, sin etiquetas `@conocido`.
 
+### Historia 0-4: UI "mesa v2" sobre el juego actual
+Aplica el rediseño aprobado (`docs/planning/ux-design.md`, `docs/design/mesa-v2/`) a la UI legacy para que se pueda jugar cómodo ya.
+- **AC** Cartas legibles (SVG propios, sin opacidad), mesa elíptica con asientos por fórmula para 2/4/6, baza en el paño con "va ganando", turno visible, marcador Nosotros/Ellos con fósforos, panel de respuesta que no tapa la mesa, globos de canto, celular 390×844.
+- **AC** Test de layout (nada fuera del viewport en 2/4/6 × 3 tamaños, capturas commiteadas) + axe sin violaciones serias; `test:partidas` en verde.
+
 ## Épica 1 — Motor de reglas v2 (`src/engine/`)
 
 Objetivo: un motor puro, determinista y completamente testeado que implemente el GDD §2–10.

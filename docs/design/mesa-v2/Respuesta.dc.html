@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Te cantaron truco</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;1,9..144,600&amp;family=Figtree:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0C1310}
+.act{cursor:pointer;transition:transform .12s ease}
+.act:hover{transform:translateY(-2px)}
+.act:focus-visible{outline:3px solid #E9C46A;outline-offset:3px}
+</style>
+</helmet>
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #0C1310; font-family: Figtree, system-ui, sans-serif; color: #EDE6D6">
+
+<div style="position: absolute; left: 0; top: 0; width: 1440px; height: 72px; box-sizing: border-box; padding: 0 32px; display: flex; align-items: center; justify-content: space-between; background: #09100D; border-bottom: 1px solid #1E2B25">
+<div style="display: flex; align-items: baseline; gap: 6px; width: 300px"><span style="font-family: Fraunces, Georgia, serif; font-style: italic; font-weight: 600; font-size: 30px; color: #F7F1E3">Truco</span><span style="font-size: 12px; font-weight: 700; letter-spacing: .18em; color: #E9C46A">AI</span></div>
+<dc-import name="Score" nos="{{nos}}" ellos="{{ellos}}" hint-size="620px,56px"></dc-import>
+<div style="display: flex; align-items: center; justify-content: flex-end; gap: 10px; width: 300px"><span style="padding: 7px 12px; border-radius: 999px; background: #15201B; border: 1px solid #26372F; font-size: 13px; font-weight: 600; color: #CFE3D8">Mano 8</span></div>
+</div>
+
+<div style="position: absolute; left: 120px; top: 112px; width: 1200px; height: 540px; border-radius: 50%; background: #5A3920; box-shadow: 0 34px 70px rgba(0,0,0,.55)"></div>
+<div style="position: absolute; left: 138px; top: 130px; width: 1164px; height: 504px; border-radius: 50%; background: radial-gradient(ellipse at 50% 45%, #246B4F 0%, #1A523C 58%, #133D2D 100%); box-shadow: inset 0 0 0 2px rgba(201,162,75,.4), inset 0 0 90px rgba(0,0,0,.38)"></div>
+
+<div style="position: absolute; left: 620px; top: 80px"><dc-import name="Seat" label="Compañero" team="nos" cards="{{three}}" hint-size="200px,72px"></dc-import></div>
+<div style="position: absolute; left: 24px; top: 346px"><dc-import name="Seat" label="Rival 1" team="ellos" cards="{{three}}" mano="{{yes}}" hint-size="200px,72px"></dc-import></div>
+<div style="position: absolute; left: 236px; top: 300px; padding: 10px 16px; border-radius: 16px 16px 16px 4px; background: #F7F1E3; color: #1A140A; font-family: Fraunces, Georgia, serif; font-weight: 700; font-size: 24px; box-shadow: 0 10px 24px rgba(0,0,0,.45)">¡Truco!</div>
+<div style="position: absolute; left: 1216px; top: 346px"><dc-import name="Seat" label="Rival 2" team="ellos" cards="{{three}}" dealer="{{yes}}" hint-size="200px,72px"></dc-import></div>
+
+<div style="position: absolute; left: 520px; top: 330px; width: 400px; box-sizing: border-box; padding: 18px 20px; border-radius: 18px; background: rgba(8,20,15,.72); border: 1px solid rgba(233,196,106,.4); text-align: center">
+<div style="font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #E9C46A">Canto pendiente</div>
+<div style="margin-top: 6px; font-family: Fraunces, Georgia, serif; font-size: 26px; font-weight: 700; color: #F7F1E3">Rival 1 cantó Truco</div>
+<div style="margin-top: 4px; font-size: 14px; color: #B9C9C0">Si querés, la mano vale 2. Si no, Ellos suman 1.</div>
+</div>
+
+<div style="position: absolute; left: 560px; top: 596px; width: 320px; height: 34px; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: 999px; background: rgba(233,196,106,.16); font-size: 14px; font-weight: 700; color: #E9C46A"><span style="width: 8px; height: 8px; border-radius: 50%; background: #E9C46A"></span>Respondé para seguir jugando</div>
+
+<div style="position: absolute; left: 40px; top: 704px"><dc-import name="Seat" label="Vos" team="nos" cards="{{zero}}" active="{{yes}}" you="{{yes}}" hint-size="200px,72px"></dc-import></div>
+
+<div style="position: absolute; left: 380px; top: 700px; width: 440px; display: flex; flex-direction: column; align-items: center; gap: 10px">
+<div style="display: flex; gap: 14px">
+<dc-import name="Card" number="7" suit="espada" size="lg" state="disabled" hint-size="104px,156px"></dc-import>
+<dc-import name="Card" number="6" suit="espada" size="lg" state="disabled" hint-size="104px,156px"></dc-import>
+<dc-import name="Card" number="12" suit="oro" size="lg" state="disabled" hint-size="104px,156px"></dc-import>
+</div>
+<div style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: #93A69C"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#93A69C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>Tus cartas se liberan cuando respondas · tenés 33 de envido</div>
+</div>
+
+<div role="dialog" aria-labelledby="resp-title" style="position: absolute; left: 860px; top: 676px; width: 548px; box-sizing: border-box; padding: 20px; border-radius: 20px; background: #F7F1E3; color: #1A140A; box-shadow: 0 24px 60px rgba(0,0,0,.6); display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; align-items: baseline; justify-content: space-between">
+<div id="resp-title" style="font-family: Fraunces, Georgia, serif; font-size: 22px; font-weight: 700">¿Querés el truco?</div>
+<div style="font-size: 12px; color: #6B6150">Q · N · R</div>
+</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">
+<button class="act" style="height: 52px; border-radius: 12px; border: 0; background: #1F5A43; color: #F7F1E3; font-family: Figtree, sans-serif; font-size: 17px; font-weight: 700">Quiero</button>
+<button class="act" style="height: 52px; border-radius: 12px; border: 0; background: #1A140A; color: #E9C46A; font-family: Figtree, sans-serif; font-size: 16px; font-weight: 700">Quiero retruco</button>
+<button class="act" style="height: 52px; border-radius: 12px; border: 2px solid #9B3B2E; background: transparent; color: #8A2E22; font-family: Figtree, sans-serif; font-size: 17px; font-weight: 700">No quiero</button>
+</div>
+<div style="padding-top: 12px; border-top: 1px solid #DCCFB1; display: flex; flex-direction: column; gap: 8px">
+<div style="font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #6B6150">El envido está primero</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">
+<button class="act" style="height: 44px; border-radius: 12px; border: 1.5px solid #1A140A; background: transparent; color: #1A140A; font-family: Figtree, sans-serif; font-size: 15px; font-weight: 700">Envido</button>
+<button class="act" style="height: 44px; border-radius: 12px; border: 1.5px solid #1A140A; background: transparent; color: #1A140A; font-family: Figtree, sans-serif; font-size: 15px; font-weight: 700">Real envido</button>
+<button class="act" style="height: 44px; border-radius: 12px; border: 1.5px solid #1A140A; background: transparent; color: #1A140A; font-family: Figtree, sans-serif; font-size: 15px; font-weight: 700">Falta envido</button>
+</div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return { nos: 19, ellos: 15, yes: true, three: 3, zero: 3 }; }
+}
+</script>
+</body>
+</html>
