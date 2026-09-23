@@ -14,6 +14,7 @@
 | Controller | vitest (sin DOM) | `src/app/__tests__/` | driver de IA, cancelación, versión, `autoAck`, nueva partida | < 5 s |
 | UI unit | vitest + jsdom | `src/ui/__tests__/` | vistas: botones == acciones legales, escape de HTML, testids | < 5 s |
 | E2E | Playwright (chromium) | `e2e/*.spec.ts` | flujos reales en `vite preview` con `?test=1&seed=N&fast=1&autoAck=1` | < 3 min |
+| Partidas completas (gate `partidas`) | Playwright (chromium) | `e2e/partidas.spec.ts` | 2/4/6 jugadores jugados por un bot hasta el fin (30 pts) con reloj acelerado: traba, marcador que baja, fin sin ganador, "Nuevo juego" y errores de página | < 3 min |
 
 ## 2. Invariantes de simulación (se chequean después de CADA acción)
 
@@ -86,10 +87,14 @@ Cada ID de `docs/planning/audit-2026-09.md` marcado para una historia debe tener
 
 ## 7b. Gates del flujo `wf` (por tarea)
 
-`@alcance` → `tipos` (`npx --no-install tsc --noEmit`) → `lint` (desde 0-1) → `tests` (`npm test --silent`) → `build` → `@arranque` (vite preview, GET `/`).
+`@alcance` → `tipos` (`npx --no-install tsc --noEmit`) → `lint` (desde 0-1) → `tests` (`npm test --silent`) → `build` → `@arranque` (vite preview, GET `/`) → `partidas` (`npm run test:partidas --silent`, desde 0-2).
 Desde la historia 4-1 se suma `e2e` (`npm run e2e`).
+El worker corre `npm ci` y `npx playwright install chromium` una vez en su worktree (el navegador no baja con `npm ci`);
+los tests con `@conocido-<ID>` en el título quedan fuera de `test:partidas` hasta que la historia que arregla ese ID los destilde.
 
 ## 8. CI (GitHub Actions, `.github/workflows/ci.yml`)
 
 En cada push y PR: `npm ci` → `npm run typecheck` → `npm run lint` → `npm run test:coverage` → `npm run build` → (desde 4-1) `npm run e2e`.
+El job `partidas` (`needs: ci`) corre `npm ci` → `npx playwright install --with-deps chromium` → `npm run test:partidas` con `PARTIDAS_SEEDS=1,2,3,4,5`
+y sube `playwright-report/` como artifact si falla: ninguna historia posterior se mergea si una partida completa falla.
 Node 20. Vercel deploya `main` automáticamente; `main` solo recibe merges con CI en verde y auditoría aprobada.

@@ -41,7 +41,11 @@
     {
       "id": "arranque",
       "run": "@arranque"
+    },
+    {
+      "id": "partidas",
+      "run": "npm run test:partidas --silent"
     }
   ],
-  "_nota": "Gate lint activo desde 0-1; partidas se agrega con 0-2; e2e con 4-1. El worker debe correr npm ci en el worktree antes de verificar."
+  "_nota": "Gate lint activo desde 0-1; partidas activo desde 0-2; e2e con 4-1. El worker debe correr npm ci y npx playwright install chromium en el worktree antes de verificar."
 }

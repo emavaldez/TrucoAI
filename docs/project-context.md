@@ -28,11 +28,15 @@ Truco argentino web (Vite + TypeScript, sin frameworks ni dependencias de runtim
 ## Comandos
 ```bash
 npm ci
+npx playwright install chromium   # una vez en el worktree, antes de test:partidas/e2e
 npm run typecheck      # tsc --noEmit
 npm run lint           # desde la historia 0-1
 npm test               # vitest run
 npm run test:coverage
 npm run build
+npm run test:partidas  # desde 0-2: partidas completas 2/4/6 por un bot (gate `partidas`)
+npm run test:partidas:todo   # las mismas + las que hoy fallan por bugs auditados (@conocido-<ID>)
+npm run e2e            # desde 4-1: toda la suite E2E
 npm run sim            # desde 1-6: 1.000 partidas con invariantes
 npm run arena          # desde 2-1: enfrentamientos de IA
 wf verify -i <id>      # gates del flujo supervisado

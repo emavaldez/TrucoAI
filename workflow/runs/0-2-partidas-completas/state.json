@@ -2,33 +2,33 @@
   "schemaVersion": 1,
   "id": "0-2-partidas-completas",
   "title": "Test de partidas completas 2/4/6 (gate partidas)",
-  "status": "ready",
+  "status": "approved",
   "branch": "task/0-2-partidas-completas",
-  "worktree": null,
-  "correctionCycle": 0,
+  "worktree": "/Users/emmanuelvaldez/GameDev/.worktrees/0-2-partidas-completas",
+  "correctionCycle": 1,
   "dispatch": {
     "approved": true,
     "approvedBy": "Emmanuel (vía Claude, 2026-09-23)",
-    "approvedAt": "2026-09-23T16:08:41.769838+00:00"
+    "approvedAt": "2026-09-23T21:22:47.622334+00:00"
   },
   "implementation": {
-    "completed": false,
-    "commit": null
+    "completed": true,
+    "commit": "635092c7d8cc40eca2e0c94919581d36f832d010"
   },
   "audit": {
-    "decision": "pending",
-    "auditedBy": null,
-    "auditedAt": null
+    "decision": "approved",
+    "auditedBy": "Claude",
+    "auditedAt": "2026-09-23T21:23:50.466612+00:00"
   },
   "merge": {
-    "approved": false,
-    "approvedBy": null,
-    "approvedAt": null,
+    "approved": true,
+    "approvedBy": "Emmanuel (vía Claude, 2026-09-23)",
+    "approvedAt": "2026-09-23T21:23:50.526849+00:00",
     "commit": null
   },
   "timestamps": {
     "createdAt": "2026-09-23T15:54:37.328222+00:00",
-    "updatedAt": "2026-09-23T16:08:41.769987+00:00"
+    "updatedAt": "2026-09-23T21:23:50.526971+00:00"
   },
   "scope": {
     "allow": [
@@ -43,5 +43,10 @@
       "docs/stories/0-2-partidas-completas.md"
     ]
   },
-  "kind": "default"
+  "kind": "default",
+  "verify": {
+    "ok": true,
+    "at": "2026-09-23T21:23:41.832848+00:00",
+    "skipped": false
+  }
 }

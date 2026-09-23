@@ -53,3 +53,7 @@ npm ci && npm run typecheck && npm test && npm run build
 ## Nota del supervisor
 
 Corré `npx playwright install chromium` en el worktree antes de verificar. **No** toques `src/`: si una partida falla por un bug que no está en la auditoría, detenete y reportalo.
+
+## Ciclo 1 (corrección de auditoría)
+
+Leé workflow/runs/0-2-partidas-completas/audit.md: los 6 cambios pedidos son la definición de terminado de este ciclo. Primero git rebase main.

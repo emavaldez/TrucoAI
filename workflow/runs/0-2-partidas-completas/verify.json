@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "id": "0-2-partidas-completas",
+  "ok": true,
+  "at": "2026-09-23T21:23:41.832848+00:00",
+  "head": "635092c7d8cc40eca2e0c94919581d36f832d010",
+  "gates": [
+    {
+      "id": "alcance",
+      "run": "@alcance",
+      "status": "ok",
+      "code": 0,
+      "seconds": 0.0,
+      "output": "archivos tocados:\n  .github/workflows/ci.yml\n  docs/planning/test-strategy.md\n  docs/project-context.md\n  docs/stories/0-2-partidas-completas.md\n  e2e/bot.ts\n  e2e/driver/legacy.ts\n  e2e/driver/types.ts\n  e2e/partidas.spec.ts\n  e2e/signature.ts\n  package-lock.json\n  package.json\n  playwright.config.ts\n  workflow/config.json\n  workflow/runs/0-2-partidas-completas/assignment.md\n  workflow/runs/0-2-partidas-completas/audit.md\n  workflow/runs/0-2-partidas-completas/implementation.md\n  workflow/runs/0-2-partidas-completas/state.json\n  workflow/runs/0-2-partidas-completas/verify.json"
+    },
+    {
+      "id": "tipos",
+      "run": "npx --no-install tsc --noEmit",
+      "status": "ok",
+      "code": 0,
+      "seconds": 0.8,
+      "output": ""
+    },
+    {
+      "id": "lint",
+      "run": "npm run lint --silent",
+      "status": "ok",
+      "code": 0,
+      "seconds": 1.3,
+      "output": "…(recortado)…\noblems were reported from '@typescript-eslint/no-explicit-any')\n   80:21  warning  'players' is assigned a value but never used. Allowed unused vars must match /^_/u                     @typescript-eslint/no-unused-vars\n   82:5   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')\n  103:5   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')\n  132:5   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')\n  144:21  warning  'players' is assigned a value but never used. Allowed unused vars must match /^_/u                     @typescript-eslint/no-unused-vars\n  146:5   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')\n  157:21  warning  'players' is assigned a value but never used. Allowed unused vars must match /^_/u                     @typescript-eslint/no-unused-vars\n  159:5   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')\n  173:5   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')\n  191:5   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')\n  206:5   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')\n  226:5   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')\n  243:5   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')\n  244:11  warning  'baza' is assigned a value but never used. Allowed unused vars must match /^_/u                        @typescript-eslint/no-unused-vars\n  250:5   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')\n  251:11  warning  'mano' is assigned a value but never used. Allowed unused vars must match /^_/u                        @typescript-eslint/no-unused-vars\n\n/Users/emmanuelvaldez/GameDev/.worktrees/0-2-partidas-completas/src/__tests__/GameEngine.turnOrder.test.ts\n  5:32  warning  'beforeEach' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars\n  7:29  warning  'GameConfig' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars\n  7:41  warning  'CardDef' is defined but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars\n\n/Users/emmanuelvaldez/GameDev/.worktrees/0-2-partidas-completas/src/ai/AIPlayer.ts\n    6:15  warning  'PlayerConfig' is defined but never used. Allowed unused vars must match /^_/u             @typescript-eslint/no-unused-vars\n    6:38  warning  'Suit' is defined but never used. Allowed unused vars must match /^_/u                     @typescript-eslint/no-unused-vars\n  163:11  warning  'ourCardHighest' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars\n\n/Users/emmanuelvaldez/GameDev/.worktrees/0-2-partidas-completas/src/ai/DecisionEngine.ts\n    8:24  warning  'PlayerConfig' is defined but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars\n    9:25  warning  'CorePlayer' is defined but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars\n   42:10  warning  'hasCard' is defined but never used. Allowed unused vars must match /^_/u          @typescript-eslint/no-unused-vars\n  366:11  warning  'maxVal' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars\n\n/Users/emmanuelvaldez/GameDev/.worktrees/0-2-partidas-completas/src/core/EnvidoScorer.ts\n  5:24  warning  'CardNumber' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars\n\n/Users/emmanuelvaldez/GameDev/.worktrees/0-2-partidas-completas/src/core/GameEngine.ts\n    4:23  warning  'getCardName' is defined but never used. Allowed unused vars must match /^_/u                                            @typescript-eslint/no-unused-vars\n    7:12  warning  'Suit' is defined but never used. Allowed unused vars must match /^_/u                                                   @typescript-eslint/no-unused-vars\n    7:30  warning  'PlayerCount' is defined but never used. Allowed unused vars must match /^_/u                                            @typescript-eslint/no-unused-vars\n    7:43  warning  'Difficulty' is defined but never used. Allowed unused vars must match /^_/u                                             @typescript-eslint/no-unused-vars\n    9:40  warning  'GameEvent' is defined but never used. Allowed unused vars must match /^_/u                                              @typescript-eslint/no-unused-vars\n   10:3   warning  'HandRecord' is defined but never used. Allowed unused vars must match /^_/u                                             @typescript-eslint/no-unused-vars\n  105:41  warning  The `Function` type accepts any function-like value.\nPrefer explicitly defining any function parameters and return type  @typescript-eslint/no-unsafe-function-type\n  111:31  warning  The `Function` type accepts any function-like value.\nPrefer explicitly defining any function parameters and return type  @typescript-eslint/no-unsafe-function-type\n\n/Users/emmanuelvaldez/GameDev/.worktrees/0-2-partidas-completas/src/ui/UIManager.ts\n    6:3   warning  'HandRecord' is defined but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars\n  361:15  warning  'team' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars\n\n✖ 82 problems (0 errors, 82 warnings)\n  0 errors and 24 warnings potentially fixable with the `--fix` option."
+    },
+    {
+      "id": "tests",
+      "run": "npm test --silent",
+      "status": "ok",
+      "code": 0,
+      "seconds": 2.3,
+      "output": "RUN  v4.1.9 /Users/emmanuelvaldez/GameDev/.worktrees/0-2-partidas-completas\n\n\n Test Files  19 passed (19)\n      Tests  276 passed (276)\n   Start at  18:23:09\n   Duration  1.19s (transform 1.47s, setup 0ms, import 1.77s, tests 1.50s, environment 1ms)\n\nThe plugin \"vite-tsconfig-paths\" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead."
+    },
+    {
+      "id": "build",
+      "run": "npm run build --silent",
+      "status": "ok",
+      "code": 0,
+      "seconds": 1.3,
+      "output": "vite v5.4.21 building for production...\ntransforming...\n✓ 10 modules transformed.\nrendering chunks...\ncomputing gzip size...\ndist/index.html                  0.45 kB │ gzip:  0.30 kB\ndist/assets/index-9stWTwtA.css  11.68 kB │ gzip:  2.92 kB\ndist/assets/index-JHTUSXb_.js   62.80 kB │ gzip: 14.99 kB │ map: 194.34 kB\n✓ built in 116ms"
+    },
+    {
+      "id": "arranque",
+      "run": "@arranque",
+      "status": "ok",
+      "code": 0,
+      "seconds": 0.7,
+      "output": "200 /"
+    },
+    {
+      "id": "partidas",
+      "run": "npm run test:partidas --silent",
+      "status": "ok",
+      "code": 0,
+      "seconds": 29.0,
+      "output": "Running 7 tests using 3 workers\n\n[partida] 2p seed 1: 15-30 en 277 pasos (111s de reloj de juego) · 24 manos · firma 8cecd082\n  ✓  1 [chromium] › e2e/partidas.spec.ts:260:5 › partida completa 2p seed 1 (5.4s)\n[partida] 2p seed 2: 13-30 en 221 pasos (88s de reloj de juego) · 27 manos · firma f7dd6a2b\n  ✓  3 [chromium] › e2e/partidas.spec.ts:260:5 › partida completa 2p seed 2 (5.6s)\n[partida] 2p seed 3: 14-30 en 232 pasos (93s de reloj de juego) · 28 manos · firma 14261841\n  ✓  2 [chromium] › e2e/partidas.spec.ts:260:5 › partida completa 2p seed 3 (6.0s)\n[partida] 4p seed 3: 15-30 en 436 pasos (174s de reloj de juego) · 24 manos · firma a2e8fcbc\n[partida] 4p seed 1: 24-30 en 403 pasos (161s de reloj de juego) · 29 manos · firma 94859c94\n  ✓  6 [chromium] › e2e/partidas.spec.ts:260:5 › partida completa 4p seed 3 (6.2s)\n  ✓  4 [chromium] › e2e/partidas.spec.ts:260:5 › partida completa 4p seed 1 (6.9s)\n[partida] 4p seed 2: 22-30 en 484 pasos (194s de reloj de juego) · 33 manos · firma bae7e12c\n  ✓  5 [chromium] › e2e/partidas.spec.ts:260:5 › partida completa 4p seed 2 (7.2s)\n[determinismo] 4p seed 7: firma 1 = 060f523c (517 pasos, 29 manos)\n[determinismo] 4p seed 7: firma 2 = 060f523c (517 pasos, 29 manos)\n  ✓  7 [chromium] › e2e/partidas.spec.ts:354:1 › determinismo 4p seed 7 (14.1s)\n\n  7 passed (28.7s)"
+    }
+  ]
+}
