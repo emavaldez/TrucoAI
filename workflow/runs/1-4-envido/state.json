@@ -2,14 +2,14 @@
   "schemaVersion": 1,
   "id": "1-4-envido",
   "title": "Motor v2: envido",
-  "status": "draft",
+  "status": "ready",
   "branch": "task/1-4-envido",
   "worktree": null,
   "correctionCycle": 0,
   "dispatch": {
-    "approved": false,
-    "approvedBy": null,
-    "approvedAt": null
+    "approved": true,
+    "approvedBy": "Emmanuel (vía Claude, 2026-09-23)",
+    "approvedAt": "2026-09-23T20:19:20.722639+00:00"
   },
   "implementation": {
     "completed": false,
@@ -28,7 +28,7 @@
   },
   "timestamps": {
     "createdAt": "2026-09-23T14:40:08.217552+00:00",
-    "updatedAt": "2026-09-23T14:40:08.217552+00:00"
+    "updatedAt": "2026-09-23T20:19:20.722761+00:00"
   },
   "scope": {
     "allow": [
