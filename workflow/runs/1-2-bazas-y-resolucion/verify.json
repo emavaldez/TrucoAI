@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "id": "1-2-bazas-y-resolucion",
+  "ok": true,
+  "at": "2026-09-23T16:35:05.005846+00:00",
+  "head": "d3b8ef0dfe773a4e1a41ca2744c62d7d8b436b03",
+  "gates": [
+    {
+      "id": "alcance",
+      "run": "@alcance",
+      "status": "ok",
+      "code": 0,
+      "seconds": 0.0,
+      "output": "archivos tocados:\n  docs/stories/1-2-bazas-y-resolucion.md\n  src/engine/__tests__/apply.test.ts\n  src/engine/__tests__/helpers.ts\n  src/engine/__tests__/scenarios/hands.test.ts\n  src/engine/__tests__/scoring.test.ts\n  src/engine/__tests__/tricks.test.ts\n  src/engine/__tests__/truco.test.ts\n  src/engine/apply.ts\n  src/engine/scoring.ts\n  src/engine/tricks.ts\n  src/engine/truco.ts\n  workflow/runs/1-2-bazas-y-resolucion/implementation.md\n  workflow/runs/1-2-bazas-y-resolucion/state.json\n  workflow/runs/1-2-bazas-y-resolucion/verify.json"
+    },
+    {
+      "id": "tipos",
+      "run": "npx --no-install tsc --noEmit",
+      "status": "ok",
+      "code": 0,
+      "seconds": 0.6,
+      "output": ""
+    },
+    {
+      "id": "lint",
+      "run": "npm run lint --silent",
+      "status": "ok",
+      "code": 0,
+      "seconds": 0.7,
+      "output": "…(recortado)…\noblems were reported from '@typescript-eslint/no-explicit-any')\n   80:21  warning  'players' is assigned a value but never used. Allowed unused vars must match /^_/u                     @typescript-eslint/no-unused-vars\n   82:5   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')\n  103:5   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')\n  132:5   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')\n  144:21  warning  'players' is assigned a value but never used. Allowed unused vars must match /^_/u                     @typescript-eslint/no-unused-vars\n  146:5   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')\n  157:21  warning  'players' is assigned a value but never used. Allowed unused vars must match /^_/u                     @typescript-eslint/no-unused-vars\n  159:5   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')\n  173:5   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')\n  191:5   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')\n  206:5   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')\n  226:5   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')\n  243:5   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')\n  244:11  warning  'baza' is assigned a value but never used. Allowed unused vars must match /^_/u                        @typescript-eslint/no-unused-vars\n  250:5   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')\n  251:11  warning  'mano' is assigned a value but never used. Allowed unused vars must match /^_/u                        @typescript-eslint/no-unused-vars\n\n/Users/emmanuelvaldez/GameDev/.worktrees/1-2-bazas-y-resolucion/src/__tests__/GameEngine.turnOrder.test.ts\n  5:32  warning  'beforeEach' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars\n  7:29  warning  'GameConfig' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars\n  7:41  warning  'CardDef' is defined but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars\n\n/Users/emmanuelvaldez/GameDev/.worktrees/1-2-bazas-y-resolucion/src/ai/AIPlayer.ts\n    6:15  warning  'PlayerConfig' is defined but never used. Allowed unused vars must match /^_/u             @typescript-eslint/no-unused-vars\n    6:38  warning  'Suit' is defined but never used. Allowed unused vars must match /^_/u                     @typescript-eslint/no-unused-vars\n  163:11  warning  'ourCardHighest' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars\n\n/Users/emmanuelvaldez/GameDev/.worktrees/1-2-bazas-y-resolucion/src/ai/DecisionEngine.ts\n    8:24  warning  'PlayerConfig' is defined but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars\n    9:25  warning  'CorePlayer' is defined but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars\n   42:10  warning  'hasCard' is defined but never used. Allowed unused vars must match /^_/u          @typescript-eslint/no-unused-vars\n  366:11  warning  'maxVal' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars\n\n/Users/emmanuelvaldez/GameDev/.worktrees/1-2-bazas-y-resolucion/src/core/EnvidoScorer.ts\n  5:24  warning  'CardNumber' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars\n\n/Users/emmanuelvaldez/GameDev/.worktrees/1-2-bazas-y-resolucion/src/core/GameEngine.ts\n    4:23  warning  'getCardName' is defined but never used. Allowed unused vars must match /^_/u                                            @typescript-eslint/no-unused-vars\n    7:12  warning  'Suit' is defined but never used. Allowed unused vars must match /^_/u                                                   @typescript-eslint/no-unused-vars\n    7:30  warning  'PlayerCount' is defined but never used. Allowed unused vars must match /^_/u                                            @typescript-eslint/no-unused-vars\n    7:43  warning  'Difficulty' is defined but never used. Allowed unused vars must match /^_/u                                             @typescript-eslint/no-unused-vars\n    9:40  warning  'GameEvent' is defined but never used. Allowed unused vars must match /^_/u                                              @typescript-eslint/no-unused-vars\n   10:3   warning  'HandRecord' is defined but never used. Allowed unused vars must match /^_/u                                             @typescript-eslint/no-unused-vars\n  105:41  warning  The `Function` type accepts any function-like value.\nPrefer explicitly defining any function parameters and return type  @typescript-eslint/no-unsafe-function-type\n  111:31  warning  The `Function` type accepts any function-like value.\nPrefer explicitly defining any function parameters and return type  @typescript-eslint/no-unsafe-function-type\n\n/Users/emmanuelvaldez/GameDev/.worktrees/1-2-bazas-y-resolucion/src/ui/UIManager.ts\n    6:3   warning  'HandRecord' is defined but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars\n  361:15  warning  'team' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars\n\n✖ 82 problems (0 errors, 82 warnings)\n  0 errors and 24 warnings potentially fixable with the `--fix` option."
+    },
+    {
+      "id": "tests",
+      "run": "npm test --silent",
+      "status": "ok",
+      "code": 0,
+      "seconds": 1.9,
+      "output": "RUN  v4.1.9 /Users/emmanuelvaldez/GameDev/.worktrees/1-2-bazas-y-resolucion\n\n\n Test Files  17 passed (17)\n      Tests  231 passed (231)\n   Start at  13:35:01\n   Duration  1.68s (transform 1.04s, setup 0ms, import 1.33s, tests 1.92s, environment 1ms)\n\nThe plugin \"vite-tsconfig-paths\" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead."
+    },
+    {
+      "id": "build",
+      "run": "npm run build --silent",
+      "status": "ok",
+      "code": 0,
+      "seconds": 0.8,
+      "output": "vite v5.4.21 building for production...\ntransforming...\n✓ 10 modules transformed.\nrendering chunks...\ncomputing gzip size...\ndist/index.html                  0.45 kB │ gzip:  0.30 kB\ndist/assets/index-9stWTwtA.css  11.68 kB │ gzip:  2.92 kB\ndist/assets/index-JHTUSXb_.js   62.80 kB │ gzip: 14.99 kB │ map: 194.34 kB\n✓ built in 110ms"
+    },
+    {
+      "id": "arranque",
+      "run": "@arranque",
+      "status": "ok",
+      "code": 0,
+      "seconds": 0.7,
+      "output": "200 /"
+    }
+  ]
+}

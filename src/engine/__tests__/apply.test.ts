@@ -5,7 +5,6 @@ import { applyAction } from '../apply.js';
 import { createDeck } from '../cards.js';
 import { getActor, getLegalActions, sameAction } from '../legal.js';
 import { createMatch } from '../match.js';
-import { completeTrick } from '../tricks.js';
 import type { Action, MatchState } from '../types.js';
 import { deckFor, ids } from './helpers.js';
 
@@ -143,14 +142,25 @@ describe('applyAction — PLAY_CARD', () => {
     expect(getActor(state)).toBe('p0');
   });
 
-  it('cuando se completa la baza delega en completeTrick (stub de la historia 1-2)', () => {
+  it('cuando se completa la baza la resuelve el motor: TRICK_WON y nuevo líder [ENG-16]', () => {
+    // mazo fijo `createDeck().slice(0, 6)`: p1 1-espada/3-espada/5-espada, p0 2-espada/4-espada/6-espada
     const state = match2p();
     const afterP1 = playFirst('p1', state);
-    const p0CardId = afterP1.hand.hands['p0'][0].id;
+    const p0Card = afterP1.hand.hands['p0'][0];
 
-    expect(() => applyAction(afterP1, 'p0', { type: 'PLAY_CARD', cardId: p0CardId })).toThrow(
-      'NOT_IMPLEMENTED: historia 1-2',
-    );
+    const result = applyAction(afterP1, 'p0', { type: 'PLAY_CARD', cardId: p0Card.id });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.events).toEqual([
+      { type: 'CARD_PLAYED', playerId: 'p0', card: p0Card },
+      { type: 'TRICK_WON', trick: 0, winnerTeam: 1, winnerPlayerId: 'p1' },
+    ]);
+    expect(result.state.hand.tricks).toHaveLength(1);
+    expect(result.state.hand.tricks[0]).toMatchObject({ winnerTeam: 1, winnerPlayerId: 'p1', leaderId: 'p1' });
+    expect(result.state.hand.currentTrick).toEqual({ leaderId: 'p1', plays: [] });
+    expect(result.state.hand.turnId).toBe('p1');
+    expect(result.state.phase).toBe('PLAYING');
     // el estado recibido no queda a medio tocar
     expect(afterP1.hand.currentTrick.plays).toHaveLength(1);
     expect(ids(afterP1.hand.hands['p0'])).toHaveLength(3);
@@ -211,10 +221,21 @@ describe('applyAction — rechazos', () => {
       error: 'MATCH_OVER',
     });
   });
-});
 
-describe('completeTrick (stub)', () => {
-  it('es el stub documentado de la historia 1-2', () => {
-    expect(() => completeTrick(match2p(), [])).toThrow('NOT_IMPLEMENTED: historia 1-2');
+  it('cuando la mano se cierra por bazas no queda nada legal', () => {
+    let state = match2p();
+    let actor = getActor(state);
+    while (actor !== null) {
+      state = playFirst(actor, state);
+      actor = getActor(state);
+    }
+
+    expect(state.phase).toBe('HAND_OVER');
+    expect(getActor(state)).toBeNull();
+    expect(getLegalActions(state, 'p1')).toEqual([]);
+    expect(applyAction(state, 'p1', { type: 'PLAY_CARD', cardId: '12-copa' })).toEqual({
+      ok: false,
+      error: 'NOT_YOUR_TURN',
+    });
   });
 });

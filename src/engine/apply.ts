@@ -20,7 +20,7 @@ function applyPlayCard(state: MatchState, playerId: PlayerId, cardId: string, ev
   events.push({ type: 'CARD_PLAYED', playerId, card });
 
   if (hand.currentTrick.plays.length === hand.participants.length) {
-    // La baza está completa: la resuelve la historia 1-2.
+    // La baza está completa: la resuelve `tricks.ts` (ganador o parda, y si la mano se decide, la cierra).
     completeTrick(state, events);
   } else {
     hand.turnId = nextParticipantId(hand, playerId);

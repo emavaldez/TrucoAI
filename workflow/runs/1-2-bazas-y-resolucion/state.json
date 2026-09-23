@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "id": "1-2-bazas-y-resolucion",
   "title": "Motor v2: bazas y resolución de la mano",
-  "status": "ready",
+  "status": "approved",
   "branch": "task/1-2-bazas-y-resolucion",
-  "worktree": null,
+  "worktree": "/Users/emmanuelvaldez/GameDev/.worktrees/1-2-bazas-y-resolucion",
   "correctionCycle": 0,
   "dispatch": {
     "approved": true,
@@ -12,23 +12,23 @@
     "approvedAt": "2026-09-23T16:22:28.973941+00:00"
   },
   "implementation": {
-    "completed": false,
-    "commit": null
+    "completed": true,
+    "commit": "d3b8ef0dfe773a4e1a41ca2744c62d7d8b436b03"
   },
   "audit": {
-    "decision": "pending",
-    "auditedBy": null,
-    "auditedAt": null
+    "decision": "approved",
+    "auditedBy": "Claude",
+    "auditedAt": "2026-09-23T19:11:05.597680+00:00"
   },
   "merge": {
-    "approved": false,
-    "approvedBy": null,
-    "approvedAt": null,
+    "approved": true,
+    "approvedBy": "Emmanuel (vía Claude, 2026-09-23)",
+    "approvedAt": "2026-09-23T19:11:05.668497+00:00",
     "commit": null
   },
   "timestamps": {
     "createdAt": "2026-09-23T14:40:08.154455+00:00",
-    "updatedAt": "2026-09-23T16:22:28.974092+00:00"
+    "updatedAt": "2026-09-23T19:11:05.668697+00:00"
   },
   "scope": {
     "allow": [
@@ -36,5 +36,10 @@
       "docs/stories/1-2-bazas-y-resolucion.md"
     ]
   },
-  "kind": "default"
+  "kind": "default",
+  "verify": {
+    "ok": true,
+    "at": "2026-09-23T16:35:05.005846+00:00",
+    "skipped": false
+  }
 }

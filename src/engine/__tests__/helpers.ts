@@ -1,8 +1,14 @@
 // Helpers compartidos por los tests del motor.
-// `deckFor` arma un mazo fijo para que cada jugador reciba exactamente las cartas pedidas.
+// `deckFor` arma un mazo fijo para que cada jugador reciba exactamente las cartas pedidas;
+// `playTrick`/`playTricks` juegan bazas enteras en el orden real de turno.
 
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { join, relative } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { applyAction } from '../apply.js';
 import { createDeck } from '../cards.js';
-import type { Card, CardNumber, PlayerId, Suit } from '../types.js';
+import { getActor } from '../legal.js';
+import type { Card, CardNumber, GameEvent, MatchState, PlayerId, Suit } from '../types.js';
 
 /** Arma una carta a partir de su id ("1-espada", "7-oro", "12-copa"). */
 export function card(id: string): Card {
@@ -49,4 +55,74 @@ export function deckFor(handsByPlayer: Record<PlayerId, string[]>, manoSeat: num
     }
     return slot;
   });
+}
+
+/**
+ * Juega una baza completa en el orden real de turno (`getActor` decide quién sigue):
+ * `cards[playerId]` es la carta que juega cada uno. Tira si algo no es legal.
+ */
+export function playTrick(state: MatchState, cards: Record<PlayerId, string>): { state: MatchState; events: GameEvent[] } {
+  let current = state;
+  const events: GameEvent[] = [];
+
+  for (let i = 0; i < state.hand.participants.length; i++) {
+    const actor = getActor(current);
+    if (actor === null) throw new Error('playTrick: no hay actor (¿la mano ya terminó?)');
+    const cardId: string | undefined = cards[actor];
+    if (cardId === undefined) throw new Error(`playTrick: falta la carta de ${actor}`);
+    const result = applyAction(current, actor, { type: 'PLAY_CARD', cardId });
+    if (!result.ok) throw new Error(`playTrick: ${actor} no puede jugar ${cardId} (${result.error})`);
+    current = result.state;
+    events.push(...result.events);
+  }
+
+  return { state: current, events };
+}
+
+/** Juega varias bazas seguidas, una por elemento. */
+export function playTricks(
+  state: MatchState,
+  ...tricks: Record<PlayerId, string>[]
+): { state: MatchState; events: GameEvent[] } {
+  let current = state;
+  const events: GameEvent[] = [];
+
+  for (const cards of tricks) {
+    const played = playTrick(current, cards);
+    current = played.state;
+    events.push(...played.events);
+  }
+
+  return { state: current, events };
+}
+
+/**
+ * Copia del estado con el marcador dado. SOLO para tests de fin de partida:
+ * el motor arranca siempre 0-0 y nadie fuera de `scoring.ts` escribe `scores`.
+ */
+export function withScores(state: MatchState, scores: [number, number]): MatchState {
+  const next = structuredClone(state);
+  next.scores = [scores[0], scores[1]];
+  return next;
+}
+
+/** Todos los .ts de `src/engine` (salteando `__tests__`): ruta relativa y código, para chequeos de fuente. */
+export function engineSources(): { file: string; source: string }[] {
+  const root = fileURLToPath(new URL('../', import.meta.url));
+
+  const walk = (dir: string): string[] => {
+    const found: string[] = [];
+    for (const entry of readdirSync(dir)) {
+      const full = join(dir, entry);
+      if (statSync(full).isDirectory()) {
+        if (entry === '__tests__') continue;
+        found.push(...walk(full));
+      } else if (entry.endsWith('.ts')) {
+        found.push(full);
+      }
+    }
+    return found;
+  };
+
+  return walk(root).map((absolute) => ({ file: relative(root, absolute), source: readFileSync(absolute, 'utf8') }));
 }
