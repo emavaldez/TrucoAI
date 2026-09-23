@@ -46,6 +46,18 @@ export default tseslint.config(
     languageOptions: {
       globals: { ...globals.browser, ...globals.node },
     },
+    rules: {
+      // Convención del proyecto: `_` como prefijo de stubs / parámetros y
+      // variables no usados (historia 1-1, auditoría ciclo 1).
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
+    },
   },
   {
     files: legacy,

@@ -1,6 +1,6 @@
 # Historia 1-1: Dominio, RNG, reparto y rotación (motor v2)
 
-Status: ready-for-dev
+Status: review
 wf-id: `1-1-dominio-rng-reparto` · kind: `default`
 Depende de: 0-1
 
@@ -58,14 +58,14 @@ para que el resto de las historias del motor v2 se construyan sobre una base pur
 
 ## Tareas
 
-- [ ] `types.ts` (AC 1)
-- [ ] `rng.ts` + tests (distribución básica, determinismo, `shuffle` no muta y es permutación) (AC 2)
-- [ ] `cards.ts` + tests: 40 cartas únicas sin 8/9; tabla completa de `cardRank` (las 40 cartas contra la tabla del GDD); `envidoValue`; nombres (AC 3)
-- [ ] `match.ts`: `createMatch`, `startHand`, `startNextHand` + tests (AC 4, 5, 6)
-- [ ] `legal.ts`, `apply.ts`, `tricks.ts` (stub) + tests: actor, legalidad, errores, turno circular, no mutación (AC 7)
-- [ ] `index.ts` (AC 8)
-- [ ] Test de pureza/determinismo (AC 9)
-- [ ] Completar Dev Agent Record
+- [x] `types.ts` (AC 1)
+- [x] `rng.ts` + tests (distribución básica, determinismo, `shuffle` no muta y es permutación) (AC 2)
+- [x] `cards.ts` + tests: 40 cartas únicas sin 8/9; tabla completa de `cardRank` (las 40 cartas contra la tabla del GDD); `envidoValue`; nombres (AC 3)
+- [x] `match.ts`: `createMatch`, `startHand`, `startNextHand` + tests (AC 4, 5, 6)
+- [x] `legal.ts`, `apply.ts`, `tricks.ts` (stub) + tests: actor, legalidad, errores, turno circular, no mutación (AC 7)
+- [x] `index.ts` (AC 8)
+- [x] Test de pureza/determinismo (AC 9)
+- [x] Completar Dev Agent Record
 
 ## Dev Notes
 
@@ -88,9 +88,52 @@ para que el resto de las historias del motor v2 se construyan sobre una base pur
 ## Dev Agent Record
 
 ### Agent Model Used
+
+Hermes Agent (perfil `trucoai`, worker headless) · modelo `deepseek-v4-flash` · worktree `../.worktrees/1-1-dominio-rng-reparto`, rama `task/1-1-dominio-rng-reparto`.
+
 ### Debug Log References
+
+- `npm ci` en el worktree: 58 paquetes (el worktree no traía `node_modules`; `vitest` solo estaba ausente, la suite no corría).
+- Gate de pureza [AI-11] falló en la primera corrida con `rng.ts: Math.random`: el propio comentario del archivo contenía el literal prohibido. Se reescribió el comentario ("aleatoriedad global"). El escáner es literal (grep), así que ningún archivo de `src/engine` puede nombrar esos identificadores ni en comentarios.
+- `helpers.test.ts` esperaba que las cartas del mano cayeran en `deck[0..2]`; con `manoSeat = 0` y 4 jugadores caen en `k = 0, 4, 8`. Se corrigió la expectativa del test (el helper estaba bien).
+- `npx vitest run --coverage` requiere `@vitest/coverage-v8`, que todavía no está en `package.json` (lo agrega 0-1). Se instaló con `npm install --no-save` para medir, y se restauró `node_modules/.package-lock.json` (archivo trackeado) para no ensuciar el diff.
+
 ### Completion Notes List
+
+- AC 1: `types.ts` transcribe los 24 tipos de `architecture.md` §4 sin cambios de nombres ni semántica.
+- AC 2–3: `rng.ts` (mulberry32 + `nextInt` + `shuffle` Fisher–Yates sobre copia) y `cards.ts` (40 cartas en orden estable, tabla de rango del GDD §3 completa, `envidoValue`, `cardName`/`cardNickname`).
+- AC 4–6: `createMatch` (asientos `p0..p{n-1}`, `team = i % 2`, `isHuman` solo p0, nombres por defecto por modo, repartidor por `firstDealerSeat` o `nextInt`, ruleset completo con defaults, reparto de la mano 1) y `startNextHand` (solo `HAND_OVER`, rota el repartidor, reparte con el RNG persistido en `rngState`, `phase = 'PLAYING'`, evento `HAND_STARTED`).
+- AC 7: `getActor`/`getLegalActions` en `legal.ts` (con `sameAction` para comparación estructural); `applyAction` en `apply.ts` con `structuredClone`, `NOT_YOUR_TURN`, `ILLEGAL_ACTION`, `MATCH_OVER` y `version + 1`; `completeTrick` de `tricks.ts` es el stub que tira `NOT_IMPLEMENTED: historia 1-2`.
+- AC 8: `index.ts` re-exporta exactamente tipos, `createMatch`, `startNextHand`, `getActor`, `getLegalActions`, `applyAction`, `createDeck`, `cardRank`, `envidoValue`, `cardName`, `cardNickname`, `createRng`.
+- AC 9: test de pureza (escáner literal de `Math.random`, `Date.now`, `setTimeout`, `document`, `window` sobre los 8 módulos, salteando `__tests__`), test de no-import del legacy, `JSON.parse(JSON.stringify(state))` `toEqual` `state`, `structuredClone` y determinismo por semilla.
+- AC 10: 65 tests nuevos (187 en total, 122 del legacy intactos), `tsc --noEmit` y `npm run build` verdes; cobertura medida de `src/engine`: 100% líneas / 95.45% ramas / 100% funciones (umbral 90/85).
+- Regresiones con ID: `[ENG-06]` (rotación del repartidor/mano), `[ENG-10]` (4 tests de rechazo: turno, carta ajena, cantos/mazo, `MATCH_OVER`), `[ENG-19]` (fases explícitas: `AWAITING_*` no tienen actor), `[AI-11]` (pureza/determinismo).
+- **Desvío de alcance documentado:** `npm run lint` y `npm run test:coverage` (AC 10) todavía **no existen**: son de la historia 0-1, que no está mergeada. Agregarlos implica tocar `package.json`/`eslint.config.js`/`vitest.config.ts`, fuera del `scope.allow` de esta tarea, así que no se agregaron. Los umbrales de cobertura de `src/engine` se verificaron igual, con el mismo 90/85, y salen en verde. El gate `lint` de `wf` está explícitamente diferido por `workflow/config.json` hasta el merge de 0-1.
+- No se modificó nada de `src/core/`, `src/App.ts`, `src/ui/` ni `src/ai/` (legacy).
+
 ### File List
+
+Nuevos (15, todos dentro de `src/engine/`):
+
+- `src/engine/types.ts` (AC 1)
+- `src/engine/rng.ts` (AC 2)
+- `src/engine/cards.ts` (AC 3)
+- `src/engine/match.ts` (AC 4, 5, 6)
+- `src/engine/legal.ts` (AC 7)
+- `src/engine/apply.ts` (AC 7)
+- `src/engine/tricks.ts` (AC 7, stub de 1-2)
+- `src/engine/index.ts` (AC 8)
+- `src/engine/__tests__/helpers.ts` (`card`, `ids`, `seatOf`, `deckFor` para las historias siguientes)
+- `src/engine/__tests__/helpers.test.ts` (6 tests)
+- `src/engine/__tests__/rng.test.ts` (10 tests)
+- `src/engine/__tests__/cards.test.ts` (8 tests)
+- `src/engine/__tests__/match.test.ts` (19 tests)
+- `src/engine/__tests__/apply.test.ts` (16 tests)
+- `src/engine/__tests__/purity.test.ts` (6 tests)
+
+Modificados: `docs/stories/1-1-dominio-rng-reparto.md` (este registro y `Status: review`).
 
 ## Change Log
 - 2026-09-23 · Claude (SM) · Historia creada.
+- 2026-09-23 · Hermes (worker `trucoai`) · Implementación del motor v2 (dominio, RNG, reparto, rotación y API) + 65 tests. `Status: review`.
+- 2026-09-23 · Hermes (operador) · Ciclo 1: rebase sobre main (0-1), convención _ en no-unused-vars.
