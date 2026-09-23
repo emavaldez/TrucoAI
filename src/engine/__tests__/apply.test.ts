@@ -40,9 +40,11 @@ describe('getActor', () => {
     expect(getActor(state)).toBeNull();
   });
 
-  it('[ENG-19] en AWAITING_ENVIDO y AWAITING_FLOR todavía no hay actor (historias 1-4 y 1-8)', () => {
+  it('[ENG-19] en AWAITING_ENVIDO y AWAITING_FLOR sin canto pendiente no hay actor (fase incoherente)', () => {
     const state = match2p();
     for (const phase of ['AWAITING_ENVIDO', 'AWAITING_FLOR'] as const) {
+      // fase forzada sin canto pendiente: `AWAITING_FLOR` es de la 1-8 y el envido
+      // pendiente de la 1-4 (con canto pendiente el actor sí existe: ver envido.test.ts).
       state.phase = phase;
       expect(getActor(state), phase).toBeNull();
       expect(getLegalActions(state, 'p1'), phase).toEqual([]);
@@ -71,11 +73,17 @@ describe('getActor', () => {
 });
 
 describe('getLegalActions', () => {
-  it('en PLAYING devuelve el canto de truco y un PLAY_CARD por carta, en ese orden', () => {
+  it('en PLAYING devuelve el canto de truco, los cantos de envido y un PLAY_CARD por carta, en ese orden', () => {
     const state = match2p();
     const cartas: Action[] = state.hand.hands['p1'].map((card) => ({ type: 'PLAY_CARD', cardId: card.id }));
-    expect(getLegalActions(state, 'p1')).toEqual([{ type: 'CALL_TRUCO' }, ...cartas]);
-    expect(getLegalActions(state, 'p1')).toHaveLength(4);
+    expect(getLegalActions(state, 'p1')).toEqual([
+      { type: 'CALL_TRUCO' },
+      { type: 'CALL_ENVIDO', call: 'E' },
+      { type: 'CALL_ENVIDO', call: 'R' },
+      { type: 'CALL_ENVIDO', call: 'F' },
+      ...cartas,
+    ]);
+    expect(getLegalActions(state, 'p1')).toHaveLength(7);
   });
 
   it('devuelve [] para cualquier otro jugador', () => {
@@ -211,9 +219,9 @@ describe('applyAction — rechazos', () => {
   it('[ENG-10] rechaza los cantos que todavía no existen y el mazo: nada fuera de getLegalActions', () => {
     const state = match2p();
     const illegales: Action[] = [
-      // `CALL_TRUCO` ya es legal para el actor desde la 1-3 (tiene sus propios tests en truco.test.ts).
+      // `CALL_TRUCO` es legal para el actor desde la 1-3 y `CALL_ENVIDO` desde la 1-4:
+      // tienen sus propios tests en truco.test.ts y envido.test.ts.
       { type: 'ANSWER_TRUCO', answer: 'QUIERO' },
-      { type: 'CALL_ENVIDO', call: 'E' },
       { type: 'ANSWER_ENVIDO', answer: 'QUIERO' },
       { type: 'DECLARE_FLOR' },
       { type: 'ANSWER_FLOR', answer: 'QUIERO' },

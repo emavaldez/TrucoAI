@@ -32,4 +32,5 @@ export { createMatch, startNextHand } from './match.js';
 export { getActor, getLegalActions } from './legal.js';
 export { applyAction } from './apply.js';
 export { cardName, cardNickname, cardRank, createDeck, envidoValue } from './cards.js';
+export { envidoScore } from './envidoScore.js';
 export { createRng } from './rng.js';

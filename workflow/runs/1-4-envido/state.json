@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "id": "1-4-envido",
   "title": "Motor v2: envido",
-  "status": "ready",
+  "status": "approved",
   "branch": "task/1-4-envido",
-  "worktree": null,
+  "worktree": "/Users/emmanuelvaldez/GameDev/.worktrees/1-4-envido",
   "correctionCycle": 0,
   "dispatch": {
     "approved": true,
@@ -12,23 +12,23 @@
     "approvedAt": "2026-09-23T20:19:20.722639+00:00"
   },
   "implementation": {
-    "completed": false,
-    "commit": null
+    "completed": true,
+    "commit": "dc3b11616751d35ae6b21591905e18614d259758"
   },
   "audit": {
-    "decision": "pending",
-    "auditedBy": null,
-    "auditedAt": null
+    "decision": "approved",
+    "auditedBy": "Claude",
+    "auditedAt": "2026-09-23T21:24:10.565307+00:00"
   },
   "merge": {
-    "approved": false,
-    "approvedBy": null,
-    "approvedAt": null,
+    "approved": true,
+    "approvedBy": "Emmanuel (vía Claude, 2026-09-23)",
+    "approvedAt": "2026-09-23T21:24:10.638477+00:00",
     "commit": null
   },
   "timestamps": {
     "createdAt": "2026-09-23T14:40:08.217552+00:00",
-    "updatedAt": "2026-09-23T20:19:20.722761+00:00"
+    "updatedAt": "2026-09-23T21:24:10.638599+00:00"
   },
   "scope": {
     "allow": [
@@ -36,5 +36,10 @@
       "docs/stories/1-4-envido.md"
     ]
   },
-  "kind": "default"
+  "kind": "default",
+  "verify": {
+    "ok": true,
+    "at": "2026-09-23T20:37:24.619000+00:00",
+    "skipped": false
+  }
 }

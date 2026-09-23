@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { applyAction } from '../apply.js';
 import { createDeck } from '../cards.js';
 import { getActor, getLegalActions } from '../legal.js';
-import type { Action, Card, CardNumber, GameEvent, MatchState, PlayerId, Rng, Suit } from '../types.js';
+import type { Action, Card, CardNumber, EnvidoCall, GameEvent, MatchState, PlayerId, Rng, Suit } from '../types.js';
 
 /** Arma una carta a partir de su id ("1-espada", "7-oro", "12-copa"). */
 export function card(id: string): Card {
@@ -117,6 +117,24 @@ export function answerTruco(
   answer: 'QUIERO' | 'NO_QUIERO',
 ): { state: MatchState; events: GameEvent[] } {
   return act(state, playerId, { type: 'ANSWER_TRUCO', answer }, 'answerTruco');
+}
+
+/** Canta (o sube) el envido con `playerId`; tira si no es legal. */
+export function callEnvido(
+  state: MatchState,
+  playerId: PlayerId,
+  call: EnvidoCall,
+): { state: MatchState; events: GameEvent[] } {
+  return act(state, playerId, { type: 'CALL_ENVIDO', call }, 'callEnvido');
+}
+
+/** Responde el canto de envido pendiente; tira si no es legal. */
+export function answerEnvido(
+  state: MatchState,
+  playerId: PlayerId,
+  answer: 'QUIERO' | 'NO_QUIERO',
+): { state: MatchState; events: GameEvent[] } {
+  return act(state, playerId, { type: 'ANSWER_ENVIDO', answer }, 'answerEnvido');
 }
 
 /** Aplica una acción que tiene que ser legal; tira con el error del motor si no lo es. */

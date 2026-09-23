@@ -87,6 +87,10 @@ describe('canCallTruco y CALL_TRUCO en PLAYING (AC 1)', () => {
     expect(canCallTruco(state, 'p1')).toBe(true);
     expect(getLegalActions(state, 'p1')).toEqual([
       { type: 'CALL_TRUCO' },
+      // el envido de la 1-4 va después del truco y antes de las cartas
+      { type: 'CALL_ENVIDO', call: 'E' },
+      { type: 'CALL_ENVIDO', call: 'R' },
+      { type: 'CALL_ENVIDO', call: 'F' },
       { type: 'PLAY_CARD', cardId: '1-espada' },
       { type: 'PLAY_CARD', cardId: '7-espada' },
       { type: 'PLAY_CARD', cardId: '4-copa' },
@@ -158,6 +162,11 @@ describe('AWAITING_TRUCO: actor y acciones del respondedor (AC 3)', () => {
       { type: 'ANSWER_TRUCO', answer: 'QUIERO' },
       { type: 'ANSWER_TRUCO', answer: 'NO_QUIERO' },
       { type: 'CALL_TRUCO' },
+      // "el envido está primero" (1-4, AC 3) [UI-05]: en la primera baza el respondedor
+      // del truco todavía tiene derecho a envido.
+      { type: 'CALL_ENVIDO', call: 'E' },
+      { type: 'CALL_ENVIDO', call: 'R' },
+      { type: 'CALL_ENVIDO', call: 'F' },
     ]);
     expect(getLegalActions(state, 'p1')).toEqual([]);
     expect(applyAction(state, 'p1', { type: 'ANSWER_TRUCO', answer: 'QUIERO' })).toEqual({
@@ -407,10 +416,17 @@ describe('[ENG-18] coherencia entre la fase y el canto pendiente', () => {
     let manosNoQueridas = 0;
 
     const coherencia = (candidate: MatchState): void => {
-      expect(
-        candidate.phase === 'AWAITING_TRUCO',
-        `${candidate.phase} / pending ${JSON.stringify(candidate.hand.truco.pending)}`,
-      ).toBe(candidate.hand.truco.pending !== null);
+      const pendiente = candidate.hand.truco.pending !== null;
+      // `AWAITING_TRUCO` siempre tiene un truco pendiente.
+      if (candidate.phase === 'AWAITING_TRUCO') expect(pendiente, candidate.phase).toBe(true);
+      // Un truco pendiente solo se resuelve en `AWAITING_TRUCO` o —desde la 1-4— mientras
+      // se juega "el envido está primero" (AC 3) [UI-05]; y si el envido terminó la partida,
+      // la fase queda en `MATCH_OVER` con el truco sin responder (AC 9: nada más es legal).
+      if (pendiente && candidate.phase !== 'AWAITING_ENVIDO' && candidate.phase !== 'MATCH_OVER') {
+        expect(candidate.phase).toBe('AWAITING_TRUCO');
+      }
+      // Y en `AWAITING_ENVIDO` el que manda es el canto de envido pendiente.
+      if (candidate.phase === 'AWAITING_ENVIDO') expect(candidate.hand.envido.pending).not.toBeNull();
     };
 
     coherencia(state);

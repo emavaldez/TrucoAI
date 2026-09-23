@@ -1,6 +1,7 @@
 // Punto de entrada del motor para actuar: valida contra `getLegalActions` y despacha.
 // Nunca muta el estado recibido (clona con `structuredClone`) y sube `version` en cada acción aplicada.
 
+import { applyAnswerEnvido, applyCallEnvido } from './envido.js';
 import { getActor, getLegalActions, sameAction } from './legal.js';
 import { completeTrick } from './tricks.js';
 import { applyAnswerTruco, applyCallTruco } from './truco.js';
@@ -60,9 +61,15 @@ export function applyAction(
     case 'ANSWER_TRUCO':
       applyAnswerTruco(working, events, playerId, chosen.answer);
       break;
+    case 'CALL_ENVIDO':
+      applyCallEnvido(working, events, playerId, chosen.call);
+      break;
+    case 'ANSWER_ENVIDO':
+      applyAnswerEnvido(working, events, playerId, chosen.answer);
+      break;
     default:
-      // CALL_ENVIDO, ANSWER_ENVIDO, DECLARE_FLOR, ANSWER_FLOR y MAZO todavía no
-      // están en `getLegalActions` (historias 1-4, 1-5 y 1-8): inalcanzable hoy.
+      // DECLARE_FLOR, ANSWER_FLOR y MAZO todavía no están en `getLegalActions`
+      // (historias 1-5 y 1-8): inalcanzable hoy.
       return { ok: false, error: 'ILLEGAL_ACTION' };
   }
 

@@ -214,6 +214,11 @@ describe('4 jugadores: quién responde el canto (AC 2 y 10)', () => {
       { type: 'ANSWER_TRUCO', answer: 'QUIERO' },
       { type: 'ANSWER_TRUCO', answer: 'NO_QUIERO' },
       { type: 'CALL_TRUCO' },
+      // "el envido está primero" (1-4, AC 3) [UI-05]: en la primera baza el respondedor
+      // del truco todavía tiene derecho a envido.
+      { type: 'CALL_ENVIDO', call: 'E' },
+      { type: 'CALL_ENVIDO', call: 'R' },
+      { type: 'CALL_ENVIDO', call: 'F' },
     ]);
 
     // p2 canta en su turno: el rival es p3

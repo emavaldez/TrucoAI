@@ -1,6 +1,6 @@
 # Historia 1-4: Envido (motor v2)
 
-Status: ready-for-dev
+Status: review
 wf-id: `1-4-envido` · kind: `default`
 Depende de: 1-3
 
@@ -91,9 +91,59 @@ para que los tantos se cobren bien y en el momento.
 ## Dev Agent Record
 
 ### Agent Model Used
+Hermes (perfil `trucoai`), modelo `deepseek-v4-flash` — worker de la historia 1-4 sobre el worktree
+`/Users/emmanuelvaldez/GameDev/.worktrees/1-4-envido`, rama `task/1-4-envido`.
+
 ### Debug Log References
+- `npx tsc --noEmit` → sin errores.
+- `npm test` (vitest) → 22 archivos, 347 tests, todos en verde.
+- `npm run test:coverage` → líneas 99.08 %, branches 94.25 %, funciones 100 % (umbral `src/engine/**` 90/85).
+- `npm run lint` → 0 errores (82 warnings preexistentes del código legacy `src/core` + `src/ui`).
+- `npm run build` → `tsc && vite build` OK.
+- `wf verify -i 1-4-envido` → gate `alcance`, `tipos`, `lint`, `tests`, `build` y `arranque` en verde.
+
 ### Completion Notes List
+- **AC 1** — `src/engine/envidoScore.ts`: puntaje puro de un jugador (GDD §6.1). Se calcula siempre sobre
+  `hand.dealt[playerId]`, nunca sobre las cartas que quedan en la mano [ENG-05]: hay un test con el 7 ya jugado.
+- **AC 2 / AC 10** — `canCallEnvido` exige `phase === 'PLAYING'`, ser el actor, primera baza, `envido.status === 'none'`,
+  `truco.level === 0`, `truco.pending === null` y sin flor declarada [ENG-13].
+- **AC 3** — `envidoFirstCalls` habilita `E`/`R`/`F` al respondedor de un truco de nivel 1 en la primera baza [UI-05];
+  `resumeTrucoAfter` hace que al resolver la cadena se vuelva a `AWAITING_TRUCO` con el **mismo** `truco.pending`.
+- **AC 4** — `nextEnvidoCalls` implementa las subidas (nunca se baja) [ENG-04]; en `AWAITING_ENVIDO` solo hay
+  `ANSWER_ENVIDO` y subidas: nunca `PLAY_CARD` ni `CALL_TRUCO` [ENG-02].
+- **AC 5 / AC 6** — `envidoPoints` (tabla del GDD §6.3, incluida la falta) y `faltaValue` (7 en pica-pica; si el líder
+  está en las malas, lo que le falta al ganador) [ENG-11].
+- **AC 7 / AC 8** — `applyAnswerEnvido`: no querido paga al equipo del último que cantó; querido evalúa a los
+  `participants` desde el mano, gana el mayor con empate para el primero en ese orden [ENG-12] y `revealed` corta en el
+  ganador [ENG-17].
+- **AC 9** — los puntos se suman en el momento con `addPoints` (razón `ENVIDO`); si la partida termina, la fase queda en
+  `MATCH_OVER` sin tocar bazas ni cartas.
+- **AC 11** — `src/engine/__tests__/scenarios/envido.test.ts`: las 11 filas de la tabla jugadas de punta a punta (querido y
+  no querido), el empate de 4 jugadores [ENG-12], "el envido está primero" completo, el cierre de ventana [ENG-13] y el
+  envido que termina la partida.
+- **AC 12** — cobertura ≥ 90/85, typecheck, lint, test y build en verde.
+- **Ajustes en los tests de la 1-3** (consecuencia del envido, no cambios de comportamiento del truco):
+  `apply.test.ts`, `truco.test.ts` y `scenarios/truco.test.ts` ahora esperan también los `CALL_ENVIDO` en las acciones
+  legales del respondedor. La invariante `AWAITING_TRUCO ⇔ truco.pending !== null` [ENG-18] pasa a tener dos excepciones
+  documentadas: `AWAITING_ENVIDO` mientras corre "el envido está primero" (AC 3) y `MATCH_OVER` si el envido cerró la
+  partida con el truco sin responder (AC 9).
+- Sin desvíos de la historia: no hubo reglas ambiguas ni archivos fuera del alcance.
+
 ### File List
+- `src/engine/envidoScore.ts` (nuevo) — puntaje de envido de un jugador (AC 1).
+- `src/engine/envido.ts` (nuevo) — ventana, "el envido está primero", cadena y subidas, tabla de puntos, falta,
+  legalidad del respondedor y resolución (AC 2 a 10).
+- `src/engine/legal.ts` — `getActor` en `AWAITING_ENVIDO`; `getLegalActions` con los cantos de envido.
+- `src/engine/apply.ts` — despacho de `CALL_ENVIDO` / `ANSWER_ENVIDO`.
+- `src/engine/index.ts` — export de `envidoScore`.
+- `src/engine/__tests__/envidoScore.test.ts` (nuevo), `src/engine/__tests__/envido.test.ts` (nuevo),
+  `src/engine/__tests__/scenarios/envido.test.ts` (nuevo).
+- `src/engine/__tests__/helpers.ts` — helpers `callEnvido` / `answerEnvido`.
+- `src/engine/__tests__/apply.test.ts`, `src/engine/__tests__/truco.test.ts`,
+  `src/engine/__tests__/scenarios/truco.test.ts` — ajustes por los cantos de envido.
+- `workflow/runs/1-4-envido/implementation.md` — evidencia de la implementación.
 
 ## Change Log
 - 2026-09-23 · Claude (SM) · Historia creada.
+- 2026-09-23 · Hermes (worker) · Implementación completa (envido: puntaje, ventana, cadena, falta y resolución) + tests
+  unitarios y de escenarios. Status → `review`.
