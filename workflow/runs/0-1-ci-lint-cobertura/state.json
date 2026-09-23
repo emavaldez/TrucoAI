@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "0-1-ci-lint-cobertura",
   "title": "CI, lint y cobertura",
-  "status": "approved",
+  "status": "merged",
   "branch": "task/0-1-ci-lint-cobertura",
   "worktree": "/Users/emmanuelvaldez/GameDev/.worktrees/0-1-ci-lint-cobertura",
   "correctionCycle": 0,
@@ -24,11 +24,11 @@
     "approved": true,
     "approvedBy": "Emmanuel (vía Claude, 2026-09-23)",
     "approvedAt": "2026-09-23T15:58:46.894103+00:00",
-    "commit": null
+    "commit": "a50ec78128b3b283e26ad52b07088b6261ffe958"
   },
   "timestamps": {
     "createdAt": "2026-09-23T14:40:08.091541+00:00",
-    "updatedAt": "2026-09-23T15:58:46.894329+00:00"
+    "updatedAt": "2026-09-23T15:58:51.274420+00:00"
   },
   "scope": {
     "allow": [
