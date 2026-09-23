@@ -2,6 +2,7 @@
 
 import { Deck } from './Deck.js';
 import { getCardRank, getCardName } from './Rules.js';
+import { getEnvidoScore, getEnvidoCardValue, getEnvidoPlayerScores } from './EnvidoScorer.js';
 import type {
   CardDef, Suit, CardNumber, PlayerCount, Difficulty,
   PlayerConfig, PlayedCard, RoundResult, PicaPicaSubmanoResult,
@@ -658,47 +659,19 @@ export class GameEngine {
   // ---- Envido utility methods ----
 
   private getEnvidoScore(cards: CardDef[]): number {
-    if (cards.length === 0) return 0;
-    const suitCounts: { [suit: string]: number } = {};
-    for (const card of cards) {
-      suitCounts[card.suit] = (suitCounts[card.suit] || 0) + 1;
-    }
-    let maxScore = 0;
-    for (const [suit, count] of Object.entries(suitCounts)) {
-      if (count >= 2) {
-        const suitCards = cards.filter(c => c.suit === suit);
-        suitCards.sort((a, b) => this.getEnvidoCardValue(b) - this.getEnvidoCardValue(a));
-        maxScore = Math.max(maxScore, 20 + this.getEnvidoCardValue(suitCards[0]) + this.getEnvidoCardValue(suitCards[1]));
-      }
-    }
-    if (maxScore === 0 && cards.length > 0) {
-      maxScore = Math.max(...cards.map(c => this.getEnvidoCardValue(c)));
-    }
-    return maxScore;
+    return getEnvidoScore(cards);
   }
 
   private getEnvidoCardValue(card: CardDef): number {
-    switch (card.number) {
-      case 1: return 1;
-      case 2: return 2;
-      case 3: return 3;
-      case 4: return 4;
-      case 5: return 5;
-      case 6: return 6;
-      case 7: return 7;
-      case 10: return 0;
-      case 11: return 0;
-      case 12: return 0;
-      default: return 0;
-    }
+    return getEnvidoCardValue(card);
   }
 
   private getEnvidoPlayerScores(): { [playerId: string]: number } {
-    const scores: { [playerId: string]: number } = {};
+    const hands: { [playerId: string]: CardDef[] } = {};
     for (const player of this.players) {
-      scores[player.id] = this.getEnvidoScore(this.hands[player.id] || []);
+      hands[player.id] = this.hands[player.id] || [];
     }
-    return scores;
+    return getEnvidoPlayerScores(hands);
   }
 
   /**

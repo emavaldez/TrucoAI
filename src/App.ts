@@ -110,7 +110,9 @@ export class App {
       if (data && data.sonBuenas) {
         const wTeam = data.winnerTeam;
         const title = wTeam === 0 ? 'Equipo 1 gana el Envido' : 'Equipo 2 gana el Envido';
-        this.uiManager.showNotification(title, 'El rival dijo "Son buenas". Envido para tu equipo.', 'success');
+        const humanTeam = this.players[0]?.team ?? 0;
+        const envidoFor = wTeam === humanTeam ? 'tu equipo' : 'el equipo contrario';
+        this.uiManager.showNotification(title, `El rival dijo "Son buenas". Envido para ${envidoFor}.`, 'success');
         return;
       }
       if (data && data.team0Best !== undefined) {
@@ -160,9 +162,12 @@ export class App {
           const aiWants = Math.random() < 0.65;
           const aiRaises = Math.random() < 0.3 && data.level < 3;
           if (aiRaises) {
-            // AI raises by calling challengeTruco (not respondTruco)
+            // AI raises by accepting AND raising to the next level.
+            // Must use respondTruco(want=true, raiseTo=true): challengeTruco
+            // would silently fail here because the truco is still pending
+            // (level>0 && !accepted), which would freeze the game.
             const aiResp = this.players.find(p => p.isAI && p.team !== humanTeam);
-            if (aiResp) this.gameEngine['challengeTruco'](aiResp.id);
+            if (aiResp) this.gameEngine['respondTruco'](aiResp.id, true, true);
           } else {
             this.handleAiTrucoResponse(aiWants);
           }
@@ -324,15 +329,26 @@ export class App {
 
     // AI calls truco sometimes
     if (trucoState.level === 0 && envState.phase === 'none' && Math.random() < 0.25) {
+      const levelBefore = this.gameEngine.getTrucoState().level;
       this.gameEngine['challengeTruco'](playerId);
-      return;
+      // Only wait for the human's response if the truco was ACTUALLY called.
+      // If challengeTruco failed silently (e.g. stuck trucoWaitingForResponse flag),
+      // fall through and play the card — otherwise the AI freezes forever.
+      if (this.gameEngine.getTrucoState().level > levelBefore) return;
     }
 
     // AI calls envido if it's the dealer or pie
     if (currentRound === 0 && envState.phase === 'none' && Math.random() < 0.3) {
       const currentTrick = this.gameEngine.getCurrentTrick();
       if (currentTrick.length === 0 && this.isAIDealerOrPie(playerId)) {
-        setTimeout(() => { this.gameEngine['openEnvido'](playerId); }, 500);
+        setTimeout(() => {
+          this.gameEngine['openEnvido'](playerId);
+          // Only wait for the human's response if the envido was ACTUALLY opened.
+          // If openEnvido failed silently (e.g. envido already resolved this round,
+          // canCallEnvido false), play the card instead — otherwise the AI freezes.
+          if (this.gameEngine.getEnvidoState().phase === 'opening') return;
+          this.gameEngine.playCard(playerId, cardIndex);
+        }, 500);
         return;
       }
     }
@@ -430,8 +446,10 @@ export class App {
     if (aiPlayers.length === 0) return;
     const aiPlayer = aiPlayers[0];
     if (raise) {
-      // AI raises by calling challengeTruco (the accepting team raises)
-      this.gameEngine['challengeTruco'](aiPlayer.id);
+      // AI raises by accepting AND raising to the next level (truco -> retruco -> vale 4).
+      // respondTruco(want=true, raiseTo=true) is the correct mechanic; challengeTruco
+      // would silently fail while the truco is pending, freezing the game.
+      this.gameEngine['respondTruco'](aiPlayer.id, true, true);
       return;
     }
     // Store pending action, show notification first
@@ -441,12 +459,15 @@ export class App {
       this.renderGameState();
     };
     this.renderGameState();
+    const trucoLevel = this.gameEngine.getTrucoState().level;
+    const trucoNames: { [level: number]: string } = { 1: 'Truco', 2: 'Retruco', 3: 'Vale 4' };
+    const trucoName = trucoNames[trucoLevel] || 'Truco';
     if (accept) {
       this.uiManager.showNotification('Truco aceptado',
-        'El equipo contrario QUIERE Truco. Se juega con apuesta más alta.', 'warning');
+        `El equipo contrario QUIERE ${trucoName}. Se juega con apuesta más alta.`, 'warning');
     } else {
       this.uiManager.showNotification('Truco rechazado',
-        'El equipo contrario NO QUIERE Truco. Puntos para tu equipo.', 'success');
+        `El equipo contrario NO QUIERE ${trucoName}. Puntos para tu equipo.`, 'success');
     }
   }
 
@@ -523,8 +544,16 @@ export class App {
   }
 
   private handleTrucoRaise(): void {
-    // Raise = challenge the next level. The accepting team uses challengeTruco.
-    this.gameEngine['challengeTruco'](this.players[0].id);
+    const trucoState = this.gameEngine.getTrucoState();
+    if (trucoState.level > 0 && !trucoState.accepted) {
+      // Truco is PENDING (rival just called and we're responding):
+      // "Subir a Retruco" here means ACCEPT and raise — respondTruco(want=true, raiseTo=true).
+      // challengeTruco would silently fail (level>0 && !accepted) and the button would do nothing.
+      this.gameEngine['respondTruco'](this.players[0].id, true, true);
+    } else {
+      // Truco accepted (or not yet called): raise to the next level.
+      this.gameEngine['challengeTruco'](this.players[0].id);
+    }
   }
 
   // ---- Irse al Mazo Handler ----

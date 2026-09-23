@@ -69,7 +69,7 @@ describe('US-05: Orden de turno correcto en cada baza', () => {
 
       // El MANO juega su primera carta
       const result = engine.playCard(manoId, 0);
-      expect(result).toBe(true);
+      expect(result.ok).toBe(true);
       // Ahora el turno debe ser el siguiente en orden (el de la derecha del MANO)
       const nextIdx = (manoIdx + 1) % order.length;
       expect(engine.getCurrentTurnPlayerId()).toBe(order[nextIdx]);
@@ -88,11 +88,12 @@ describe('US-05: Orden de turno correcto en cada baza', () => {
       const round = engine.getCurrentRound();
       expect(round).toBe(0);
 
-      // Todos los 4 jugadores juegan su primera carta
-      for (const playerId of order) {
+      // Jugar las 4 cartas de la baza respetando el orden de turnos
+      for (let i = 0; i < order.length; i++) {
+        const currentTurn = engine.getCurrentTurnPlayerId();
         const hands = engine.getHands();
-        if (hands[playerId] && hands[playerId].length > 0) {
-          engine.playCard(playerId, 0);
+        if (hands[currentTurn] && hands[currentTurn].length > 0) {
+          engine.playCard(currentTurn, 0);
         }
       }
 
@@ -102,7 +103,7 @@ describe('US-05: Orden de turno correcto en cada baza', () => {
   });
 
   describe('Validación: No es tu turno (engine rechaza jugadas fuera de turno)', () => {
-    it('playCard() devuelve false si no es el turno del jugador', () => {
+    it('playCard() devuelve { ok: false } si no es el turno del jugador', () => {
       const engine = createEngine();
       const order = engine.getPlayingOrder();
       const currentTurn = engine.getCurrentTurnPlayerId();
@@ -112,7 +113,8 @@ describe('US-05: Orden de turno correcto en cada baza', () => {
       const hands = engine.getHands();
       if (hands[wrongPlayer] && hands[wrongPlayer].length > 0) {
         const result = engine.playCard(wrongPlayer, 0);
-        expect(result).toBe(false);
+        expect(result.ok).toBe(false);
+        expect(result.error).toBeDefined();
       }
     });
 
@@ -123,25 +125,24 @@ describe('US-05: Orden de turno correcto en cada baza', () => {
 
       // Solo el MANO puede jugar
       const valid = engine.playCard(currentTurn, 0);
-      expect(valid).toBe(true);
+      expect(valid.ok).toBe(true);
 
-      // El resto no puede jugar hasta que sea su turno
+      // Después de que el MANO juega, el turno avanza al siguiente.
+      // Los jugadores que NO son el nuevo turno actual deben ser rechazados.
+      const newCurrentTurn = engine.getCurrentTurnPlayerId();
       for (const p of order) {
-        if (p !== currentTurn) {
+        if (p !== newCurrentTurn) {
           const hands = engine.getHands();
           // Puede que ya no tenga cartas (si ya jugó antes)
-          const result = p !== currentTurn ?
-            false :
-            engine.playCard(p, 0);
-          // Solo el MANO juega válidamente aquí
-          if (p === currentTurn) {
-            expect(result).toBe(true);
+          if (hands[p] && hands[p].length > 0) {
+            const result = engine.playCard(p, 0);
+            expect(result.ok).toBe(false);
           }
         }
       }
     });
 
-    it('si un jugador no tiene cartas, playCard devuelve false', () => {
+    it('si un jugador no tiene cartas, playCard devuelve { ok: false }', () => {
       const engine = createEngine();
       // Jugar todas las cartas de un jugador
       const order = engine.getPlayingOrder();
@@ -153,17 +154,18 @@ describe('US-05: Orden de turno correcto en cada baza', () => {
           engine.playCard(player1, 0);
         }
       }
-      // Ya no tiene cartas, debe devolver false
-      expect(engine.playCard(player1, 0)).toBe(false);
+      // Ya no tiene cartas, debe devolver { ok: false }
+      const result = engine.playCard(player1, 0);
+      expect(result.ok).toBe(false);
     });
 
-    it('cardIndex inválido devuelve false', () => {
+    it('cardIndex inválido devuelve { ok: false }', () => {
       const engine = createEngine();
       const currentTurn = engine.getCurrentTurnPlayerId();
       const hands = engine.getHands();
       if (hands[currentTurn]) {
-        expect(engine.playCard(currentTurn, -1)).toBe(false);
-        expect(engine.playCard(currentTurn, 99)).toBe(false);
+        expect(engine.playCard(currentTurn, -1).ok).toBe(false);
+        expect(engine.playCard(currentTurn, 99).ok).toBe(false);
       }
     });
   });
