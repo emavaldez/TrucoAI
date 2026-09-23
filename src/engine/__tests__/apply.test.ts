@@ -6,7 +6,7 @@ import { createDeck } from '../cards.js';
 import { getActor, getLegalActions, sameAction } from '../legal.js';
 import { createMatch } from '../match.js';
 import type { Action, MatchState } from '../types.js';
-import { deckFor, ids } from './helpers.js';
+import { deckFor, ids, callTruco } from './helpers.js';
 
 /** Partida de 2 jugadores con mazo fijo: repartidor p0, mano p1 (arranca p1). */
 function match2p(): MatchState {
@@ -40,9 +40,9 @@ describe('getActor', () => {
     expect(getActor(state)).toBeNull();
   });
 
-  it('[ENG-19] en las fases AWAITING_* todavía no hay actor (historias 1-3, 1-4 y 1-8)', () => {
+  it('[ENG-19] en AWAITING_ENVIDO y AWAITING_FLOR todavía no hay actor (historias 1-4 y 1-8)', () => {
     const state = match2p();
-    for (const phase of ['AWAITING_TRUCO', 'AWAITING_ENVIDO', 'AWAITING_FLOR'] as const) {
+    for (const phase of ['AWAITING_ENVIDO', 'AWAITING_FLOR'] as const) {
       state.phase = phase;
       expect(getActor(state), phase).toBeNull();
       expect(getLegalActions(state, 'p1'), phase).toEqual([]);
@@ -52,14 +52,30 @@ describe('getActor', () => {
       });
     }
   });
+
+  it('[ENG-19] en AWAITING_TRUCO decide el respondedor; sin canto pendiente no hay actor (1-3)', () => {
+    const state = match2p();
+    state.phase = 'AWAITING_TRUCO'; // fase forzada sin `truco.pending`: estado incoherente
+    expect(getActor(state)).toBeNull();
+    expect(getLegalActions(state, 'p1')).toEqual([]);
+    expect(applyAction(state, 'p1', { type: 'PLAY_CARD', cardId: state.hand.hands['p1'][0].id })).toEqual({
+      ok: false,
+      error: 'NOT_YOUR_TURN',
+    });
+
+    // con el canto pendiente el actor es el respondedor (ver truco.test.ts)
+    const pendiente = callTruco(match2p(), 'p1').state;
+    expect(pendiente.phase).toBe('AWAITING_TRUCO');
+    expect(getActor(pendiente)).toBe('p0');
+  });
 });
 
 describe('getLegalActions', () => {
-  it('en PLAYING devuelve un PLAY_CARD por carta de la mano del actor, en orden', () => {
+  it('en PLAYING devuelve el canto de truco y un PLAY_CARD por carta, en ese orden', () => {
     const state = match2p();
-    const expected: Action[] = state.hand.hands['p1'].map((card) => ({ type: 'PLAY_CARD', cardId: card.id }));
-    expect(getLegalActions(state, 'p1')).toEqual(expected);
-    expect(getLegalActions(state, 'p1')).toHaveLength(3);
+    const cartas: Action[] = state.hand.hands['p1'].map((card) => ({ type: 'PLAY_CARD', cardId: card.id }));
+    expect(getLegalActions(state, 'p1')).toEqual([{ type: 'CALL_TRUCO' }, ...cartas]);
+    expect(getLegalActions(state, 'p1')).toHaveLength(4);
   });
 
   it('devuelve [] para cualquier otro jugador', () => {
@@ -73,7 +89,7 @@ describe('getLegalActions', () => {
     const after = playFirst('p1', state);
     expect(getActor(after)).toBe('p0');
     expect(getLegalActions(after, 'p1')).toEqual([]);
-    expect(getLegalActions(after, 'p0')).toHaveLength(3);
+    expect(getLegalActions(after, 'p0').filter((action) => action.type === 'PLAY_CARD')).toHaveLength(3);
 
     after.phase = 'HAND_OVER';
     expect(getLegalActions(after, 'p0')).toEqual([]);
@@ -192,10 +208,10 @@ describe('applyAction — rechazos', () => {
     });
   });
 
-  it('[ENG-10] rechaza cantos y mazo: nada fuera de getLegalActions', () => {
+  it('[ENG-10] rechaza los cantos que todavía no existen y el mazo: nada fuera de getLegalActions', () => {
     const state = match2p();
     const illegales: Action[] = [
-      { type: 'CALL_TRUCO' },
+      // `CALL_TRUCO` ya es legal para el actor desde la 1-3 (tiene sus propios tests en truco.test.ts).
       { type: 'ANSWER_TRUCO', answer: 'QUIERO' },
       { type: 'CALL_ENVIDO', call: 'E' },
       { type: 'ANSWER_ENVIDO', answer: 'QUIERO' },

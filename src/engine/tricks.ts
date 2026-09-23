@@ -4,6 +4,7 @@
 
 import { cardRank } from './cards.js';
 import { endHand } from './scoring.js';
+import { teamOfSeat } from './turns.js';
 import type { GameEvent, MatchState, PlayerId, Seat, TeamId, TrickPlay, TrickResult } from './types.js';
 
 /** Lo que dejó una baza: equipo ganador (o `'PARDA'`) y quién jugó la carta máxima. */
@@ -18,13 +19,6 @@ export interface TrickOutcome {
  */
 export type HandWinner = { decided: true; winnerTeam: TeamId } | { decided: false };
 
-/** Equipo de un jugador según los asientos; tira si no está sentado. */
-function teamOfPlayer(seats: readonly Seat[], playerId: PlayerId): TeamId {
-  const seat = seats.find((candidate) => candidate.id === playerId);
-  if (seat === undefined) throw new Error(`UNKNOWN_PLAYER: ${playerId}`);
-  return seat.team;
-}
-
 /**
  * Resuelve una baza (AC 1): gana el equipo de la carta de mayor `cardRank`.
  * Si el rango máximo lo jugaron equipos distintos es parda (`'PARDA'`, sin ganador);
@@ -36,7 +30,7 @@ export function resolveTrick(plays: readonly TrickPlay[], seats: readonly Seat[]
 
   const topRank = plays.reduce((max, play) => Math.max(max, cardRank(play.card)), -1);
   const best = plays.filter((play) => cardRank(play.card) === topRank);
-  const bestTeams = best.map((play) => teamOfPlayer(seats, play.playerId));
+  const bestTeams = best.map((play) => teamOfSeat(seats, play.playerId));
 
   if (bestTeams.some((team) => team !== bestTeams[0])) {
     return { winnerTeam: 'PARDA', winnerPlayerId: null };
@@ -89,7 +83,7 @@ export function nextLeader(trick: TrickResult): PlayerId {
 
 /** Equipo del mano efectivo: el primero de `participants` (en pica-pica, el primero del par). */
 function manoTeamOf(state: MatchState): TeamId {
-  return teamOfPlayer(state.seats, state.hand.participants[0]);
+  return teamOfSeat(state.seats, state.hand.participants[0]);
 }
 
 /**

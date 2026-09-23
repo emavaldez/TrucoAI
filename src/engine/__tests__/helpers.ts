@@ -7,8 +7,8 @@ import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { applyAction } from '../apply.js';
 import { createDeck } from '../cards.js';
-import { getActor } from '../legal.js';
-import type { Card, CardNumber, GameEvent, MatchState, PlayerId, Suit } from '../types.js';
+import { getActor, getLegalActions } from '../legal.js';
+import type { Action, Card, CardNumber, GameEvent, MatchState, PlayerId, Rng, Suit } from '../types.js';
 
 /** Arma una carta a partir de su id ("1-espada", "7-oro", "12-copa"). */
 export function card(id: string): Card {
@@ -94,6 +94,53 @@ export function playTricks(
   }
 
   return { state: current, events };
+}
+
+/** Canta truco/retruco/vale cuatro con `playerId`; tira si no es legal. */
+export function callTruco(state: MatchState, playerId: PlayerId): { state: MatchState; events: GameEvent[] } {
+  return act(state, playerId, { type: 'CALL_TRUCO' }, 'callTruco');
+}
+
+/** Juega la primera carta del actor actual: el turno lo decide el motor, no el test. */
+export function playFirstCard(state: MatchState): { state: MatchState; events: GameEvent[] } {
+  const actor = getActor(state);
+  if (actor === null) throw new Error('playFirstCard: no hay actor');
+  const cardId = state.hand.hands[actor][0]?.id;
+  if (cardId === undefined) throw new Error(`playFirstCard: ${actor} no tiene cartas`);
+  return act(state, actor, { type: 'PLAY_CARD', cardId }, 'playFirstCard');
+}
+
+/** Responde el canto de truco pendiente; tira si no es legal. */
+export function answerTruco(
+  state: MatchState,
+  playerId: PlayerId,
+  answer: 'QUIERO' | 'NO_QUIERO',
+): { state: MatchState; events: GameEvent[] } {
+  return act(state, playerId, { type: 'ANSWER_TRUCO', answer }, 'answerTruco');
+}
+
+/** Aplica una acción que tiene que ser legal; tira con el error del motor si no lo es. */
+function act(
+  state: MatchState,
+  playerId: PlayerId,
+  action: Action,
+  who: string,
+): { state: MatchState; events: GameEvent[] } {
+  const result = applyAction(state, playerId, action);
+  if (!result.ok) throw new Error(`${who}: ${playerId} no puede ${action.type} (${result.error})`);
+  return { state: result.state, events: result.events };
+}
+
+/**
+ * Acción legal al azar del actor, con el `Rng` dado: para tests de invariantes y
+ * simulaciones (determinista si el `Rng` viene con semilla). Tira si no hay actor.
+ */
+export function randomLegalAction(state: MatchState, rng: Rng): { playerId: PlayerId; action: Action } {
+  const playerId = getActor(state);
+  if (playerId === null) throw new Error('randomLegalAction: no hay actor');
+  const legal = getLegalActions(state, playerId);
+  if (legal.length === 0) throw new Error(`randomLegalAction: ${playerId} no tiene acciones legales`);
+  return { playerId, action: legal[Math.floor(rng.next() * legal.length)] };
 }
 
 /**

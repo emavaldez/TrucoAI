@@ -1,6 +1,6 @@
 # Historia 1-3: Truco, retruco y vale cuatro (motor v2)
 
-Status: ready-for-dev
+Status: review
 wf-id: `1-3-truco` · kind: `default`
 Depende de: 1-2
 
@@ -45,12 +45,12 @@ para que el canto más importante del juego funcione sin trampas ni manos que se
 
 ## Tareas
 
-- [ ] `responderFor` (AC 2)
-- [ ] Legalidad y `getActor` para `AWAITING_TRUCO` (AC 1, 3)
-- [ ] Aplicar `CALL_TRUCO` / `ANSWER_TRUCO` (AC 1, 4, 5, 6)
-- [ ] Tabla única + `trucoPoints` (AC 7)
-- [ ] Tests de coherencia, derecho a subir y escenarios (AC 8, 9, 10)
-- [ ] Completar Dev Agent Record
+- [x] `responderFor` (AC 2)
+- [x] Legalidad y `getActor` para `AWAITING_TRUCO` (AC 1, 3)
+- [x] Aplicar `CALL_TRUCO` / `ANSWER_TRUCO` (AC 1, 4, 5, 6)
+- [x] Tabla única + `trucoPoints` (AC 7)
+- [x] Tests de coherencia, derecho a subir y escenarios (AC 8, 9, 10)
+- [x] Completar Dev Agent Record
 
 ## Dev Notes
 
@@ -69,9 +69,57 @@ para que el canto más importante del juego funcione sin trampas ni manos que se
 ## Dev Agent Record
 
 ### Agent Model Used
+
+Hermes headless (perfil `trucoai`), modelo `deepseek-v4-flash`.
+
 ### Debug Log References
+
+- `npm test` → 19 archivos / 276 tests verdes (45 nuevos de esta historia: 23 en
+  `truco.test.ts`, 8 en `turns.test.ts`, 13 en `scenarios/truco.test.ts` y 1 en
+  `apply.test.ts`).
+- `npx vitest run --coverage` → statements 97,94% · branches 94,53% · functions 100% ·
+  lines 98,75% (umbral de `src/engine/**`: 90/85).
+- `npm run typecheck`, `npm run lint` (0 errores) y `npm run build` en verde.
+- `wf verify -i 1-3-truco` → **VERIFICACIÓN EN VERDE** (6/6: alcance, tipos, lint, tests,
+  build, arranque) sobre `d0928bd`, en la primera corrida. Salida completa en
+  `workflow/runs/1-3-truco/verify.json`.
+- Evidencia completa, decisiones y riesgos: `workflow/runs/1-3-truco/implementation.md`.
+
 ### Completion Notes List
+
+- AC 1–10 implementados y cubiertos por tests. Toda la lógica del truco quedó en
+  `truco.ts`; `legal.ts` (actor/legalidad) y `apply.ts` (dispatch) solo delegan.
+- `responderFor` vive en `turns.ts` porque la comparten truco (1-3), envido (1-4) y flor
+  (1-8); `tricks.ts` pasó a usar el `teamOfSeat` de ahí (se sacó una copia privada).
+- La tabla `TRUCO_POINTS` es única [ENG-20] y tiene un test de fuente que verifica que
+  ningún otro módulo del motor la duplique; `endHand` paga `trucoPoints(state)` por bazas
+  y `rejected[pending.level]` en el no querer [ENG-03] (sigue siendo el único que suma).
+- `phase === 'AWAITING_TRUCO'` ⇔ `truco.pending !== null` se verifica tras cada acción en
+  50 manos random con acciones legales aleatorias [ENG-18]; con el canto pendiente
+  `getActor` es el respondedor y `PLAY_CARD` nunca es legal [ENG-02].
+- Los 3 tests de `apply.test.ts` que exigían rechazar `CALL_TRUCO` (stub de 1-2) se
+  actualizaron al comportamiento real, y el test [ENG-19] se separó en envido/flor
+  (siguen sin actor) y truco (decide el respondedor).
+- Sin cambios en la API pública (`index.ts`) ni fuera de `scope.allow`; no se tocó
+  `audit.md` ni los campos de aprobación del estado.
+
 ### File List
+
+| Archivo | Estado |
+|---|---|
+| `src/engine/turns.ts` | nuevo (`teamOfSeat`, `teamOf`, `responderFor`) |
+| `src/engine/truco.ts` | modificado (tabla única, legalidad y transiciones del truco) |
+| `src/engine/legal.ts` | modificado (`getActor` en `AWAITING_TRUCO`, `getLegalActions` por fase) |
+| `src/engine/apply.ts` | modificado (dispatch de `CALL_TRUCO` / `ANSWER_TRUCO`) |
+| `src/engine/tricks.ts` | modificado (`teamOfSeat` compartido) |
+| `src/engine/__tests__/turns.test.ts` | nuevo (8 tests) |
+| `src/engine/__tests__/truco.test.ts` | modificado (25 tests) |
+| `src/engine/__tests__/scenarios/truco.test.ts` | nuevo (13 tests) |
+| `src/engine/__tests__/helpers.ts` | modificado (`act`, `callTruco`, `answerTruco`, `playFirstCard`, `randomLegalAction`, `engineSources`) |
+| `src/engine/__tests__/apply.test.ts` | modificado (tests del stub → comportamiento real) |
+| `docs/stories/1-3-truco.md` | modificado (este record) |
+| `workflow/runs/1-3-truco/implementation.md` | modificado (evidencia) |
 
 ## Change Log
 - 2026-09-23 · Claude (SM) · Historia creada.
+- 2026-09-23 · Hermes (worker) · Implementación completa; tests y gates en verde sobre el commit de tarea.

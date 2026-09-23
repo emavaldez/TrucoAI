@@ -3,6 +3,7 @@
 
 import { getActor, getLegalActions, sameAction } from './legal.js';
 import { completeTrick } from './tricks.js';
+import { applyAnswerTruco, applyCallTruco } from './truco.js';
 import type { Action, Card, GameEvent, HandState, MatchState, PlayerId } from './types.js';
 
 /** Siguiente jugador de la ronda, en orden circular desde el que acaba de jugar. */
@@ -49,10 +50,21 @@ export function applyAction(
   const working = structuredClone(state);
   const events: GameEvent[] = [];
 
-  // TODO(historias 1-3 / 1-4 / 1-8): CALL_TRUCO, ANSWER_TRUCO, CALL_ENVIDO,
-  // ANSWER_ENVIDO, DECLARE_FLOR, ANSWER_FLOR y MAZO.
-  if (chosen.type !== 'PLAY_CARD') return { ok: false, error: 'ILLEGAL_ACTION' };
-  applyPlayCard(working, playerId, chosen.cardId, events);
+  switch (chosen.type) {
+    case 'PLAY_CARD':
+      applyPlayCard(working, playerId, chosen.cardId, events);
+      break;
+    case 'CALL_TRUCO':
+      applyCallTruco(working, events, playerId);
+      break;
+    case 'ANSWER_TRUCO':
+      applyAnswerTruco(working, events, playerId, chosen.answer);
+      break;
+    default:
+      // CALL_ENVIDO, ANSWER_ENVIDO, DECLARE_FLOR, ANSWER_FLOR y MAZO todavía no
+      // están en `getLegalActions` (historias 1-4, 1-5 y 1-8): inalcanzable hoy.
+      return { ok: false, error: 'ILLEGAL_ACTION' };
+  }
 
   working.version += 1;
   return { ok: true, state: working, events };
