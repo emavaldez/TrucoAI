@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "1-1-dominio-rng-reparto",
   "title": "Motor v2: dominio, RNG, reparto y rotación",
-  "status": "approved",
+  "status": "merged",
   "branch": "task/1-1-dominio-rng-reparto",
   "worktree": "/Users/emmanuelvaldez/GameDev/.worktrees/1-1-dominio-rng-reparto",
   "correctionCycle": 0,
@@ -24,11 +24,11 @@
     "approved": true,
     "approvedBy": "Emmanuel (vía Claude, 2026-09-23)",
     "approvedAt": "2026-09-23T16:22:14.020513+00:00",
-    "commit": null
+    "commit": "5cca9732c8171a000ab0ae110c88a23e3a0061ac"
   },
   "timestamps": {
     "createdAt": "2026-09-23T14:40:08.123351+00:00",
-    "updatedAt": "2026-09-23T16:22:14.020658+00:00"
+    "updatedAt": "2026-09-23T16:22:18.296948+00:00"
   },
   "scope": {
     "allow": [
