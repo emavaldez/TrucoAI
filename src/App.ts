@@ -62,7 +62,9 @@ export class App {
       if (state.phase === 'round-resolving' || state.phase === 'round-over' || state.phase === 'picapica-resolving') return;
       // Brief delay so player can see the played cards, then continue
       this._waitingForContinue = true;
+      const version = this._gameVersion;
       setTimeout(() => {
+        if (version !== this._gameVersion) return; // partida vieja ([UI-08])
         this._waitingForContinue = false;
         if (this._pendingAiTurn) {
           const pending = this._pendingAiTurn;
@@ -79,7 +81,9 @@ export class App {
       this.renderGameState();
       const humanTeam = this.players[0]?.team ?? 0;
       if (data.team === humanTeam) {
+        const version = this._gameVersion;
         setTimeout(() => {
+          if (version !== this._gameVersion) return; // partida vieja ([UI-08])
           const aiDecision = Math.random() < 0.6;
           this.handleAiEnvidoResponse(aiDecision);
         }, 900);
@@ -92,7 +96,9 @@ export class App {
       const humanTeam = this.players[0]?.team ?? 0;
       // data.team is the raiser's team — if human raised, AI must respond
       if (data.team === humanTeam) {
+        const version = this._gameVersion;
         setTimeout(() => {
+          if (version !== this._gameVersion) return; // partida vieja ([UI-08])
           const aiWants = Math.random() < 0.6;
           if (data.level !== 'falta-envido' && Math.random() < 0.25) {
             const next = data.level === 'envido' ? 'real-envido' as const : 'falta-envido' as const;
@@ -122,7 +128,11 @@ export class App {
         const msg = `Equipo ${wTeam + 1} gana con ${winnerPoints} pts — se lleva ${data.points} pts`;
         this.uiManager.showNotification(title, msg, 'info');
       } else {
-        setTimeout(() => this.resumeCurrentTurn(), 300);
+        const version = this._gameVersion;
+        setTimeout(() => {
+          if (version !== this._gameVersion) return; // partida vieja ([UI-08])
+          this.resumeCurrentTurn();
+        }, 300);
       }
     });
 
@@ -131,7 +141,9 @@ export class App {
       this.renderGameState();
       const humanTeam = this.players[0]?.team ?? 0;
       if (data.challengerTeam === humanTeam) {
+        const version = this._gameVersion;
         setTimeout(() => {
+          if (version !== this._gameVersion) return; // partida vieja ([UI-08])
           const aiWants = Math.random() < 0.65;
           this.handleAiTrucoResponse(aiWants);
         }, 900);
@@ -144,12 +156,20 @@ export class App {
         this.renderGameState();
         return;
       }
-      setTimeout(() => this.handleTrucoRejected(), 500);
+      const version = this._gameVersion;
+      setTimeout(() => {
+        if (version !== this._gameVersion) return; // partida vieja ([UI-08])
+        this.handleTrucoRejected();
+      }, 500);
     });
 
     // After truco accepted, resume the turn
     this.gameEngine.on('truco-accepted', () => {
-      setTimeout(() => this.resumeCurrentTurn(), 300);
+      const version = this._gameVersion;
+      setTimeout(() => {
+        if (version !== this._gameVersion) return; // partida vieja ([UI-08])
+        this.resumeCurrentTurn();
+      }, 300);
     });
 
     // When truco is raised, the OTHER team must respond
@@ -158,7 +178,9 @@ export class App {
       const humanTeam = this.players[0]?.team ?? 0;
       // If the HUMAN raised (data.team === humanTeam), AI (original caller) must respond
       if (data.team === humanTeam) {
+        const version = this._gameVersion;
         setTimeout(() => {
+          if (version !== this._gameVersion) return; // partida vieja ([UI-08])
           const aiWants = Math.random() < 0.65;
           const aiRaises = Math.random() < 0.3 && data.level < 3;
           if (aiRaises) {
@@ -227,6 +249,9 @@ export class App {
   // ---- Game Setup ----
 
   startGame(playerCount: number, difficulty: 'easy' | 'normal' | 'hard'): void {
+    // Partida nueva: invalida los timers de la anterior ([UI-08]) y descarta
+    // notificaciones/acciones pendientes para que arranque en limpio ([UI-01]).
+    this.beginNewGameVersion();
     this.selectedPlayerCount = playerCount;
     this.selectedDifficulty = difficulty;
     this.gameRunning = true;
@@ -341,7 +366,9 @@ export class App {
     if (currentRound === 0 && envState.phase === 'none' && Math.random() < 0.3) {
       const currentTrick = this.gameEngine.getCurrentTrick();
       if (currentTrick.length === 0 && this.isAIDealerOrPie(playerId)) {
+        const version = this._gameVersion;
         setTimeout(() => {
+          if (version !== this._gameVersion) return; // partida vieja ([UI-08])
           this.gameEngine['openEnvido'](playerId);
           // Only wait for the human's response if the envido was ACTUALLY opened.
           // If openEnvido failed silently (e.g. envido already resolved this round,
@@ -353,7 +380,11 @@ export class App {
       }
     }
 
-    setTimeout(() => { this.gameEngine.playCard(playerId, cardIndex); }, 700);
+    const version = this._gameVersion;
+    setTimeout(() => {
+      if (version !== this._gameVersion) return; // partida vieja ([UI-08])
+      this.gameEngine.playCard(playerId, cardIndex);
+    }, 700);
   }
 
   private handleNewRound(): void {
@@ -366,6 +397,9 @@ export class App {
   }
 
   private handleNewGame(): void {
+    // Volver al menú corta la partida en curso: los timers que quedaron
+    // agendados de esa partida ya no pueden jugar ni mostrar avisos ([UI-01][UI-08]).
+    this.beginNewGameVersion();
     this.gameRunning = false;
     this.players = [];
     this.renderInitialMenu();
@@ -493,6 +527,23 @@ export class App {
   private _pendingTrucoAction: (() => void) | null = null;
   private _waitingForContinue: boolean = false;
   private _pendingAiTurn: any = null;
+
+  /**
+   * Versión de la partida en curso: se incrementa al arrancar una partida y al
+   * volver al menú ("Nuevo juego"). Cada `setTimeout` captura la versión con la
+   * que se agendó y descarta su callback si ya no es la actual, así ningún timer
+   * de la partida anterior juega cartas ni muestra avisos ([UI-08]).
+   */
+  private _gameVersion: number = 0;
+
+  /** Descarta el estado pendiente de la partida anterior y arranca una versión nueva. */
+  private beginNewGameVersion(): void {
+    this._gameVersion++;
+    this._waitingForContinue = false;
+    this._pendingAiTurn = null;
+    this._pendingEnvidoAction = null;
+    this._pendingTrucoAction = null;
+  }
 
   // Temporary builder state (not persisted)
   private _tempEnvidoLevel: string | null = null;

@@ -127,9 +127,30 @@ export class GameEngine {
     this.config = config;
     this.scores = { team0: 0, team1: 0 };
     this.currentHand = 0;
+    this.currentRound = 0;
     this.firstHandCompleted = false;
+    this.gameOver = false;
     this.isPicaPica = this.checkPicaPica();
     this.picaPicaHandAlternation = true;
+
+    // Reset total del estado de partida ([ENG-01] / [UI-01]): una partida nueva
+    // no puede heredar bazas, cantos, pica-pica ni el fin de partida anterior.
+    this.roundResults = [];
+    this.currentTrick = [];
+    this.currentTrickNumber = 0;
+    this.inPicaPicaHand = false;
+    this.picaPicaSubmano = 0;
+    this.picapicaResults = [];
+    this.picaPicaActivePairIds = [];
+    this.hands = {};
+    this.currentTurnPlayerId = '';
+    this.trickWinnerId = '';
+    this.trickWinnerTeam = -1;
+    this.roundWinnerTeam = -1;
+    this.firstTrickWinnerTeam = -1;
+    this.previousStarterId = '';
+    this.resetEnvido();
+    this.resetTruco();
 
     // Record match start
     this.startedAt = Date.now();
@@ -414,6 +435,21 @@ export class GameEngine {
 
     this.resetEnvido();
     this.resetTruco();
+
+    // Si el que arranca la submano es IA, disparar su turno (mismo mecanismo
+    // que startRound). Sin esto la submano arranca con el turno de una IA que
+    // nadie despierta y la partida se congela ([UI-02] / [AI-04]).
+    const starterPlayer = this.getPlayerById(this.starterId);
+    if (starterPlayer && starterPlayer.isAI) {
+      this.emit('ai-turn', {
+        playerId: this.starterId,
+        trickNumber: 0,
+        roundNumber: 0,
+        handNumber: this.currentHand,
+        isPicaPica: true,
+        picaPicaSubmano: submano
+      });
+    }
 
     this.emit('round-start', {
       roundNumber: 0,

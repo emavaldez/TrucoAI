@@ -60,10 +60,7 @@ const SEEDS = (process.env.PARTIDAS_SEEDS ?? '1,2,3')
  *   ([UI-01]) en las tres cantidades.
  * 2p, 4p y `determinismo 4p seed 7` **no** llevan etiqueta.
  */
-const KNOWN_FAILURE_PREFIXES: Array<[string, string]> = [
-  ['partida:6:', 'UI-02'],
-  ['nueva:', 'UI-01'],
-];
+const KNOWN_FAILURE_PREFIXES: Array<[string, string]> = []; // 0-3: sin fallas conocidas
 
 function knownTag(key: string): string {
   const match = KNOWN_FAILURE_PREFIXES.find(([prefix]) => key.startsWith(prefix));
