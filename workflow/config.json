@@ -27,6 +27,10 @@
       "run": "npx --no-install tsc --noEmit"
     },
     {
+      "id": "lint",
+      "run": "npm run lint --silent"
+    },
+    {
       "id": "tests",
       "run": "npm test --silent"
     },
@@ -39,5 +43,5 @@
       "run": "@arranque"
     }
   ],
-  "_nota": "El gate 'lint' se agrega cuando se mergea 0-1; 'e2e' con 4-1. El worker debe correr 'npm ci' en el worktree antes de verificar."
+  "_nota": "Gate lint activo desde 0-1; partidas se agrega con 0-2; e2e con 4-1. El worker debe correr npm ci en el worktree antes de verificar."
 }
