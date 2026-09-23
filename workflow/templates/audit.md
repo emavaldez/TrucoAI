@@ -1,6 +1,6 @@
-# Auditoría: Motor v2: bazas y resolución de la mano
+# Auditoría: {{TITLE}}
 
-- ID: `1-2-bazas-y-resolucion`
+- ID: `{{ID}}`
 - Auditor: supervisor (sesión Hermes)
 - Dictamen: pendiente
 

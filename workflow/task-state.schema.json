@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Agentic workflow task state",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "title", "status", "branch", "worktree", "correctionCycle", "dispatch", "implementation", "audit", "merge", "timestamps"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "title": { "type": "string", "minLength": 1 },
+    "status": { "enum": ["draft", "ready", "dispatched", "implemented", "changes_requested", "approved", "blocked", "merged"] },
+    "branch": { "type": "string", "minLength": 1 },
+    "worktree": { "type": ["string", "null"] },
+    "correctionCycle": { "type": "integer", "minimum": 0 },
+    "dispatch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["approved", "approvedBy", "approvedAt"],
+      "properties": {
+        "approved": { "type": "boolean" },
+        "approvedBy": { "type": ["string", "null"] },
+        "approvedAt": { "type": ["string", "null"], "format": "date-time" }
+      }
+    },
+    "implementation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["completed", "commit"],
+      "properties": {
+        "completed": { "type": "boolean" },
+        "commit": { "type": ["string", "null"] }
+      }
+    },
+    "audit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["decision", "auditedBy", "auditedAt"],
+      "properties": {
+        "decision": { "enum": ["pending", "changes_requested", "approved", "blocked"] },
+        "auditedBy": { "type": ["string", "null"] },
+        "auditedAt": { "type": ["string", "null"], "format": "date-time" }
+      }
+    },
+    "merge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["approved", "approvedBy", "approvedAt", "commit"],
+      "properties": {
+        "approved": { "type": "boolean" },
+        "approvedBy": { "type": ["string", "null"] },
+        "approvedAt": { "type": ["string", "null"], "format": "date-time" },
+        "commit": { "type": ["string", "null"] }
+      }
+    },
+    "timestamps": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["createdAt", "updatedAt"],
+      "properties": {
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}

@@ -1,6 +1,6 @@
-# Implementación: Motor v2: bazas y resolución de la mano
+# Implementación: {{TITLE}}
 
-- ID: `1-2-bazas-y-resolucion`
+- ID: `{{ID}}`
 - Worker: Hermes headless
 - Estado: pendiente
 
