@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Naipe con espada">
+  <title>Naipe con espada</title>
+  <rect x="7" y="4" width="50" height="56" rx="7" fill="#fbfaf4" stroke="#1f2937" stroke-width="3" />
+  <rect x="11" y="8" width="42" height="48" rx="4" fill="none" stroke="#d6d3c8" stroke-width="1.5" />
+  <g>
+    <path d="M32 11 L37 33 L37 37 L27 37 L27 33 Z" fill="#cfd8e3" stroke="#334155" stroke-width="1.8" stroke-linejoin="round" />
+    <path d="M32 13 L32 36" stroke="#94a3b8" stroke-width="1.2" />
+    <rect x="20" y="37" width="24" height="4.5" rx="2.2" fill="#c9a227" stroke="#7c5e12" stroke-width="1.4" />
+    <rect x="29" y="41.5" width="6" height="9.5" rx="2" fill="#8c3b1e" stroke="#5c2410" stroke-width="1.4" />
+    <circle cx="32" cy="53" r="4" fill="#c9a227" stroke="#7c5e12" stroke-width="1.4" />
+  </g>
+  <text x="13" y="21" font-family="Georgia, 'Times New Roman', serif" font-size="12" font-weight="700" fill="#b91c1c">1</text>
+  <text x="46" y="54" font-family="Georgia, 'Times New Roman', serif" font-size="12" font-weight="700" fill="#b91c1c">1</text>
+</svg>

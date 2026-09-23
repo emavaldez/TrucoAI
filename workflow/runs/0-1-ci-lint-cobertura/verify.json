@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "id": "0-1-ci-lint-cobertura",
+  "ok": true,
+  "at": "2026-09-23T15:58:42.635847+00:00",
+  "head": "67a663d55410f4cbef068437ef4375c60e5d081e",
+  "gates": [
+    {
+      "id": "alcance",
+      "run": "@alcance",
+      "status": "ok",
+      "code": 0,
+      "seconds": 0.0,
+      "output": "archivos tocados:\n  .github/workflows/ci.yml\n  .gitignore\n  .nvmrc\n  README.md\n  docs/stories/0-1-ci-lint-cobertura.md\n  eslint.config.js\n  index.html\n  package-lock.json\n  package.json\n  public/favicon.svg\n  scripts/arena.ts\n  scripts/sim.ts\n  vite.config.ts\n  vitest.config.ts\n  workflow/runs/0-1-ci-lint-cobertura/implementation.md\n  workflow/runs/0-1-ci-lint-cobertura/state.json\n  workflow/runs/0-1-ci-lint-cobertura/verify.json"
+    },
+    {
+      "id": "tipos",
+      "run": "npx --no-install tsc --noEmit",
+      "status": "ok",
+      "code": 0,
+      "seconds": 0.7,
+      "output": ""
+    },
+    {
+      "id": "tests",
+      "run": "npm test --silent",
+      "status": "ok",
+      "code": 0,
+      "seconds": 1.6,
+      "output": "RUN  v4.1.9 /Users/emmanuelvaldez/GameDev/.worktrees/0-1-ci-lint-cobertura\n\n\n Test Files  7 passed (7)\n      Tests  122 passed (122)\n   Start at  12:58:39\n   Duration  1.32s (transform 366ms, setup 0ms, import 440ms, tests 1.52s, environment 0ms)\n\nThe plugin \"vite-tsconfig-paths\" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead."
+    },
+    {
+      "id": "build",
+      "run": "npm run build --silent",
+      "status": "ok",
+      "code": 0,
+      "seconds": 1.4,
+      "output": "vite v5.4.21 building for production...\ntransforming...\n✓ 10 modules transformed.\nrendering chunks...\ncomputing gzip size...\ndist/index.html                  0.45 kB │ gzip:  0.30 kB\ndist/assets/index-9stWTwtA.css  11.68 kB │ gzip:  2.92 kB\ndist/assets/index-JHTUSXb_.js   62.80 kB │ gzip: 14.99 kB │ map: 194.34 kB\n✓ built in 134ms"
+    },
+    {
+      "id": "arranque",
+      "run": "@arranque",
+      "status": "ok",
+      "code": 0,
+      "seconds": 0.7,
+      "output": "200 /"
+    }
+  ]
+}
