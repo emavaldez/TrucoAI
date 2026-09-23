@@ -16,6 +16,8 @@ La auditoría de septiembre 2026 (`docs/planning/audit-2026-09.md`) encontró 48
 **Decisión (ADR-1):** construir un motor nuevo, **puro y determinista**, en `src/engine/`, al lado del viejo;
 montar IA y app sobre él; y recién al final borrar el código legacy (`src/core/`, `src/App.ts`, `src/ai/` viejo).
 No se parchea el motor viejo salvo que bloquee algo.
+**Excepción registrada (2026-09-23):** la historia 0-3 parchea el legacy solo para que las partidas publicadas no se traben
+(pica-pica en 6p, "Nuevo juego"). Las reglas mal implementadas del legacy no se tocan: las resuelve el motor v2.
 
 ## 2. Principios
 

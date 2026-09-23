@@ -26,7 +26,8 @@ para poder jugar una partida tras otra sin errores.
 5. **Historial [ENG-15]:** cada mano cerrada agrega un `HandRecord` con `number` correcto (1, 2, 3, …), `dealerId`, `manoId`, `tricks`, `cantos`
    (con `answer`, `points` y `pointsTo` completos para truco y envido), `winnerTeam`, `points`, `reason`, `scoresAfter`.
    Si la partida termina **en medio** de una mano (por envido), igual se agrega el `HandRecord` de esa mano con `reason: 'MATCH_ENDED'`, `points: 0` y sus cantos [UI-16].
-6. **Partida nueva limpia [ENG-01]:** test que juega una partida completa hasta `MATCH_OVER` con una política "primera acción legal",
+6. **Partida nueva limpia [ENG-01]:** test (`fullMatch.test.ts`) que, para **2, 4 y 6 jugadores** (6p con `picaPica: false` hasta la 1-7), juega una partida completa hasta `MATCH_OVER` con una política "primera acción legal"
+   y otra con una política aleatoria con semilla; en cada paso `getActor` no es `null` fuera de `HAND_OVER`/`MATCH_OVER` y tiene acciones legales (sin trabas);
    después llama a `createMatch` de nuevo y juega otra completa; la segunda arranca con `scores [0,0]`, `history []`, `phase 'PLAYING'` y termina bien.
 7. **Escenarios** (`scenarios/mazo-fin.test.ts`):
    - mazo sin truco → 1 al rival; con truco querido → 2; con retruco querido → 3; respondiendo a un truco → 1 al que cantó; respondiendo a un vale cuatro → 3;
@@ -62,3 +63,4 @@ para poder jugar una partida tras otra sin errores.
 
 ## Change Log
 - 2026-09-23 · Claude (SM) · Historia creada.
+- 2026-09-23 · Claude (SM) · AC6: partida completa en 2, 4 y 6 jugadores (pedido de Emmanuel).

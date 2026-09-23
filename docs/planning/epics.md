@@ -25,6 +25,7 @@ y se ejecuta como tarea `wf` con el mismo ID: Claude (supervisor) asigna y audit
 - **NFR3** Cobertura: engine ≥ 90% líneas, ai ≥ 80%, app ≥ 80%.
 - **NFR4** Responsive (390×844 y 1280×800), táctil ≥ 44 px, jugable con teclado, textos escapados.
 - **NFR5** CI en GitHub Actions; Vercel deploya `main`; `main` siempre verde.
+- **NFR6** Después de cada historia se juegan partidas completas de 2, 4 y 6 jugadores en el juego real (gate `partidas`) y en el motor (simulación): ninguna se traba.
 
 ### Mapa de cobertura
 
@@ -45,7 +46,8 @@ y se ejecuta como tarea `wf` con el mismo ID: Claude (supervisor) asigna y audit
 | NFR2 | 1-6 |
 | NFR3 | 0-1, cada historia |
 | NFR4 | 3-2, 3-4 |
-| NFR5 | 0-1, 4-1, 4-2 |
+| NFR5 | 0-1, 0-2, 4-1, 4-2 |
+| NFR6 | 0-2, 0-3, 1-5, 1-6 |
 
 ---
 
@@ -61,6 +63,16 @@ Como desarrollador, quiero que cada push corra typecheck, lint, tests con cobert
 - **AC4** Cobertura v8 configurada en `vitest.config.ts` con umbrales por carpeta para `src/engine/**` (90/85), `src/ai/**` excepto legacy (80/70), `src/app/**` (80/70); legacy excluido. Con carpetas vacías la corrida no falla.
 - **AC5** `.nvmrc` = 20; favicon agregado (sin 404); `README.md` con cómo correr, testear y el flujo BMAD+wf.
 - **AC6** Todos los tests existentes siguen en verde.
+
+### Historia 0-2: Test de partidas completas 2/4/6 (gate `partidas`)
+Como Emmanuel, quiero que después de cada historia se juegue sola una partida completa de 2, 4 y 6 jugadores en el juego real, para detectar trabas antes del merge.
+- **AC** Playwright + driver de UI intercambiable + bot con semilla y reloj acelerado; 3 partidas por modo; detecta trabas, marcador que baja y errores de página; "nueva partida" **[UI-01]**.
+- **AC** Gate `partidas` en `wf` y job en CI. Fallas conocidas etiquetadas `@conocido-<ID>` hasta la 0-3.
+
+### Historia 0-3: Hotfix del juego actual — partidas completas sin trabas
+Excepción acotada al ADR-1: el juego publicado se traba en 6p (pica-pica) y "Nuevo juego" nace terminado.
+- **AC** Submanos de pica-pica disparan el turno de la IA **[UI-02, AI-04]**; nuevo juego limpio **[UI-01, ENG-01]**; timers viejos descartados **[UI-08]**.
+- **AC** `test:partidas` verde con 10 semillas por modo, sin etiquetas `@conocido`.
 
 ## Épica 1 — Motor de reglas v2 (`src/engine/`)
 
@@ -100,7 +112,7 @@ Objetivo: un motor puro, determinista y completamente testeado que implemente el
 - **AC2** Puntos del mazo según GDD §8; un solo `endHand` y un solo `addPoints` para todos los caminos.
 - **AC3** Fin inmediato al llegar a 30 desde cualquier camino; marcador con tope 30; `MATCH_OVER` sin acciones legales.
 - **AC4** Historial por mano (`HandRecord`) con número de mano correcto **[ENG-15]** y cantos.
-- **AC5** `createMatch` siempre produce estado limpio; test "jugar partida completa, crear otra, jugar otra" **[ENG-01]**.
+- **AC5** `createMatch` siempre produce estado limpio; test "jugar partida completa, crear otra, jugar otra" en **2, 4 y 6 jugadores** **[ENG-01]**.
 
 ### Historia 1-6: Observación pública y simulación
 - **AC1** `getObservation` según contrato; no incluye cartas ocultas ni envidos no revelados; test de fuga serializando **[AI-09]**.

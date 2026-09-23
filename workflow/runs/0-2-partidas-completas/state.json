@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "id": "0-2-partidas-completas",
+  "title": "Test de partidas completas 2/4/6 (gate partidas)",
+  "status": "draft",
+  "branch": "task/0-2-partidas-completas",
+  "worktree": null,
+  "correctionCycle": 0,
+  "dispatch": {
+    "approved": false,
+    "approvedBy": null,
+    "approvedAt": null
+  },
+  "implementation": {
+    "completed": false,
+    "commit": null
+  },
+  "audit": {
+    "decision": "pending",
+    "auditedBy": null,
+    "auditedAt": null
+  },
+  "merge": {
+    "approved": false,
+    "approvedBy": null,
+    "approvedAt": null,
+    "commit": null
+  },
+  "timestamps": {
+    "createdAt": "2026-09-23T15:54:37.328222+00:00",
+    "updatedAt": "2026-09-23T15:54:37.328222+00:00"
+  },
+  "scope": {
+    "allow": [
+      "e2e/*",
+      "playwright.config.ts",
+      "package.json",
+      "package-lock.json",
+      ".github/*",
+      "workflow/config.json",
+      "docs/planning/test-strategy.md",
+      "docs/project-context.md",
+      "docs/stories/0-2-partidas-completas.md"
+    ]
+  },
+  "kind": "default"
+}

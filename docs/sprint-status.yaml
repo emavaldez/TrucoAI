@@ -12,11 +12,13 @@ approver: Emmanuel
 
 development_status:
   epic-0: in-progress
-  0-1-ci-lint-cobertura: ready-for-dev
+  0-1-ci-lint-cobertura: in-progress
+  0-2-partidas-completas: ready-for-dev
+  0-3-hotfix-trabas-legacy: ready-for-dev
   epic-0-retrospective: optional
 
   epic-1: in-progress
-  1-1-dominio-rng-reparto: ready-for-dev
+  1-1-dominio-rng-reparto: in-progress
   1-2-bazas-y-resolucion: ready-for-dev
   1-3-truco: ready-for-dev
   1-4-envido: ready-for-dev

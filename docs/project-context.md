@@ -16,7 +16,7 @@ Truco argentino web (Vite + TypeScript, sin frameworks ni dependencias de runtim
 
 ## Reglas duras
 - El motor nuevo vive en `src/engine/` y es **puro**: sin DOM, sin timers, sin `Math.random` (usar `Rng`), sin mutar el estado recibido.
-- **No importes nada del código legacy** (`src/core/`, `src/App.ts`, `src/ui/UIManager.ts` viejo, `src/ai/AIPlayer.ts`, `src/ai/DecisionEngine.ts`, `src/ai/CardEvaluator.ts`) desde código nuevo, y no modifiques el legacy salvo que tu historia lo diga.
+- **No importes nada del código legacy** (`src/core/`, `src/App.ts`, `src/ui/UIManager.ts` viejo, `src/ai/AIPlayer.ts`, `src/ai/DecisionEngine.ts`, `src/ai/CardEvaluator.ts`) desde código nuevo, y no modifiques el legacy salvo que tu historia lo diga (hoy solo la 0-3).
 - Toda acción pasa por `getLegalActions` / `applyAction`. Nada de acceder a funciones privadas con `obj['x']`.
 - La IA solo recibe `Observation`. Nunca manos ajenas.
 - TypeScript `strict`, sin `any` en `src/engine` ni `src/ai`. Imports con extensión `.js`.
