@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "id": "1-6-observacion-y-simulacion",
   "ok": true,
-  "at": "2026-09-24T20:23:53.055957+00:00",
-  "head": "9dcc5ddcf9cf313b757d1b639aaee01dffeb704c",
+  "at": "2026-09-24T20:25:09.696583+00:00",
+  "head": "e27f3fe4882f24032b1ec3e1c4e2cd93c311e976",
   "gates": [
     {
       "id": "alcance",
@@ -18,7 +18,7 @@
       "run": "npx --no-install tsc --noEmit",
       "status": "ok",
       "code": 0,
-      "seconds": 0.9,
+      "seconds": 0.8,
       "output": ""
     },
     {
@@ -35,14 +35,14 @@
       "status": "ok",
       "code": 0,
       "seconds": 2.5,
-      "output": "RUN  v4.1.9 /Users/emmanuelvaldez/GameDev/.worktrees/1-6-observacion-y-simulacion\n\n\n Test Files  29 passed (29)\n      Tests  401 passed (401)\n   Start at  17:23:08\n   Duration  2.26s (transform 1.44s, setup 0ms, import 2.06s, tests 3.95s, environment 1ms)\n\nThe plugin \"vite-tsconfig-paths\" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead."
+      "output": "RUN  v4.1.9 /Users/emmanuelvaldez/GameDev/.worktrees/1-6-observacion-y-simulacion\n\n\n Test Files  29 passed (29)\n      Tests  401 passed (401)\n   Start at  17:24:25\n   Duration  2.29s (transform 1.55s, setup 0ms, import 2.16s, tests 4.38s, environment 1ms)\n\nThe plugin \"vite-tsconfig-paths\" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead."
     },
     {
       "id": "build",
       "run": "npm run build --silent",
       "status": "ok",
       "code": 0,
-      "seconds": 1.0,
+      "seconds": 0.9,
       "output": "vite v5.4.21 building for production...\ntransforming...\n✓ 10 modules transformed.\nrendering chunks...\ncomputing gzip size...\ndist/index.html                  0.45 kB │ gzip:  0.30 kB\ndist/assets/index-9stWTwtA.css  11.68 kB │ gzip:  2.92 kB\ndist/assets/index-C8K1YJj9.js   64.19 kB │ gzip: 15.17 kB │ map: 199.22 kB\n✓ built in 109ms"
     },
     {
@@ -58,8 +58,8 @@
       "run": "npm run test:partidas --silent",
       "status": "ok",
       "code": 0,
-      "seconds": 40.4,
-      "output": "Running 13 tests using 3 workers\n\n[partida] 2p seed 1: 15-30 en 277 pasos (111s de reloj de juego) · 24 manos · firma 8cecd082\n  ✓   1 [chromium] › e2e/partidas.spec.ts:257:5 › partida completa 2p seed 1 (5.3s)\n[partida] 2p seed 2: 13-30 en 221 pasos (88s de reloj de juego) · 27 manos · firma f7dd6a2b\n  ✓   2 [chromium] › e2e/partidas.spec.ts:257:5 › partida completa 2p seed 2 (5.4s)\n[partida] 2p seed 3: 14-30 en 232 pasos (93s de reloj de juego) · 28 manos · firma 14261841\n  ✓   3 [chromium] › e2e/partidas.spec.ts:257:5 › partida completa 2p seed 3 (5.9s)\n[partida] 4p seed 3: 15-30 en 436 pasos (174s de reloj de juego) · 24 manos · firma a2e8fcbc\n[partida] 4p seed 1: 24-30 en 403 pasos (161s de reloj de juego) · 29 manos · firma 94859c94\n  ✓   6 [chromium] › e2e/partidas.spec.ts:257:5 › partida completa 4p seed 3 (6.0s)\n  ✓   4 [chromium] › e2e/partidas.spec.ts:257:5 › partida completa 4p seed 1 (6.7s)\n[partida] 4p seed 2: 22-30 en 484 pasos (194s de reloj de juego) · 33 manos · firma bae7e12c\n  ✓   5 [chromium] › e2e/partidas.spec.ts:257:5 › partida completa 4p seed 2 (7.1s)\n[partida] 6p seed 2: 11-30 en 506 pasos (202s de reloj de juego) · 23 manos · firma f134a7d3\n  ✓   8 [chromium] › e2e/partidas.spec.ts:257:5 › partida completa 6p seed 2 (6.0s)\n[partida] 6p seed 1: 16-30 en 458 pasos (183s de reloj de juego) · 26 manos · firma 734ea70d\n  ✓   7 [chromium] › e2e/partidas.spec.ts:257:5 › partida completa 6p seed 1 (6.3s)\n[partida] 6p seed 3: 22-30 en 671 pasos (268s de reloj de juego) · 28 manos · firma 294f6d2f\n  ✓   9 [chromium] › e2e/partidas.spec.ts:257:5 › partida completa 6p seed 3 (7.9s)\n[nueva] 2p seed 1: 15-30 en 277 pasos (111s de reloj de juego) · 24 manos · firma 8cecd082\n  ✓  10 [chromium] › e2e/partidas.spec.ts:292:3 › nueva partida tras terminar 2p (5.6s)\n[nueva] 4p seed 1: 24-30 en 403 pasos (161s de reloj de juego) · 29 manos · firma 94859c94\n  ✓  11 [chromium] › e2e/partidas.spec.ts:292:3 › nueva partida tras terminar 4p (7.0s)\n[nueva] 6p seed 1: 16-30 en 458 pasos (183s de reloj de juego) · 26 manos · firma 734ea70d\n  ✓  12 [chromium] › e2e/partidas.spec.ts:292:3 › nueva partida tras terminar 6p (6.6s)\n[determinismo] 4p seed 7: firma 1 = 060f523c (517 pasos, 29 manos)\n[determinismo] 4p seed 7: firma 2 = 060f523c (517 pasos, 29 manos)\n  ✓  13 [chromium] › e2e/partidas.spec.ts:351:1 › determinismo 4p seed 7 (14.3s)\n\n  13 passed (40.0s)"
+      "seconds": 40.5,
+      "output": "Running 13 tests using 3 workers\n\n[partida] 2p seed 1: 15-30 en 277 pasos (111s de reloj de juego) · 24 manos · firma 8cecd082\n  ✓   2 [chromium] › e2e/partidas.spec.ts:257:5 › partida completa 2p seed 1 (5.3s)\n[partida] 2p seed 2: 13-30 en 221 pasos (88s de reloj de juego) · 27 manos · firma f7dd6a2b\n  ✓   1 [chromium] › e2e/partidas.spec.ts:257:5 › partida completa 2p seed 2 (5.4s)\n[partida] 2p seed 3: 14-30 en 232 pasos (93s de reloj de juego) · 28 manos · firma 14261841\n  ✓   3 [chromium] › e2e/partidas.spec.ts:257:5 › partida completa 2p seed 3 (5.9s)\n[partida] 4p seed 3: 15-30 en 436 pasos (174s de reloj de juego) · 24 manos · firma a2e8fcbc\n  ✓   6 [chromium] › e2e/partidas.spec.ts:257:5 › partida completa 4p seed 3 (6.0s)\n[partida] 4p seed 1: 24-30 en 403 pasos (161s de reloj de juego) · 29 manos · firma 94859c94\n  ✓   4 [chromium] › e2e/partidas.spec.ts:257:5 › partida completa 4p seed 1 (6.7s)\n[partida] 4p seed 2: 22-30 en 484 pasos (194s de reloj de juego) · 33 manos · firma bae7e12c\n  ✓   5 [chromium] › e2e/partidas.spec.ts:257:5 › partida completa 4p seed 2 (7.0s)\n[partida] 6p seed 2: 11-30 en 506 pasos (202s de reloj de juego) · 23 manos · firma f134a7d3\n[partida] 6p seed 1: 16-30 en 458 pasos (183s de reloj de juego) · 26 manos · firma 734ea70d\n  ✓   8 [chromium] › e2e/partidas.spec.ts:257:5 › partida completa 6p seed 2 (6.1s)\n  ✓   7 [chromium] › e2e/partidas.spec.ts:257:5 › partida completa 6p seed 1 (6.2s)\n[partida] 6p seed 3: 22-30 en 671 pasos (268s de reloj de juego) · 28 manos · firma 294f6d2f\n  ✓   9 [chromium] › e2e/partidas.spec.ts:257:5 › partida completa 6p seed 3 (7.9s)\n[nueva] 2p seed 1: 15-30 en 277 pasos (111s de reloj de juego) · 24 manos · firma 8cecd082\n  ✓  10 [chromium] › e2e/partidas.spec.ts:292:3 › nueva partida tras terminar 2p (5.6s)\n[nueva] 4p seed 1: 24-30 en 403 pasos (161s de reloj de juego) · 29 manos · firma 94859c94\n  ✓  11 [chromium] › e2e/partidas.spec.ts:292:3 › nueva partida tras terminar 4p (7.0s)\n[nueva] 6p seed 1: 16-30 en 458 pasos (183s de reloj de juego) · 26 manos · firma 734ea70d\n  ✓  12 [chromium] › e2e/partidas.spec.ts:292:3 › nueva partida tras terminar 6p (6.7s)\n[determinismo] 4p seed 7: firma 1 = 060f523c (517 pasos, 29 manos)\n[determinismo] 4p seed 7: firma 2 = 060f523c (517 pasos, 29 manos)\n  ✓  13 [chromium] › e2e/partidas.spec.ts:351:1 › determinismo 4p seed 7 (14.2s)\n\n  13 passed (40.1s)"
     }
   ]
 }
