@@ -29,6 +29,7 @@ export type {
 } from './types.js';
 
 export { createMatch, startNextHand } from './match.js';
+export { getObservation } from './observation.js';
 export { getActor, getLegalActions } from './legal.js';
 export { applyAction } from './apply.js';
 export { cardName, cardNickname, cardRank, createDeck, envidoValue } from './cards.js';
