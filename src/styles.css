@@ -1,3 +1,96 @@
+/* ─── Tokens de diseño "mesa v2" (ux-design.md §3) ─────
+   Fuente de valores exactos: docs/design/mesa-v2/*.dc.html.
+   Ninguna regla de este archivo debe usar colores sueltos: todo pasa por estas custom properties. */
+
+:root {
+  /* Fondo y superficies */
+  --bg: #0C1310;            /* fondo de la página */
+  --bar: #09100D;           /* barra superior */
+  --surface: #111A16;       /* tarjetas oscuras, feed */
+  --surface-border: #1E2B25;
+  --surface-2: #131E19;     /* asiento */
+  --surface-3: #15201B;     /* píldoras de estado */
+  --line-soft: #26372F;     /* borde inactivo de asiento / píldora */
+  --line-mid: #3A4A42;      /* borde de botón secundario */
+
+  /* Mesa */
+  --rail: #5A3920;                                    /* baranda de madera */
+  --felt-1: #246B4F; --felt-2: #1A523C; --felt-3: #133D2D;
+  --felt-glow: rgba(201, 162, 75, 0.4);               /* aro interior del paño */
+
+  /* Papel (cartas, globos, paneles) */
+  --paper: #F7F1E3;
+  --paper-border: #D9CCAE;
+  --paper-2: #EFE6D2;
+  --paper-line: #DCCFB1;
+  --paper-line-2: #E4D9C1;
+  --paper-ink-soft: #6B6150;
+  --paper-ink-mid: #4A4234;
+  --ink: #1A140A;
+
+  /* Texto sobre oscuro */
+  --text: #EDE6D6;
+  --text-2: #B9C9C0;
+  --text-3: #93A69C;
+  --text-pill: #CFE3D8;
+  --text-muted: #6F8F80;
+
+  /* Acentos */
+  --gold: #E9C46A;
+  --gold-soft: rgba(233, 196, 106, 0.16);
+  --gold-tint: rgba(233, 196, 106, 0.12);
+  --gold-line: rgba(233, 196, 106, 0.45);
+  --gold-glow: rgba(233, 196, 106, 0.55);
+  --nos: #8CCBF2;      /* celeste: Nosotros */
+  --nos-soft: rgba(140, 203, 242, 0.16);
+  --nos-tint: rgba(140, 203, 242, 0.08);
+  --nos-line: #BFE3F8;
+  --ellos: #F0A35E;    /* naranja: Ellos */
+  --ellos-soft: rgba(240, 163, 94, 0.16);
+  --go: #1F5A43;       /* verde botón primario sobre papel */
+  --go-deep: #173F31;  /* dorso de carta */
+  --go-border: #C9A24B;
+  --danger: #9B3B2E;
+  --danger-ink: #8A2E22;
+  --ellos-ink: #9B4A16; /* naranja oscuro sobre papel */
+
+  /* Fósforos del marcador */
+  --match-on: #E9D8A6;
+  --match-off: rgba(233, 216, 166, 0.13);
+
+  /* Palos (tinta de número y marco) */
+  --suit-oro: #8A5D10;
+  --suit-copa: #A3302A;
+  --suit-espada: #244A70;
+  --suit-basto: #3F6B2F;
+  --suit-oro-soft: rgba(138, 93, 16, 0.28);
+  --suit-copa-soft: rgba(163, 48, 42, 0.28);
+  --suit-espada-soft: rgba(36, 74, 112, 0.28);
+  --suit-basto-soft: rgba(63, 107, 47, 0.28);
+  /* Tintas de los SVG de palos (docs/design/mesa-v2/Card.dc.html) */
+  --pip-oro-1: #E3B24A; --pip-oro-2: #B7811F;
+  --pip-copa-1: #C4473F; --pip-copa-2: #6E1F1B; --pip-copa-3: #F2C27A;
+  --pip-espada-1: #D5DEE8; --pip-espada-2: #2F4E6E; --pip-espada-3: #8FA5BD;
+  --pip-espada-4: #2F5D8A; --pip-espada-5: #1E3C5A;
+  --pip-basto-1: #8C5E36; --pip-basto-2: #3F2A15; --pip-basto-3: #5C3C1F;
+  --pip-basto-4: #4F8A3E; --pip-basto-5: #2C5222;
+
+  /* Tipografía */
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-ui: 'Figtree', system-ui, sans-serif;
+
+  /* Sombras */
+  --shadow-card: 0 6px 16px rgba(0, 0, 0, 0.42);
+  --shadow-card-playable: 0 12px 26px rgba(0, 0, 0, 0.5), 0 0 0 2px rgba(233, 196, 106, 0.85);
+  --shadow-table: 0 34px 70px rgba(0, 0, 0, 0.55);
+  --shadow-panel: 0 24px 60px rgba(0, 0, 0, 0.6);
+  --scrim: rgba(4, 9, 7, 0.74);
+  --scrim-strong: rgba(4, 9, 7, 0.8);
+  --glass: rgba(8, 20, 15, 0.55);
+  --glass-strong: rgba(8, 20, 15, 0.72);
+  --glass-stronger: rgba(8, 20, 15, 0.78);
+}
+
 /* ─── Reset & Base ──────────────────────────── */
 
 *, *::before, *::after {
@@ -10,9 +103,9 @@ html, body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  font-family: 'Segoe UI', system-ui, sans-serif;
-  background: #0a1a0a;
-  color: #fff;
+  font-family: var(--font-ui);
+  background: var(--bg);
+  color: var(--text);
 }
 
 #game-container {
