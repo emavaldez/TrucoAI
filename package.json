@@ -11,7 +11,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:partidas": "playwright test e2e/partidas.spec.ts --grep-invert @conocido",
+    "test:partidas": "playwright test e2e/partidas.spec.ts e2e/layout.spec.ts --grep-invert @conocido",
     "test:partidas:todo": "playwright test e2e/partidas.spec.ts",
     "e2e": "playwright test",
     "sim": "tsx scripts/sim.ts",

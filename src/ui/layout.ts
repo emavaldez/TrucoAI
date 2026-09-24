@@ -28,6 +28,8 @@ export interface SeatPoint {
 export interface SeatOptions {
   seatWidth?: number;
   seatHeight?: number;
+  /** Altura extra debajo del asiento (la mano del humano); se descuenta del clamp inferior. */
+  extraBelow?: number;
 }
 
 /** Ángulo por slot de asiento según la cantidad de jugadores (slot = posición del jugador). */
@@ -43,12 +45,13 @@ export const SLOT_ANGLES: Record<number, number[]> = {
 export function tableEllipse(viewport: Viewport, options: SeatOptions = {}) {
   const seatW = options.seatWidth ?? 200;
   const seatH = options.seatHeight ?? 72;
+  const extra = options.extraBelow ?? 0;
   const cx = viewport.width / 2;
   const cy = viewport.height * 0.42;
-  // Radios máximos que mantienen el asiento (con su caja) dentro del viewport con 8 px de margen.
+  // Radios máximos que mantienen el asiento (con su caja + mano debajo) dentro del viewport con 8 px de margen.
   const maxRx = Math.max(0, (viewport.width - seatW) / 2 - 8);
   const maxRyTop = Math.max(0, cy - seatH / 2 - 8);
-  const maxRyBottom = Math.max(0, viewport.height - cy - seatH / 2 - 8);
+  const maxRyBottom = Math.max(0, viewport.height - cy - seatH / 2 - 8 - extra);
   return {
     cx,
     cy,
@@ -74,14 +77,15 @@ export function seatPosition(
   if (index < 0 || index >= playerCount) throw new Error(`seatPosition: índice fuera de rango: ${index}`);
 
   const angle = angles[index];
-  const ellipse = tableEllipse(viewport, { seatWidth: seatW, seatHeight: seatH });
+  const ellipse = tableEllipse(viewport, { seatWidth: seatW, seatHeight: seatH, extraBelow: options.extraBelow });
   const rad = (angle * Math.PI) / 180;
   const x = ellipse.cx + ellipse.rx * Math.cos(rad) - seatW / 2;
   const y = ellipse.cy + ellipse.ry * Math.sin(rad) - seatH / 2;
 
-  // Redoble de seguridad: clamp explícito dentro del viewport.
+  // Redoble de seguridad: clamp explícito dentro del viewport (con la mano debajo).
+  const extra = options.extraBelow ?? 0;
   const clampedX = Math.min(Math.max(x, 8), viewport.width - seatW - 8);
-  const clampedY = Math.min(Math.max(y, 8), viewport.height - seatH - 8);
+  const clampedY = Math.min(Math.max(y, 8), viewport.height - seatH - extra - 8);
   return { x: Math.round(clampedX), y: Math.round(clampedY), angle };
 }
 

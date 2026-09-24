@@ -1218,7 +1218,7 @@ button.card--playable:hover, button.card--playable:focus-visible { transform: tr
 .seat-played { position: relative; height: 0; display: flex; justify-content: center; z-index: 6; }
 .history-round { position: absolute; z-index: 4; transform: translate(-50%, -50%); }
 .played-card { pointer-events: none; }
-.played-card--history { transform: translate(-50%, -50%) rotate(-4deg); opacity: 0.92; }
+.played-card--history { transform: rotate(-4deg); }
 .seat-slot[data-seat-anchor="top"] .seat-played { order: -1; }
 
 /* Globo de canto (AC 8) */
@@ -1466,7 +1466,7 @@ button.card--playable:hover, button.card--playable:focus-visible { transform: tr
 .round-chip--t1 { color: var(--ellos-ink); background: var(--ellos-soft); border-color: var(--ellos-ink); }
 .hand-history { margin-top: 12px; border-top: 1px solid var(--paper-line); padding-top: 8px; }
 .hand-history-header { font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--paper-ink-soft); margin-bottom: 6px; }
-.hand-row { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; padding: 3px 0; border-bottom: 1px dotted var(--paper-line-2); }
+.paper-panel .hand-row { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; padding: 3px 0; border-bottom: 1px dotted var(--paper-line-2); }
 .hand-entry { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; padding: 3px 0; }
 .hand-entry-score { font-weight: 800; }
 .match-meta { display: flex; gap: 18px; margin: 10px 0; font-size: 13px; color: var(--paper-ink-mid); }

@@ -109,7 +109,7 @@ export function renderCard(card: CardViewData, options: CardRenderOptions = {}):
   }
 
   const face =
-    `<div class="card-face suit-${card.suit}" style="${boxStyle}--cr2:${r2}px;--cframe:${frame}px;--cpad:${s.pad}px;--cpadt:${padT}px;--cnum:${s.num}px;--cpip:${s.pip}px;--cfig:${s.fig}px;">`
+    `<div class="card-face suit-${card.suit}" style="${boxStyle}--cr2:${r2};--cframe:${frame};--cpad:${s.pad};--cpadt:${padT};--cnum:${s.num};--cpip:${s.pip};--cfig:${s.fig};">`
     + `<div class="card-frame"></div>`
     + `<div class="card-corner card-corner--tl"><span class="card-number">${number}</span>`
     + (hasFig ? `<span class="card-figure">${figLabel}</span>` : '')
@@ -121,7 +121,7 @@ export function renderCard(card: CardViewData, options: CardRenderOptions = {}):
   const winnerTag = state === 'winner'
     ? `<span class="card-winner-tag">${escapeHtml(options.tag ?? 'Va ganando')}</span>`
     : '';
-  const winnerRing = state === 'winner' ? `<span class="card-winner-ring" style="--crw:${s.r + 5}px;"></span>` : '';
+  const winnerRing = state === 'winner' ? `<span class="card-winner-ring" style="--crw:${s.r + 5};"></span>` : '';
 
   const inner = face + winnerRing + winnerTag;
 

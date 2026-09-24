@@ -349,7 +349,7 @@ export class UIManager {
 
   /** Dimensiona la mesa y posiciona la elipse según el viewport actual. */
   private layoutTable(board: HTMLElement, playerCount: number): void {
-    const vp: Viewport = { width: window.innerWidth, height: window.innerHeight };
+    const vp: Viewport = this.tableViewport();
     const mobile = this.isMobile;
     const { w: seatW, h: seatH } = this.seatBox();
     const ellipse = tableEllipse(vp, { seatWidth: seatW, seatHeight: seatH });
@@ -406,12 +406,29 @@ export class UIManager {
     return this.isMobile ? { w: 118, h: 54 } : { w: 200, h: 72 };
   }
 
+  /** Altura que ocupa la mano propia debajo del asiento (xl 186 / lg 156 + margen). */
+  private handExtra(): number {
+    return this.isMobile ? 168 : 202;
+  }
+
+  /**
+   * Viewport de juego real: el rectángulo de `.felt-room` (dentro de la sala
+   * viven asientos y mano; arriba/top-bar y abajo/marcador+controles son overlays).
+   */
+  private tableViewport(): Viewport {
+    const room = this.container.querySelector<HTMLElement>('.felt-room');
+    if (room && room.clientHeight > 0) {
+      return { width: room.clientWidth, height: room.clientHeight };
+    }
+    return { width: window.innerWidth, height: window.innerHeight };
+  }
+
   private renderPlayers(params: RenderParams): void {
     const board = this.container.querySelector('.game-board');
     const seatsLayer = this.container.querySelector('.seats-layer');
     if (!board || !seatsLayer) return;
 
-    const vp: Viewport = { width: window.innerWidth, height: window.innerHeight };
+    const vp: Viewport = this.tableViewport();
     const { w: seatW, h: seatH } = this.seatBox();
 
     // Baza actual para saber quién ya jugó (sus dorsos bajan).
@@ -425,7 +442,10 @@ export class UIManager {
     for (const player of params.players) {
       const hand = params.hands[player.id] || [];
       const isHuman = player.isHuman;
-      const slot = seatPosition(player.position, params.players.length, vp, { seatWidth: seatW, seatHeight: seatH });
+      // La mano del humano cuelga debajo del asiento: entra en el clamp del layout.
+      const extraBelow = isHuman ? this.handExtra() : 0;
+      const slot = seatPosition(player.position, params.players.length, vp,
+        { seatWidth: seatW, seatHeight: seatH, extraBelow });
 
       const wrap = document.createElement('div');
       wrap.className = 'seat-slot' + (player.isHuman ? ' human-area' : '');
@@ -533,14 +553,18 @@ export class UIManager {
       for (const played of result.cards) {
         const player = params.players.find((p) => p.id === played.playerId);
         if (!player) continue;
-        const vp: Viewport = { width: window.innerWidth, height: window.innerHeight };
+        const vp: Viewport = this.tableViewport();
         const box = this.seatBox();
         const slot = seatPosition(player.position, params.players.length, vp,
           { seatWidth: box.w, seatHeight: box.h });
+        // 25 % del camino entre el centro del paño y el asiento (no tapa la silla).
+        const ell = tableEllipse(vp, { seatWidth: box.w, seatHeight: box.h });
+        const sx = slot.x + box.w / 2;
+        const sy = slot.y + box.h / 2;
         const holder = document.createElement('div');
         holder.className = 'history-round';
-        holder.style.left = `${slot.x + box.w / 2}px`;
-        holder.style.top = `${slot.y}px`;
+        holder.style.left = `${ell.cx + (sx - ell.cx) * 0.25}px`;
+        holder.style.top = `${ell.cy + (sy - ell.cy) * 0.25}px`;
         holder.insertAdjacentHTML('beforeend', renderCard(played.card, {
           size: 'xs',
           state: result.highestCardPlayerId === played.playerId && result.teamWinner !== -1 ? 'winner' : 'normal',

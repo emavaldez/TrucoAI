@@ -180,6 +180,8 @@ for (const [w, h, label] of [[1280, 800, 'desktop'], [390, 844, 'movil']] as con
     await driver.start(4);
     await advanceToHumanWithTrick(page, driver);
     await ensureTrickCards(page, driver);
+    // El reloj congelado traba los timers internos de axe: devolver el tiempo real.
+    await page.clock.resume();
 
     const results = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
