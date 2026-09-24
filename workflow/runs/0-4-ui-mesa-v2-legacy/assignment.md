@@ -53,3 +53,24 @@ npm ci && npm run typecheck && npm test && npm run build
 ## Nota del supervisor
 
 Esta historia puede modificar la UI legacy (`src/ui/`, `src/styles.css`, `src/App.ts`) pero **no** `src/core/` ni `src/engine/`. La fuente del diseño es `docs/design/mesa-v2/` (leé su README) y `docs/planning/ux-design.md`. Corré `npx playwright install chromium` en el worktree antes de verificar.
+
+
+## Cómo trabajar (obligatorio — agregado por el supervisor tras el primer intento)
+
+El primer intento no produjo nada: el modelo intentó escribir toda la UI en una sola respuesta y agotó su límite de salida 4 veces.
+Esta historia es grande; hacela **por tareas, en este orden, con un commit por tarea** (y `npm run typecheck && npm test` antes de cada commit):
+
+1. `src/styles.css`: tokens (`:root`) + fuentes en `index.html`. Commit.
+2. `src/ui/cardView.ts` (+ test) con los SVG de `docs/design/mesa-v2/Card.dc.html`. Commit.
+3. `src/ui/layout.ts` (+ tests de posiciones 2/4/6 × 1280×800 y 390×844). Commit.
+4. `src/ui/seatView.ts` y `src/ui/scoreView.ts` (+ tests). Commit.
+5. `UIManager.ts`: mesa, asientos, baza, centro y marcador usando 2–4. Commit.
+6. `UIManager.ts`: acciones, panel de respuesta, globos, feed. Commit.
+7. `UIManager.ts`: avisos, resumen de mano, fin de partida, menú. Commit.
+8. Celular (media queries). Commit.
+9. `data-testid` + driver si hizo falta. Commit.
+10. `e2e/layout.spec.ts` + capturas + axe. Commit.
+11. Partidas ×2, Dev Agent Record, `implementation.md`, `wf verify`, `wf record-impl`.
+
+Reglas: **nunca reescribas `UIManager.ts` entero de una vez** (editá por secciones); ningún archivo nuevo de más de ~300 líneas en una sola escritura
+(partilo en módulos); pensá poco y escribí código: si una tarea te lleva a una respuesta enorme, partila.
