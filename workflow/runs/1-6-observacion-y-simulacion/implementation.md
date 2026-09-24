@@ -59,7 +59,9 @@ $ npx tsx scripts/sim.ts --games 50 --players 4 --seed 1 --flor   # 0 errores (f
 $ wf verify -i 1-6-observacion-y-simulacion        # ver más abajo (se pega el resultado)
 ```
 
-Resultado de `wf verify`: (completar tras el verde)
+Resultado de `wf verify`: VERDE sobre el último commit — `alcance` OK · `tipos` OK · `lint` OK ·
+`tests` OK (401) · `build` OK · `arranque` OK · `partidas` OK (40,8 s). Total 47,7 s.
+Detalle en `workflow/runs/1-6-observacion-y-simulacion/verify.json`.
 
 ## Riesgos o desviaciones del alcance
 
