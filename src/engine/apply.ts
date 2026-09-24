@@ -3,6 +3,7 @@
 
 import { applyAnswerEnvido, applyCallEnvido } from './envido.js';
 import { getActor, getLegalActions, sameAction } from './legal.js';
+import { applyMazo } from './mazo.js';
 import { completeTrick } from './tricks.js';
 import { applyAnswerTruco, applyCallTruco } from './truco.js';
 import type { Action, Card, GameEvent, HandState, MatchState, PlayerId } from './types.js';
@@ -67,9 +68,12 @@ export function applyAction(
     case 'ANSWER_ENVIDO':
       applyAnswerEnvido(working, events, playerId, chosen.answer);
       break;
+    case 'MAZO':
+      applyMazo(working, events, playerId);
+      break;
     default:
-      // DECLARE_FLOR, ANSWER_FLOR y MAZO todavía no están en `getLegalActions`
-      // (historias 1-5 y 1-8): inalcanzable hoy.
+      // DECLARE_FLOR y ANSWER_FLOR todavía no están en `getLegalActions`
+      // (historia 1-8): inalcanzable hoy.
       return { ok: false, error: 'ILLEGAL_ACTION' };
   }
 

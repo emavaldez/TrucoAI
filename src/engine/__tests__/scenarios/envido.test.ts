@@ -123,6 +123,8 @@ describe('tabla de puntos de punta a punta (AC 5, AC 11)', () => {
       expect(state.hand.tricks).toEqual([]);
       expect(getLegalActions(state, 'p1')).toEqual([
         { type: 'CALL_TRUCO' },
+        // el mazo de la 1-5 (AC 1)
+        { type: 'MAZO' },
         ...state.hand.hands['p1'].map((card) => ({ type: 'PLAY_CARD' as const, cardId: card.id })),
       ]);
     });
@@ -317,8 +319,22 @@ describe('cierre de la ventana y fin de partida (AC 10, AC 11)', () => {
       ok: false,
       error: 'MATCH_OVER',
     });
-    // la mano no se cerró (eso es la 1-5): no hay `HAND_OVER` ni historial todavía
+    // la mano no se cierra como mano jugada (no hay `HAND_OVER` ni `hand.result`), pero la
+    // 1-5 [UI-16] la deja igual en el historial: `MATCH_ENDED`, 0 puntos y sus cantos (AC 5)
     expect(fin.hand.result).toBeNull();
-    expect(fin.history).toEqual([]);
+    expect(fin.history).toEqual([
+      {
+        number: 1,
+        dealerId: 'p0',
+        manoId: 'p1',
+        picaPica: false,
+        tricks: [],
+        cantos: [{ kind: 'ENVIDO', by: 'p1', team: 1, answer: 'QUIERO', points: 2, pointsTo: 1 }],
+        winnerTeam: 1,
+        points: 0,
+        reason: 'MATCH_ENDED',
+        scoresAfter: [0, 30],
+      },
+    ]);
   });
 });

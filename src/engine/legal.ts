@@ -2,6 +2,7 @@
 // La UI y la IA derivan todo de acá: no existe acción fuera de turno.
 
 import { canCallEnvido, envidoFirstCalls, envidoResponseActions, openingEnvidoCalls } from './envido.js';
+import { mazoActions } from './mazo.js';
 import { canCallTruco, trucoResponseActions } from './truco.js';
 import type { Action, MatchState, PlayerId } from './types.js';
 
@@ -30,8 +31,8 @@ export function getActor(state: MatchState): PlayerId | null {
 /**
  * Acciones legales de `playerId` en el estado actual.
  * Fuera de turno (o sin actor) devuelve `[]`.
- * Orden en `PLAYING`: primero el canto de truco, después los cantos de envido (E, R, F)
- * y por último un `PLAY_CARD` por carta de la mano, en orden.
+ * Orden en `PLAYING`: primero el canto de truco, después los cantos de envido (E, R, F),
+ * después el mazo (AC 1) y por último un `PLAY_CARD` por carta de la mano, en orden.
  */
 export function getLegalActions(state: MatchState, playerId: PlayerId): Action[] {
   const actor = getActor(state);
@@ -40,16 +41,23 @@ export function getLegalActions(state: MatchState, playerId: PlayerId): Action[]
   switch (state.phase) {
     case 'AWAITING_TRUCO':
       // Nunca PLAY_CARD con un canto pendiente [ENG-02]; el respondedor puede, además,
-      // cantar envido si todavía tiene derecho ("el envido está primero", AC 3) [UI-05].
-      return [...trucoResponseActions(state, playerId), ...envidoFirstCalls(state, playerId)];
+      // cantar envido si todavía tiene derecho ("el envido está primero", AC 3) [UI-05]
+      // o irse al mazo en vez de responder (AC 1).
+      return [
+        ...trucoResponseActions(state, playerId),
+        ...envidoFirstCalls(state, playerId),
+        ...mazoActions(state, playerId),
+      ];
     case 'AWAITING_ENVIDO':
-      // Nunca PLAY_CARD ni CALL_TRUCO con el envido pendiente [ENG-02].
+      // Nunca PLAY_CARD ni CALL_TRUCO con el envido pendiente [ENG-02], y tampoco MAZO:
+      // al envido hay que responderlo primero [ENG-09].
       return envidoResponseActions(state, playerId);
     case 'PLAYING': {
       const actions: Action[] = [];
       if (canCallTruco(state, playerId)) actions.push({ type: 'CALL_TRUCO' });
       if (canCallEnvido(state, playerId)) actions.push(...openingEnvidoCalls());
-      // TODO(historias 1-5 / 1-8): flor y mazo.
+      // TODO(historia 1-8): flor.
+      actions.push(...mazoActions(state, playerId));
       for (const card of state.hand.hands[playerId]) actions.push({ type: 'PLAY_CARD', cardId: card.id });
       return actions;
     }

@@ -135,15 +135,35 @@ export function envidoResponseActions(state: MatchState, playerId: PlayerId): Ac
   return actions;
 }
 
+/** ¿Es un canto de la cadena de envido? */
+function isEnvidoCanto(kind: CantoRecord['kind']): boolean {
+  return kind === 'ENVIDO' || kind === 'REAL_ENVIDO' || kind === 'FALTA_ENVIDO';
+}
+
 /** Completa el último canto de envido de la mano con su respuesta (AC 4, AC 7 y AC 8). */
 function answerLastEnvidoCanto(cantos: readonly CantoRecord[], answer: 'QUIERO' | 'NO_QUIERO'): void {
   for (let index = cantos.length - 1; index >= 0; index--) {
     const canto = cantos[index];
-    if (canto.kind === 'ENVIDO' || canto.kind === 'REAL_ENVIDO' || canto.kind === 'FALTA_ENVIDO') {
+    if (isEnvidoCanto(canto.kind)) {
       canto.answer = answer;
       return;
     }
   }
+}
+
+/**
+ * Puntos de un canto de envido ya resuelto y a quién van (AC 5, GDD §9), para el historial:
+ * la cadena se cobra junta, así que **todos** sus cantos llevan el valor cobrado y el equipo
+ * que lo cobró (`envido.result`: el ganador del envido si se quiso, el último que cantó si no).
+ * `null` si el canto no es de envido o el envido todavía no se resolvió.
+ */
+export function envidoCantoPoints(
+  state: MatchState,
+  canto: CantoRecord,
+): { points: number; pointsTo: TeamId } | null {
+  const result = state.hand.envido.result;
+  if (result === null || canto.answer === undefined || !isEnvidoCanto(canto.kind)) return null;
+  return { points: result.points, pointsTo: result.winnerTeam };
 }
 
 /**

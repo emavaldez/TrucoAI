@@ -98,8 +98,8 @@ describe('2 jugadores: truco querido y la mano por bazas', () => {
     expect(mano.scores).toEqual([0, 3]);
     expect(mano.hand.result).toEqual({ winnerTeam: 1, points: 3, reason: 'BAZAS' });
     expect(mano.hand.cantos).toEqual([
-      { kind: 'TRUCO', by: 'p1', team: 1, answer: 'QUIERO' },
-      { kind: 'RETRUCO', by: 'p0', team: 0, answer: 'QUIERO' },
+      { kind: 'TRUCO', by: 'p1', team: 1, answer: 'QUIERO', points: 2, pointsTo: 1 },
+      { kind: 'RETRUCO', by: 'p0', team: 0, answer: 'QUIERO', points: 3, pointsTo: 1 },
     ]);
   });
 
@@ -117,9 +117,9 @@ describe('2 jugadores: truco querido y la mano por bazas', () => {
     expect(mano.state.scores).toEqual([0, 4]);
     expect(mano.state.hand.result).toEqual({ winnerTeam: 1, points: 4, reason: 'BAZAS' });
     expect(mano.state.hand.cantos).toEqual([
-      { kind: 'TRUCO', by: 'p1', team: 1, answer: 'QUIERO' },
-      { kind: 'RETRUCO', by: 'p0', team: 0, answer: 'QUIERO' },
-      { kind: 'VALE4', by: 'p1', team: 1, answer: 'QUIERO' },
+      { kind: 'TRUCO', by: 'p1', team: 1, answer: 'QUIERO', points: 2, pointsTo: 1 },
+      { kind: 'RETRUCO', by: 'p0', team: 0, answer: 'QUIERO', points: 3, pointsTo: 1 },
+      { kind: 'VALE4', by: 'p1', team: 1, answer: 'QUIERO', points: 4, pointsTo: 1 },
     ]);
   });
 });
@@ -192,9 +192,9 @@ describe('subir como respuesta: "quiero retruco" y después "quiero vale cuatro"
     const mano = playTricks(state, { p1: '1-espada', p0: '3-basto' }, { p1: '7-espada', p0: '5-copa' });
 
     expect(mano.state.hand.cantos).toEqual([
-      { kind: 'TRUCO', by: 'p1', team: 1, answer: 'QUIERO' },
-      { kind: 'RETRUCO', by: 'p0', team: 0, answer: 'QUIERO' },
-      { kind: 'VALE4', by: 'p1', team: 1, answer: 'QUIERO' },
+      { kind: 'TRUCO', by: 'p1', team: 1, answer: 'QUIERO', points: 2, pointsTo: 1 },
+      { kind: 'RETRUCO', by: 'p0', team: 0, answer: 'QUIERO', points: 3, pointsTo: 1 },
+      { kind: 'VALE4', by: 'p1', team: 1, answer: 'QUIERO', points: 4, pointsTo: 1 },
     ]);
     expect(mano.state.scores).toEqual([0, 4]);
     expect(mano.state.hand.result).toEqual({ winnerTeam: 1, points: 4, reason: 'BAZAS' });
@@ -219,6 +219,8 @@ describe('4 jugadores: quién responde el canto (AC 2 y 10)', () => {
       { type: 'CALL_ENVIDO', call: 'E' },
       { type: 'CALL_ENVIDO', call: 'R' },
       { type: 'CALL_ENVIDO', call: 'F' },
+      // y el mazo del respondedor (1-5, AC 1)
+      { type: 'MAZO' },
     ]);
 
     // p2 canta en su turno: el rival es p3
@@ -312,7 +314,9 @@ describe('truco en la 2ª y en la 3ª baza', () => {
     expect(mano.state.hand.tricks).toHaveLength(2);
     expect(mano.state.phase).toBe('HAND_OVER');
     expect(mano.state.scores).toEqual([0, 2]);
-    expect(mano.state.history[0].cantos).toEqual([{ kind: 'TRUCO', by: 'p1', team: 1, answer: 'QUIERO' }]);
+    expect(mano.state.history[0].cantos).toEqual([
+      { kind: 'TRUCO', by: 'p1', team: 1, answer: 'QUIERO', points: 2, pointsTo: 1 },
+    ]);
   });
 
   it('truco cantado en la 3ª baza con la mano 1-1 → se define ahí y vale 2', () => {
@@ -336,6 +340,8 @@ describe('truco en la 2ª y en la 3ª baza', () => {
     expect(tercera.state.phase).toBe('HAND_OVER');
     expect(tercera.state.scores).toEqual([0, 2]);
     expect(tercera.state.hand.result).toEqual({ winnerTeam: 1, points: 2, reason: 'BAZAS' });
-    expect(tercera.state.hand.cantos).toEqual([{ kind: 'TRUCO', by: 'p0', team: 0, answer: 'QUIERO' }]);
+    expect(tercera.state.hand.cantos).toEqual([
+      { kind: 'TRUCO', by: 'p0', team: 0, answer: 'QUIERO', points: 2, pointsTo: 1 },
+    ]);
   });
 });

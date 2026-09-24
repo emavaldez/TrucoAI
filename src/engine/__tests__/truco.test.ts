@@ -91,6 +91,8 @@ describe('canCallTruco y CALL_TRUCO en PLAYING (AC 1)', () => {
       { type: 'CALL_ENVIDO', call: 'E' },
       { type: 'CALL_ENVIDO', call: 'R' },
       { type: 'CALL_ENVIDO', call: 'F' },
+      // el mazo de la 1-5, después de los cantos (AC 1)
+      { type: 'MAZO' },
       { type: 'PLAY_CARD', cardId: '1-espada' },
       { type: 'PLAY_CARD', cardId: '7-espada' },
       { type: 'PLAY_CARD', cardId: '4-copa' },
@@ -167,6 +169,8 @@ describe('AWAITING_TRUCO: actor y acciones del respondedor (AC 3)', () => {
       { type: 'CALL_ENVIDO', call: 'E' },
       { type: 'CALL_ENVIDO', call: 'R' },
       { type: 'CALL_ENVIDO', call: 'F' },
+      // y puede irse al mazo en vez de responder (1-5, AC 1)
+      { type: 'MAZO' },
     ]);
     expect(getLegalActions(state, 'p1')).toEqual([]);
     expect(applyAction(state, 'p1', { type: 'ANSWER_TRUCO', answer: 'QUIERO' })).toEqual({
@@ -190,6 +194,8 @@ describe('AWAITING_TRUCO: actor y acciones del respondedor (AC 3)', () => {
     expect(getLegalActions(state, 'p0')).toEqual([
       { type: 'ANSWER_TRUCO', answer: 'QUIERO' },
       { type: 'ANSWER_TRUCO', answer: 'NO_QUIERO' },
+      // el mazo del respondedor vale como no quiero (1-5, AC 2)
+      { type: 'MAZO' },
     ]);
     expect(getLegalActions(state, 'p1')).toEqual([]);
   });
@@ -323,7 +329,10 @@ describe('ANSWER_TRUCO NO_QUIERO (AC 6) [ENG-03]', () => {
     expect(result.state.scores).toEqual([0, 1]);
     expect(result.state.hand.result).toEqual({ winnerTeam: 1, points: 1, reason: 'NO_QUIERO' });
     expect(result.state.hand.truco.pending).toBeNull();
-    expect(result.state.hand.cantos).toEqual([{ kind: 'TRUCO', by: 'p1', team: 1, answer: 'NO_QUIERO' }]);
+    // el historial lleva el canto con su respuesta y el puntaje completo (1-5, AC 5)
+    expect(result.state.hand.cantos).toEqual([
+      { kind: 'TRUCO', by: 'p1', team: 1, answer: 'NO_QUIERO', points: 1, pointsTo: 1 },
+    ]);
     expect(result.state.history[0]).toMatchObject({ points: 1, reason: 'NO_QUIERO', scoresAfter: [0, 1] });
     // no se jugó ninguna carta y no queda nada legal
     expect(result.state.hand.currentTrick.plays).toEqual([]);

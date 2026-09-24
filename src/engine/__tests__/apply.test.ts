@@ -73,7 +73,7 @@ describe('getActor', () => {
 });
 
 describe('getLegalActions', () => {
-  it('en PLAYING devuelve el canto de truco, los cantos de envido y un PLAY_CARD por carta, en ese orden', () => {
+  it('en PLAYING devuelve el canto de truco, los cantos de envido, el mazo y un PLAY_CARD por carta, en ese orden', () => {
     const state = match2p();
     const cartas: Action[] = state.hand.hands['p1'].map((card) => ({ type: 'PLAY_CARD', cardId: card.id }));
     expect(getLegalActions(state, 'p1')).toEqual([
@@ -81,9 +81,11 @@ describe('getLegalActions', () => {
       { type: 'CALL_ENVIDO', call: 'E' },
       { type: 'CALL_ENVIDO', call: 'R' },
       { type: 'CALL_ENVIDO', call: 'F' },
+      // el mazo de la 1-5 va después de los cantos y antes de las cartas
+      { type: 'MAZO' },
       ...cartas,
     ]);
-    expect(getLegalActions(state, 'p1')).toHaveLength(7);
+    expect(getLegalActions(state, 'p1')).toHaveLength(8);
   });
 
   it('devuelve [] para cualquier otro jugador', () => {
@@ -216,16 +218,15 @@ describe('applyAction — rechazos', () => {
     });
   });
 
-  it('[ENG-10] rechaza los cantos que todavía no existen y el mazo: nada fuera de getLegalActions', () => {
+  it('[ENG-10] rechaza los cantos que todavía no existen: nada fuera de getLegalActions', () => {
     const state = match2p();
     const illegales: Action[] = [
-      // `CALL_TRUCO` es legal para el actor desde la 1-3 y `CALL_ENVIDO` desde la 1-4:
-      // tienen sus propios tests en truco.test.ts y envido.test.ts.
+      // `CALL_TRUCO` es legal para el actor desde la 1-3, `CALL_ENVIDO` desde la 1-4 y
+      // `MAZO` desde la 1-5: tienen sus propios tests en truco.test.ts, envido.test.ts y mazo.test.ts.
       { type: 'ANSWER_TRUCO', answer: 'QUIERO' },
       { type: 'ANSWER_ENVIDO', answer: 'QUIERO' },
       { type: 'DECLARE_FLOR' },
       { type: 'ANSWER_FLOR', answer: 'QUIERO' },
-      { type: 'MAZO' },
     ];
     for (const action of illegales) {
       expect(applyAction(state, 'p1', action), action.type).toEqual({ ok: false, error: 'ILLEGAL_ACTION' });

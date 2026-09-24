@@ -119,6 +119,11 @@ export function answerTruco(
   return act(state, playerId, { type: 'ANSWER_TRUCO', answer }, 'answerTruco');
 }
 
+/** Se va al mazo con `playerId`; tira si no es legal. */
+export function goToMazo(state: MatchState, playerId: PlayerId): { state: MatchState; events: GameEvent[] } {
+  return act(state, playerId, { type: 'MAZO' }, 'goToMazo');
+}
+
 /** Canta (o sube) el envido con `playerId`; tira si no es legal. */
 export function callEnvido(
   state: MatchState,

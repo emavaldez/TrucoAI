@@ -6,7 +6,7 @@
 
 import { endHand } from './scoring.js';
 import { responderFor, teamOf } from './turns.js';
-import type { Action, CantoRecord, GameEvent, MatchState, PlayerId } from './types.js';
+import type { Action, CantoRecord, GameEvent, MatchState, PlayerId, TeamId } from './types.js';
 
 /**
  * Tabla ÚNICA de puntos del truco (GDD §5) [ENG-20]: el índice es el nivel
@@ -23,6 +23,13 @@ const CANTO_KIND: Record<1 | 2 | 3, 'TRUCO' | 'RETRUCO' | 'VALE4'> = {
   1: 'TRUCO',
   2: 'RETRUCO',
   3: 'VALE4',
+};
+
+/** Nivel de cada canto de truco: la inversa de `CANTO_KIND`, para el historial (AC 5). */
+const LEVEL_OF_CANTO: Record<'TRUCO' | 'RETRUCO' | 'VALE4', 1 | 2 | 3> = {
+  TRUCO: 1,
+  RETRUCO: 2,
+  VALE4: 3,
 };
 
 /** Puntos que vale la mano por el truco querido vigente (1 si nadie cantó truco). */
@@ -114,10 +121,10 @@ export function applyAnswerTruco(
   const pending = truco.pending;
   if (pending === null) throw new Error('NO_PENDING_TRUCO');
 
-  answerLastTrucoCanto(state.hand.cantos, answer);
   events.push({ type: 'TRUCO_ANSWERED', playerId, answer });
 
   if (answer === 'QUIERO') {
+    answerLastTrucoCanto(state.hand.cantos, 'QUIERO');
     truco.level = pending.level;
     truco.quieroTeam = teamOf(state, playerId);
     truco.pending = null;
@@ -125,9 +132,45 @@ export function applyAnswerTruco(
     return;
   }
 
-  const points = TRUCO_POINTS.rejected[pending.level];
-  const callerTeam = pending.callerTeam;
-  // El canto deja de estar pendiente: `phase === 'AWAITING_TRUCO' ⇔ pending !== null` [ENG-18].
+  const rejected = rejectPendingTruco(state);
+  endHand(state, events, { winnerTeam: rejected.winnerTeam, reason: 'NO_QUIERO', points: rejected.points });
+}
+
+/**
+ * Da por **no querido** el truco pendiente sin responderlo (AC 2, GDD §8): lo usa el mazo,
+ * que vale lo mismo que un "no quiero". Marca el canto como `NO_QUIERO`, deja el canto sin
+ * pendiente — `phase === 'AWAITING_TRUCO' ⇔ pending !== null` [ENG-18] — y devuelve quién
+ * cobra y cuánto. La mano la cierra quien llama, con `endHand`.
+ */
+export function rejectPendingTruco(state: MatchState): { winnerTeam: TeamId; points: number } {
+  const truco = state.hand.truco;
+  const pending = truco.pending;
+  if (pending === null) throw new Error('NO_PENDING_TRUCO');
+
+  answerLastTrucoCanto(state.hand.cantos, 'NO_QUIERO');
   truco.pending = null;
-  endHand(state, events, { winnerTeam: callerTeam, reason: 'NO_QUIERO', points });
+  return { winnerTeam: pending.callerTeam, points: TRUCO_POINTS.rejected[pending.level] };
+}
+
+/** ¿Es un canto de truco? */
+function isTrucoCanto(kind: CantoRecord['kind']): kind is 'TRUCO' | 'RETRUCO' | 'VALE4' {
+  return kind === 'TRUCO' || kind === 'RETRUCO' || kind === 'VALE4';
+}
+
+/**
+ * Puntos de un canto de truco ya respondido y a quién van (AC 5, GDD §9), para el historial:
+ * - querido: el valor del nivel lo cobra quien gane la mano (`handWinnerTeam`, porque el
+ *   truco querido se paga con la mano);
+ * - no querido: el valor no querido lo cobra el equipo que lo cantó.
+ * `null` si no es un canto de truco o todavía no tiene respuesta.
+ */
+export function trucoCantoPoints(
+  canto: CantoRecord,
+  handWinnerTeam: TeamId,
+): { points: number; pointsTo: TeamId } | null {
+  if (!isTrucoCanto(canto.kind) || canto.answer === undefined) return null;
+  const level = LEVEL_OF_CANTO[canto.kind];
+  if (canto.answer === 'QUIERO') return { points: TRUCO_POINTS.accepted[level], pointsTo: handWinnerTeam };
+  if (canto.answer === 'NO_QUIERO') return { points: TRUCO_POINTS.rejected[level], pointsTo: canto.team };
+  return null;
 }
