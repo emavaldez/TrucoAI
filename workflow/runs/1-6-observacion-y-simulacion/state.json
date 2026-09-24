@@ -2,14 +2,14 @@
   "schemaVersion": 1,
   "id": "1-6-observacion-y-simulacion",
   "title": "Motor v2: observación pública y simulación",
-  "status": "draft",
+  "status": "ready",
   "branch": "task/1-6-observacion-y-simulacion",
   "worktree": null,
   "correctionCycle": 0,
   "dispatch": {
-    "approved": false,
-    "approvedBy": null,
-    "approvedAt": null
+    "approved": true,
+    "approvedBy": "Emmanuel (vía Claude, 2026-09-24)",
+    "approvedAt": "2026-09-24T19:47:45.788533+00:00"
   },
   "implementation": {
     "completed": false,
@@ -28,7 +28,7 @@
   },
   "timestamps": {
     "createdAt": "2026-09-23T14:40:08.279746+00:00",
-    "updatedAt": "2026-09-23T14:40:08.279746+00:00"
+    "updatedAt": "2026-09-24T19:47:45.788664+00:00"
   },
   "scope": {
     "allow": [
