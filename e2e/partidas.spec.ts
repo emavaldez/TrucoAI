@@ -133,7 +133,7 @@ interface MatchResult {
 async function openGame(page: Page, seed: number): Promise<void> {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.clock.install({ time: FROZEN_TIME });
-  await page.clock.pauseAt(FROZEN_TIME + 60_000);
+  await page.clock.pauseAt(new Date(FROZEN_TIME.getTime() + 60_000));
   await page.addInitScript(installSeededRandom, seed);
   await page.goto('/');
   await page.addStyleTag({ content: NO_MOTION_CSS });
