@@ -12,7 +12,7 @@
  * sin violaciones `serious`/`critical`.
  */
 
-import { test, expect, type Page, type TestInfo } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { AxeBuilder } from '@axe-core/playwright';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
