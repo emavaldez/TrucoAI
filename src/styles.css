@@ -887,3 +887,133 @@ html, body {
     height: clamp(68px, 17vw, 92px);
   }
 }
+
+/* ─── Carta v2 (cardView.ts / Card.dc.html) ─────────────── */
+
+.card {
+  position: relative;
+  width: var(--cw);
+  height: var(--ch);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: default;
+  flex-shrink: 0;
+}
+
+button.card { cursor: pointer; border-radius: var(--cr); transition: transform 0.18s ease; }
+button.card:hover, button.card:focus-visible { transform: translateY(-6px); }
+button.card:disabled { cursor: default; }
+button.card:disabled:hover { transform: none; }
+button.card:focus-visible { outline: 3px solid var(--gold); outline-offset: 6px; }
+
+.card--playable .card-face { box-shadow: var(--shadow-card-playable); }
+.card:not(.card--playable) .card-face { box-shadow: var(--shadow-card); }
+.card--playable { transform: translateY(-6px); }
+button.card--playable:hover, button.card--playable:focus-visible { transform: translateY(-14px); }
+.card--disabled .card-face { filter: saturate(0.35) brightness(0.72); }
+
+.card-face {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--cr);
+  background: var(--paper);
+  border: 1px solid var(--paper-border);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.card-frame {
+  position: absolute;
+  inset: calc(var(--cframe) * 1px);
+  border: 1.5px solid transparent;
+  border-radius: calc(var(--cr2) * 1px);
+}
+
+.card-corner {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: calc(var(--cnum) * 1px);
+}
+.card-corner--tl { left: calc(var(--cpad) * 1px); top: calc(var(--cpadt) * 1px); }
+.card-corner--br {
+  right: calc(var(--cpad) * 1px);
+  bottom: calc(var(--cpadt) * 1px);
+  transform: rotate(180deg);
+}
+.card-figure {
+  margin-top: 2px;
+  font-size: calc(var(--cfig) * 1px);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.card-pip {
+  position: absolute;
+  left: 50%;
+  top: 54%;
+  transform: translate(-50%, -50%);
+  width: calc(var(--cpip) * 1px);
+  height: calc(var(--cpip) * 1px);
+}
+.card-pip svg { width: 100%; height: 100%; display: block; }
+
+/* Tintas por palo (tokens; mismo valor que los literales de Card.dc.html) */
+.suit-oro .card-number, .suit-oro .card-figure, .suit-oro .card-corner--br { color: var(--suit-oro); }
+.suit-copa .card-number, .suit-copa .card-figure, .suit-copa .card-corner--br { color: var(--suit-copa); }
+.suit-espada .card-number, .suit-espada .card-figure, .suit-espada .card-corner--br { color: var(--suit-espada); }
+.suit-basto .card-number, .suit-basto .card-figure, .suit-basto .card-corner--br { color: var(--suit-basto); }
+.suit-oro .card-frame { border-color: var(--suit-oro-soft); }
+.suit-copa .card-frame { border-color: var(--suit-copa-soft); }
+.suit-espada .card-frame { border-color: var(--suit-espada-soft); }
+.suit-basto .card-frame { border-color: var(--suit-basto-soft); }
+
+.pip-oro-a { fill: var(--pip-oro-1); stroke: var(--suit-oro); }
+.pip-oro-b { stroke: var(--suit-oro); }
+.pip-oro-c { fill: var(--pip-oro-2); stroke: var(--suit-oro); }
+.pip-oro-d { stroke: var(--suit-oro); }
+.pip-copa-a { fill: var(--pip-copa-1); stroke: var(--pip-copa-2); }
+.pip-copa-b { stroke: var(--pip-copa-3); }
+.pip-copa-c { fill: var(--pip-oro-1); stroke: var(--suit-oro); }
+.pip-esp-a { fill: var(--pip-espada-1); stroke: var(--pip-espada-2); }
+.pip-esp-b { stroke: var(--pip-espada-3); }
+.pip-esp-c { fill: var(--pip-espada-4); stroke: var(--pip-espada-5); }
+.pip-esp-d { fill: var(--pip-basto-1); stroke: var(--pip-basto-2); }
+.pip-bas-a { fill: var(--pip-basto-1); stroke: var(--pip-basto-2); }
+.pip-bas-b { fill: var(--pip-basto-3); }
+.pip-bas-c { fill: var(--pip-basto-4); stroke: var(--pip-basto-5); }
+
+/* Estado winner: aro dorado + cinta */
+.card-winner-ring {
+  position: absolute;
+  inset: -5px;
+  border-radius: calc(var(--crw) * 1px);
+  border: 3px solid var(--gold);
+  box-shadow: 0 0 18px var(--gold-glow);
+  pointer-events: none;
+}
+.card-winner-tag {
+  position: absolute;
+  left: 50%;
+  top: -13px;
+  transform: translateX(-50%);
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--gold);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  z-index: 2;
+}
+
+/* Dorso (state=back y dorsos del asiento) */
+.card--back { border-radius: var(--cr); background: var(--go-deep); }
