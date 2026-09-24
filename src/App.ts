@@ -52,6 +52,44 @@ export class App {
       this.gameEngine.on(event, () => this.renderGameState());
     }
 
+    // ---- Feed "En esta mano" + globos de canto (AC 8, UI-07) ----
+    const nameOf = (playerId?: string): string =>
+      this.players.find((p) => p.id === playerId)?.name ?? 'Alguien';
+
+    this.gameEngine.on('card-played', (data: any) => {
+      if (!data?.card) return;
+      this.uiManager.pushFeedLine(`${nameOf(data.playerId)} jugó ${data.card.number} de ${data.card.suit}`);
+    });
+    this.gameEngine.on('envido-opened', (data: any) => {
+      this.uiManager.pushFeedLine(`${nameOf(data.playerId)} cantó envido`);
+      this.uiManager.showBubble(data.playerId, 'Envido');
+    });
+    this.gameEngine.on('envido-raised', (data: any) => {
+      const label = data.level === 'falta-envido' ? 'Falta envido' : data.level === 'real-envido' ? 'Real envido' : 'Envido';
+      this.uiManager.pushFeedLine(`${nameOf(data.playerId)} subió a ${label}`);
+      this.uiManager.showBubble(data.playerId, label);
+    });
+    this.gameEngine.on('truco-challenged', (data: any) => {
+      const label = ['Truco', 'Retruco', 'Vale cuatro'][data.level - 1] ?? 'Truco';
+      this.uiManager.pushFeedLine(`${nameOf(data.playerId)} cantó ${label}`);
+      this.uiManager.showBubble(data.playerId, label);
+    });
+    this.gameEngine.on('truco-raised', (data: any) => {
+      const label = ['Truco', 'Retruco', 'Vale cuatro'][data.level - 1] ?? 'Truco';
+      this.uiManager.pushFeedLine(`${nameOf(data.playerId)} subió a ${label}`);
+      this.uiManager.showBubble(data.playerId, label);
+    });
+    this.gameEngine.on('truco-accepted', (data: any) => {
+      if (data.playerId) this.uiManager.showBubble(data.playerId, 'Quiero');
+    });
+    this.gameEngine.on('irse-al-mazo', (data: any) => {
+      this.uiManager.pushFeedLine(`${nameOf(data.playerId)} se fue al mazo`);
+      this.uiManager.showBubble(data.playerId, 'Al mazo');
+    });
+    this.gameEngine.on('hand-resolved', () => {
+      this.uiManager.pushFeedLine('—— mano terminada ——');
+    });
+
     // When a trick is resolved, just re-render (no popup per round)
     this.gameEngine.on('trick-resolved', (data: any) => {
       this.renderGameState();
@@ -653,6 +691,10 @@ export class App {
     const scores = this.gameEngine.getScores();
     const state = this.gameEngine.getState();
     const isGameOver = state.gameOver;
+    // data-busy (contrato §5): la IA tiene una decisión programada si no es el
+    // turno del humano y la partida sigue viva.
+    this.uiManager.setBusy(!isGameOver && this.gameRunning
+      && state.currentTurnPlayerId !== this.players[0]?.id);
     const gameOverWinner = isGameOver ? (state.partidaHistory.winningTeam >= 0 ? state.partidaHistory.winningTeam : (scores.team0 >= 30 ? 0 : 1)) : null;
     const isHandOver = state.phase === 'round-resolving' || state.phase === 'round-over' || state.phase === 'picapica-resolving' || state.phase === 'game-over';
     const roundResults = this.gameEngine.getRoundResults();

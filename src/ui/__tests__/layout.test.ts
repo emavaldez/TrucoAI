@@ -47,12 +47,13 @@ describe('layout — seatPosition (AC 3)', () => {
     }
   });
 
-  it('4p: compañero arriba, rivales a los lados', () => {
+  it('4p: compañero (pos 2, team 0) arriba, rivales (pos 1 y 3) a los lados', () => {
     const seats = [0, 1, 2, 3].map((i) => seatPosition(i, 4, DESKTOP, SEAT));
-    expect(seats[1].y).toBeLessThan(seats[2].y); // compañero más arriba que rivales
+    expect(seats[2].y).toBeLessThan(seats[1].y); // compañero más arriba que el rival de la izquierda
     const angles = [0, 1, 2, 3].map((i) => seatPosition(i, 4, DESKTOP, SEAT).angle);
     expect(angles).toEqual(SLOT_ANGLES[4]);
-    expect(angles[2]).toBe(180); // rival izquierdo
+    expect(angles[1]).toBe(180); // rival izquierdo
+    expect(angles[2]).toBe(270); // compañero arriba
     expect(angles[3]).toBe(0);   // rival derecho
   });
 

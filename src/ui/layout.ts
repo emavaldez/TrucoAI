@@ -8,8 +8,8 @@
  *
  * Ángulos (sistema: 0° = derecha, 90° = abajo, sentido horario en pantalla):
  * - 2 jugadores: humano abajo (90°), rival arriba (270°).
- * - 4: humano abajo, compañero a la izquierda (180°), rival arriba (270°), rival derecha (0°).
- *   (posición del jugador legacy: 0=humano, 1=compañero, 2=rival, 3=rival — equipos alternados)
+ * - 4: humano abajo (90°), compañero arriba (270°, posición 2), rivales a los
+ *   lados (180° y 0°, posiciones 1 y 3) — equipos alternados, AC 3.
  * - 6: humano abajo + asientos a 8, 10, 12, 2 y 4 horas; equipos alternados alrededor.
  */
 
@@ -33,8 +33,9 @@ export interface SeatOptions {
 /** Ángulo por slot de asiento según la cantidad de jugadores (slot = posición del jugador). */
 export const SLOT_ANGLES: Record<number, number[]> = {
   2: [90, 270],
-  // pos0 humano abajo · pos1 compañero arriba · pos2/pos3 rivales a los lados (AC 3)
-  4: [90, 270, 180, 0],
+  // App.ts asigna team = posición % 2: en 4p el compañero es la posición 2 y va
+  // arriba (270°); los rivales (pos 1 y 3) quedan a los lados — AC 3.
+  4: [90, 180, 270, 0],
   6: [90, 150, 210, 270, 330, 30],
 };
 

@@ -1,10 +1,18 @@
-// UIManager.ts — Truco UI renderer (corrected player positioning + card sizing)
+// UIManager.ts — Truco UI renderer ("mesa v2" — historia 0-4)
 
 import type {
   CardDef, PlayerConfig, PlayedCard, RoundResult,
   PicaPicaSubmanoResult, EnvidoState, TrucoState,
   HandRecord, PartidaHistory
 } from '../types.js';
+import { resolverBaza } from '../core/Rules.js';
+import { renderCard, cardAriaLabel, type CardState } from './cardView.js';
+import { renderSeat } from './seatView.js';
+import { renderScore } from './scoreView.js';
+import { renderTopBar, renderTrickIndicator, renderFeed, renderBubble } from './boardView.js';
+import { seatPosition, tableEllipse, type Viewport } from './layout.js';
+import { escapeHtml } from './escape.js';
+import type { Card } from '../core/Card.js';
 
 interface UICallbacks {
   onCardPlayed: (playerId: string, cardIndex: number) => void;
@@ -52,30 +60,88 @@ interface RenderParams {
   partidaHistory: PartidaHistory;
 }
 
+/** Breakpoint de celular (AC 10). */
+const MOBILE_QUERY = '(max-width: 700px), (max-height: 560px)';
+
 export class UIManager {
   private container: HTMLElement;
   private callbacks: UICallbacks;
   private boardRendered: boolean = false;
   private lastPlayerCount: number = 0;
+  private feedLines: string[] = [];
+  private lastHandKey = '';
+  private isMobile: boolean;
+  private onResize: (() => void) | null = null;
+  private lastParams: RenderParams | null = null;
+  private pendingNotification: ((value: void) => void) | null = null;
+  private bubbleTimers: number[] = [];
 
   constructor(containerId: string, callbacks: UICallbacks) {
     const el = document.getElementById(containerId);
     if (!el) throw new Error(`#${containerId} not found`);
     this.container = el;
     this.callbacks = callbacks;
+    this.container.setAttribute('data-testid', 'app-root');
+    this.isMobile = window.matchMedia(MOBILE_QUERY).matches;
 
     // Expose callbacks for inline onclick handlers
-    (window as any)._uiCallbacks = callbacks;
+    (window as unknown as { _uiCallbacks: UICallbacks })._uiCallbacks = callbacks;
+
+    const mq = window.matchMedia(MOBILE_QUERY);
+    mq.addEventListener('change', (e) => {
+      if (this.isMobile === e.matches) return;
+      this.isMobile = e.matches;
+      this.rerenderBoard();
+    });
+    this.onResize = () => this.rerenderBoard();
+    window.addEventListener('resize', this.debounce(this.onResize, 200));
+  }
+
+  /** Reconstruye la mesa (cambió el viewport o el breakpoint). */
+  private rerenderBoard(): void {
+    if (this.lastParams && this.lastParams.players.length > 0) {
+      this.boardRendered = false;
+      this.renderGame(this.lastParams);
+    }
+  }
+
+  private debounce(fn: () => void, ms: number): () => void {
+    let t = 0;
+    return () => {
+      window.clearTimeout(t);
+      t = window.setTimeout(fn, ms);
+    };
+  }
+
+  /** `data-busy` en la raíz (contrato test-strategy §5). Lo usa App.ts. */
+  setBusy(busy: boolean): void {
+    this.container.setAttribute('data-busy', busy ? 'true' : 'false');
   }
 
   renderGame(params: RenderParams): void {
     const playerCount = params.players.length;
+    this.lastParams = params;
 
     if (playerCount === 0) {
       this.boardRendered = false;
       this.lastPlayerCount = 0;
+      this.container.setAttribute('data-phase', 'menu');
       this.renderMenu();
       return;
+    }
+
+    this.container.setAttribute(
+      'data-phase',
+      params.isGameOver ? 'game-over'
+        : params.firstHandCompleted && params.handWinnerTeam >= 0 ? 'hand-over'
+        : 'playing',
+    );
+
+    // Feed "En esta mano": se reinicia cuando cambia la mano.
+    const handKey = `${params.partidaHistory.hands.length}:${params.isPicaPica ? 'pp' : ''}${params.picaPicaSubmano}`;
+    if (handKey !== this.lastHandKey) {
+      this.lastHandKey = handKey;
+      this.feedLines = [];
     }
 
     if (!this.boardRendered || this.lastPlayerCount !== playerCount) {
@@ -85,29 +151,76 @@ export class UIManager {
       this.lastPlayerCount = playerCount;
     }
 
-    this.updateScoreboard(params.scores);
+    this.updateScoreboard(params);
     this.renderPlayers(params);
-    this.renderPlayedCards(params);
-    this.updateMessage(params);
     this.updateControls(params);
     this.renderRoundOverPanel(params);
+    this.updateFeed();
   }
 
-  // ---- Scoreboard ----
+  // ---- Scoreboard + barra superior ----
 
-  private updateScoreboard(scores: { team0: number; team1: number }): void {
-    const sb = this.container.querySelector('.scoreboard');
+  private cantoText(params: RenderParams): string | null {
+    const { truco, envido } = params;
+    const levelNames: Record<number, string> = { 1: 'Truco', 2: 'Retruco', 3: 'Vale cuatro' };
+    const levelPoints: Record<number, number> = { 1: 2, 2: 3, 3: 4 };
+    if (truco.level > 0 && truco.accepted) {
+      return `${levelNames[truco.level]} querido · vale ${levelPoints[truco.level]}`;
+    }
+    if (truco.level > 0) {
+      return `${levelNames[truco.level]} cantado`;
+    }
+    if (envido.phase !== 'none' && envido.phase !== 'resolution') {
+      const names: Record<string, string> = {
+        envido: 'Envido', 'envido-envido': 'Envido envido',
+        'real-envido': 'Real envido', 'falta-envido': 'Falta envido',
+      };
+      return `${names[envido.level] ?? 'Envido'} cantado`;
+    }
+    return null;
+  }
+
+  private updateScoreboard(params: RenderParams): void {
+    const sb = this.container.querySelector('.scoreboard-slot');
     if (!sb) return;
-    sb.innerHTML = `
-      <div class="team-score">
-        <span class="team-label">EQUIPO 1</span>
-        <span class="team-points">${scores.team0}</span>
-      </div>
-      <div class="team-score">
-        <span class="team-label">EQUIPO 2</span>
-        <span class="team-points">${scores.team1}</span>
-      </div>
-    `;
+    sb.innerHTML = renderScore({
+      nos: params.scores.team0,
+      ellos: params.scores.team1,
+      compact: this.isMobile,
+    });
+
+    const top = this.container.querySelector('.top-bar-slot');
+    if (top) {
+      top.innerHTML = renderTopBar({
+        handNumber: params.partidaHistory.hands.length + 1,
+        cantoText: this.cantoText(params),
+        deckRemaining: params.deckRemaining,
+      });
+    }
+
+    const center = this.container.querySelector('.table-center');
+    if (center) {
+      const wonByTeam: (number | null)[] = [0, 1, 2].map((i) => {
+        const r = params.roundResults[i];
+        return r ? r.teamWinner : null;
+      });
+      let pairLabel: string | undefined;
+      if (params.isPicaPica) {
+        const pair = params.picapicaResults
+          .find((p) => p.submanoNumber === params.picaPicaSubmano);
+        if (pair && pair.cards.length > 0) {
+          const names = [...new Set(pair.cards.map((c) =>
+            params.players.find((p) => p.id === c.playerId)?.name ?? ''))].slice(0, 2);
+          pairLabel = names.join(' contra ');
+        }
+      }
+      center.innerHTML = renderTrickIndicator({
+        wonByTeam,
+        isPicaPica: params.isPicaPica,
+        picaPicaSubmano: params.picaPicaSubmano + 1,
+        picaPicaPairLabel: pairLabel,
+      });
+    }
   }
 
   // ---- Menu ----
@@ -115,43 +228,45 @@ export class UIManager {
   private renderMenu(): void {
     const menu = document.createElement('div');
     menu.className = 'menu-container';
+    menu.setAttribute('data-testid', 'menu');
     menu.innerHTML = `
-      <h1>🃏 Truco</h1>
-      <div class="menu-options">
+      <div class="menu-card">
+        <h1 class="menu-title">Truco</h1>
+        <p class="menu-sub">Argentino · Envido · Truco · Pica-Pica</p>
         <div class="menu-section">
-          <label>Jugadores</label>
+          <span class="menu-label">Jugadores</span>
           <div class="count-buttons">
-            <button class="count-btn active" data-count="2">2</button>
-            <button class="count-btn" data-count="4">4</button>
-            <button class="count-btn" data-count="6">6</button>
+            <button class="count-btn active" data-count="2" data-testid="player-count-2" aria-pressed="true">2</button>
+            <button class="count-btn" data-count="4" data-testid="player-count-4" aria-pressed="false">4</button>
+            <button class="count-btn" data-count="6" data-testid="player-count-6" aria-pressed="false">6</button>
           </div>
         </div>
         <div class="menu-section">
-          <label>Dificultad</label>
+          <span class="menu-label">Dificultad</span>
           <div class="diff-buttons">
-            <button class="diff-btn" data-diff="easy">Fácil</button>
-            <button class="diff-btn active" data-diff="normal">Normal</button>
-            <button class="diff-btn" data-diff="hard">Difícil</button>
+            <button class="diff-btn" data-diff="easy" data-testid="difficulty-easy" aria-pressed="false">Fácil</button>
+            <button class="diff-btn active" data-diff="normal" data-testid="difficulty-normal" aria-pressed="true">Normal</button>
+            <button class="diff-btn" data-diff="hard" data-testid="difficulty-hard" aria-pressed="false">Difícil</button>
           </div>
         </div>
-        <button class="btn-start">¡Jugar!</button>
+        <button class="btn-start" data-testid="start-game">Jugar</button>
       </div>
     `;
 
-    menu.querySelectorAll('.count-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        menu.querySelectorAll('.count-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        (btn as HTMLElement).dataset.selected = 'true';
+    const pressGroup = (selector: string) => {
+      menu.querySelectorAll(selector).forEach((btn) => {
+        btn.addEventListener('click', () => {
+          menu.querySelectorAll(selector).forEach((b) => {
+            b.classList.remove('active');
+            b.setAttribute('aria-pressed', 'false');
+          });
+          btn.classList.add('active');
+          btn.setAttribute('aria-pressed', 'true');
+        });
       });
-    });
-
-    menu.querySelectorAll('.diff-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        menu.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-      });
-    });
+    };
+    pressGroup('.count-btn');
+    pressGroup('.diff-btn');
 
     const startBtn = menu.querySelector('.btn-start');
     if (startBtn) {
@@ -169,8 +284,6 @@ export class UIManager {
 
   // ---- Notification Overlay ----
 
-  private pendingNotification: ((value: void) => void) | null = null;
-
   /**
    * Show a large notification overlay that blocks game interaction.
    * Player must click "OK" to continue. Returns a Promise that resolves
@@ -182,32 +295,20 @@ export class UIManager {
 
       const overlay = document.createElement('div');
       overlay.className = 'notification-overlay';
-      overlay.style.cssText = `
-        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-        background: rgba(0,0,0,0.7); z-index: 100;
-        display: flex; align-items: center; justify-content: center;
-      `;
-
-      const colors = { info: '#ffd700', success: '#4caf50', warning: '#ff9800' };
-      const color = colors[type];
 
       const box = document.createElement('div');
-      box.style.cssText = `
-        background: rgba(10,20,10,0.95); border: 2px solid ${color};
-        border-radius: 20px; padding: 40px 50px; max-width: 500px;
-        text-align: center; box-shadow: 0 0 40px ${color}44;
-      `;
+      box.className = `paper-panel notification-panel notif--${type}`;
+      box.setAttribute('role', 'alertdialog');
+      box.setAttribute('aria-label', title);
+      box.setAttribute('data-testid', 'toast');
+      box.setAttribute('data-kind', type);
       box.innerHTML = `
-        <div style="font-size: 28px; font-weight: 800; color: ${color}; margin-bottom: 12px; text-shadow: 0 0 20px ${color}66;">${title}</div>
-        <div style="font-size: 18px; color: #ddd; margin-bottom: 24px; line-height: 1.5;">${message}</div>
-        <button class="btn-notif-ok" style="
-          padding: 14px 50px; font-size: 18px; font-weight: 700;
-          border: 2px solid ${color}; background: ${color}; color: #000;
-          border-radius: 12px; cursor: pointer; transition: all 0.2s;
-        ">OK</button>
+        <div class="notification-title">${escapeHtml(title)}</div>
+        <div class="notification-message">${escapeHtml(message)}</div>
+        <button class="btn-notif-ok">OK</button>
       `;
 
-      box.querySelector('.btn-notif-ok')!.addEventListener('click', () => {
+      box.querySelector<HTMLButtonElement>('.btn-notif-ok')!.addEventListener('click', () => {
         overlay.remove();
         this.pendingNotification = null;
         this.callbacks.onContinueAfterNotification();
@@ -216,6 +317,7 @@ export class UIManager {
 
       overlay.appendChild(box);
       document.body.appendChild(overlay);
+      box.querySelector<HTMLButtonElement>('.btn-notif-ok')?.focus();
     });
   }
 
@@ -224,402 +326,384 @@ export class UIManager {
   private renderGameBoard(playerCount: number): void {
     const board = document.createElement('div');
     board.className = 'game-board';
-    // For 6 players, wrap side slots in a container so grid alignment works
-    const sideLeftHtml = playerCount === 6
-      ? '<div class="side-player-area side-left-6"><div class="side-left-top"></div><div class="side-left-bottom"></div></div>'
-      : '<div class="side-player-area side-left"></div>';
-    const sideRightHtml = playerCount === 6
-      ? '<div class="side-player-area side-right-6"><div class="side-right-top"></div><div class="side-right-bottom"></div></div>'
-      : '<div class="side-player-area side-right"></div>';
+    board.setAttribute('data-count', String(playerCount));
     board.innerHTML = `
-      <div class="scoreboard"></div>
-      <div class="circle-seating" id="circle-seating" data-count="${playerCount}">
-        <div class="opponents-area"></div>
-        <div class="middle-area">
-          ${sideLeftHtml}
-          <div class="table-area">
-            <div class="played-cards"></div>
-            <div class="message-area"></div>
+      <div class="top-bar-slot"></div>
+      <div class="felt-room">
+        <div class="table-area" data-testid="table">
+          <div class="table-rail"></div>
+          <div class="table-felt">
+            <div class="table-center"></div>
           </div>
-          ${sideRightHtml}
         </div>
-        <div class="human-area"></div>
+        <div class="seats-layer"></div>
+        <div class="feed-slot"></div>
       </div>
-      <div class="controls"></div>
+      <div class="scoreboard-slot"></div>
+      <div class="controls" data-testid="actions"></div>
       <div class="response-panel"></div>
     `;
     this.container.appendChild(board);
+    this.layoutTable(board, playerCount);
   }
 
-  // ---- Render Players ----
+  /** Dimensiona la mesa y posiciona la elipse según el viewport actual. */
+  private layoutTable(board: HTMLElement, playerCount: number): void {
+    const vp: Viewport = { width: window.innerWidth, height: window.innerHeight };
+    const mobile = this.isMobile;
+    const { w: seatW, h: seatH } = this.seatBox();
+    const ellipse = tableEllipse(vp, { seatWidth: seatW, seatHeight: seatH });
+    board.style.setProperty('--ell-cx', `${ellipse.cx}px`);
+    board.style.setProperty('--ell-cy', `${ellipse.cy}px`);
+    board.style.setProperty('--ell-rx', `${ellipse.rx}px`);
+    board.style.setProperty('--ell-ry', `${ellipse.ry}px`);
+    const railInset = mobile ? 10 : 18;
+    board.style.setProperty('--rail-inset', `${railInset}px`);
+    const room = board.querySelector('.felt-room');
+    if (room) {
+      (room as HTMLElement).dataset.count = String(playerCount);
+    }
+  }
 
-  /**
-   * Player positioning rules:
-   * 2 players: human bottom, opponent top center
-   * 4 players: human bottom, opponent top center, teammate left, opponent right
-   *   (positions: 0=human bottom, 1=teammate left, 2=opponent top, 3=opponent right)
-   * 6 players: human bottom-center + 2 teammates bottom-left/right,
-   *   3 opponents top-left/center/right
-   *   (positions: 0=human, 1=teammate left, 2=teammate right,
-   *               3=opponent top-left, 4=opponent top-center, 5=opponent top-right)
-   */
-  private renderPlayers(params: {
-    players: PlayerConfig[];
-    hands: { [playerId: string]: CardDef[] };
-    currentTurnPlayerId: string;
-    dealerId: string;
-    starterId: string;
-  }): void {
-    const seating = this.container.querySelector('#circle-seating') as HTMLElement;
-    if (!seating) return;
+  // ---- Render Players (asientos v2 por fórmula de layout) ----
 
-    const opponentsArea = seating.querySelector('.opponents-area') as HTMLElement;
-    const sideLeft = seating.querySelector('.side-left') as HTMLElement;
-    const sideRight = seating.querySelector('.side-right') as HTMLElement;
-    const humanArea = seating.querySelector('.human-area') as HTMLElement;
+  /** Pares de submano de pica-pica (legacy: order[i] vs order[i+3], i = submano). */
+  private picaPicaPairIds(params: RenderParams): string[] {
+    const order = params.players.slice().sort((a, b) => a.position - b.position).map((p) => p.id);
+    if (order.length !== 6) return order;
+    const i = params.picaPicaSubmano;
+    return [order[i], order[i + 3]];
+  }
 
-    // Clear existing players
-    seating.querySelectorAll('.player-area').forEach(el => el.remove());
+  /** ¿El asiento está afuera de la submano que se juega? (AC 3: atenuado). */
+  private seatDimmed(params: RenderParams, playerId: string): boolean {
+    if (!params.isPicaPica) return false;
+    if (params.handWinnerTeam >= 0) return false; // la mano ya terminó: nadie atenuado
+    return !this.picaPicaPairIds(params).includes(playerId);
+  }
 
-    const playerCount = params.players.length;
+  private humanPlayer(params: RenderParams): PlayerConfig | undefined {
+    return params.players.find((p) => p.isHuman);
+  }
 
+  /** Estado de una carta propia: playable si es el turno y no hay canto pendiente. */
+  private handCardState(params: RenderParams, responseOpen: boolean): CardState {
+    const human = this.humanPlayer(params);
+    if (!human || params.currentTurnPlayerId !== human.id) return 'normal';
+    if (responseOpen || (params.firstHandCompleted && params.handWinnerTeam >= 0) || params.isGameOver) {
+      return 'disabled';
+    }
+    return 'playable';
+  }
+
+  /** Id de carta para `hand-card-{cardId}` (número + palo, único en la mano). */
+  private cardId(card: CardDef): string {
+    return `${card.number}-${card.suit}`;
+  }
+
+  /** Caja del asiento según breakpoint (Seat.dc.html: 200×72, compacto 118×54). */
+  private seatBox(): { w: number; h: number } {
+    return this.isMobile ? { w: 118, h: 54 } : { w: 200, h: 72 };
+  }
+
+  private renderPlayers(params: RenderParams): void {
+    const board = this.container.querySelector('.game-board');
+    const seatsLayer = this.container.querySelector('.seats-layer');
+    if (!board || !seatsLayer) return;
+
+    const vp: Viewport = { width: window.innerWidth, height: window.innerHeight };
+    const { w: seatW, h: seatH } = this.seatBox();
+
+    // Baza actual para saber quién ya jugó (sus dorsos bajan).
+    const playedIds = new Set(params.currentTrick.map((c) => c.playerId));
+    const human = this.humanPlayer(params);
+    const responseOpen = this.responsePanelOpen(params);
+    const handState = this.handCardState(params, responseOpen);
+    const trickWinner = this.currentTrickWinner(params);
+
+    seatsLayer.innerHTML = '';
     for (const player of params.players) {
       const hand = params.hands[player.id] || [];
-      const playerEl = document.createElement('div');
-      playerEl.className = 'player-area';
-      playerEl.dataset.playerId = player.id;
-      playerEl.dataset.position = String(player.position);
-
       const isHuman = player.isHuman;
-      const labelClass = isHuman ? 'player-name human' : 'player-name';
-      const labelName = isHuman ? 'VOS' : player.name;
+      const slot = seatPosition(player.position, params.players.length, vp, { seatWidth: seatW, seatHeight: seatH });
 
-      playerEl.innerHTML = `
-        <div class="${labelClass}">${labelName}</div>
-        <div class="player-cards" data-player-id="${player.id}"></div>
-      `;
+      const wrap = document.createElement('div');
+      wrap.className = 'seat-slot' + (player.isHuman ? ' human-area' : '');
+      wrap.dataset.playerId = player.id;
+      wrap.dataset.position = String(player.position);
+      wrap.dataset.seatAnchor = slot.y > vp.height / 2 ? 'bottom' : 'top';
+      wrap.style.left = `${slot.x}px`;
+      wrap.style.top = `${slot.y}px`;
+      wrap.style.width = `${seatW}px`;
 
-      const badges = document.createElement('div');
-      badges.style.cssText = 'display:flex;gap:4px;margin-top:2px;flex-wrap:wrap;justify-content:center;';
-      if (player.isAI) badges.innerHTML += '<span style="font-size:9px;padding:1px 4px;background:rgba(0,0,0,0.5);color:#aaa;border-radius:3px;">IA</span>';
-      badges.innerHTML += `<span style="font-size:9px;padding:1px 4px;background:rgba(0,0,0,0.5);color:#ffd700;border-radius:3px;">Eq ${player.team + 1}</span>`;
-      if (player.id === params.dealerId) badges.innerHTML += '<span style="font-size:9px;padding:1px 4px;background:rgba(255,165,0,0.3);color:#ffa500;border-radius:3px;">📦</span>';
-      if (player.id === params.starterId) badges.innerHTML += '<span style="font-size:9px;padding:1px 4px;background:rgba(255,215,0,0.3);color:#ffd700;border-radius:3px;">👑</span>';
-      playerEl.appendChild(badges);
+      const cardsLeft = isHuman ? 0 : Math.max(0, hand.length - (playedIds.has(player.id) ? 1 : 0));
+      wrap.innerHTML = renderSeat({
+        label: isHuman ? 'Vos' : player.name,
+        team: player.team,
+        cards: isHuman ? hand.length : cardsLeft,
+        mano: player.id === params.starterId,
+        dealer: player.id === params.dealerId,
+        active: player.id === params.currentTurnPlayerId,
+        dim: this.seatDimmed(params, player.id),
+        compact: this.isMobile,
+        you: isHuman,
+        playerId: player.id,
+      });
 
-      const cardsArea = playerEl.querySelector('.player-cards') as HTMLElement;
-      for (let i = 0; i < hand.length; i++) {
-        const cardEl = this.createCardElement(hand[i], isHuman);
-        if (isHuman) {
-          cardEl.classList.add('clickable');
-          cardEl.style.cursor = player.id === params.currentTurnPlayerId ? 'pointer' : 'default';
-          cardEl.style.opacity = player.id === params.currentTurnPlayerId ? '1' : '0.75';
-          cardEl.addEventListener('click', () => {
-              this.callbacks.onCardPlayed(player.id, i);
+      // El driver legacy espera `.player-area.active-turn` con `.player-name`.
+      const seatEl = wrap.querySelector('.seat') as HTMLElement;
+      seatEl.classList.add('player-area');
+      seatEl.classList.toggle('active-turn', player.id === params.currentTurnPlayerId);
+      const nameEl = seatEl.querySelector('.seat-label');
+      if (nameEl) nameEl.classList.add('player-name');
+
+      if (isHuman) {
+        const handEl = document.createElement('div');
+        handEl.className = 'hand-row';
+        handEl.setAttribute('data-testid', 'hand');
+        hand.forEach((card, i) => {
+          const html = renderCard(card, {
+            size: this.isMobile ? 'lg' : 'xl',
+            state: handState,
+            label: handState === 'playable' ? cardAriaLabel(card) : undefined,
           });
-        } else {
-          cardEl.classList.add('card-back');
-        }
-        cardsArea.appendChild(cardEl);
-      }
-
-      playerEl.classList.toggle('active-turn', player.id === params.currentTurnPlayerId);
-
-      // ── PLACEMENT LOGIC ──────────────────────────────────────────────────
-      if (playerCount === 2) {
-        // 0 = human bottom, 1 = opponent top
-        if (isHuman) {
-          humanArea.appendChild(playerEl);
-        } else {
-          opponentsArea.appendChild(playerEl);
-        }
-
-      } else if (playerCount === 4) {
-        // Positions: 0=human(bottom), 1=teammate(left), 2=opponent(top), 3=opponent(right)
-        // Teams: 0→players 0,1 | 1→players 2,3
-        // player 0: human, team 0, bottom
-        // player 1: AI, team 0, LEFT
-        // player 2: AI, team 1, TOP (across from human)
-        // player 3: AI, team 1, RIGHT
-        const pos = player.position;
-        if (pos === 0) {
-          humanArea.appendChild(playerEl);
-        } else if (pos === 1) {
-          sideLeft.appendChild(playerEl);
-        } else if (pos === 2) {
-          opponentsArea.appendChild(playerEl);
-        } else if (pos === 3) {
-          sideRight.appendChild(playerEl);
-        }
-
-      } else if (playerCount === 6) {
-        // Teams: team0=[0,2,4], team1=[1,3,5]
-        // Layout: bottom-center = human(0), top-center = opponent(1),
-        //         left-top = teammate(2), left-bottom = opponent(3),
-        //         right-top = teammate(4), right-bottom = opponent(5)
-        const pos = player.position;
-        const team = player.team;
-        if (pos === 0) {
-          humanArea.appendChild(playerEl);
-        } else if (pos === 1) {
-          opponentsArea.appendChild(playerEl);
-        } else if (pos === 2) {
-          const leftTop = seating.querySelector('.side-left-top');
-          if (leftTop) leftTop.appendChild(playerEl);
-          else sideLeft.appendChild(playerEl);
-        } else if (pos === 3) {
-          const leftBottom = seating.querySelector('.side-left-bottom');
-          if (leftBottom) leftBottom.appendChild(playerEl);
-          else sideLeft.appendChild(playerEl);
-        } else if (pos === 4) {
-          const rightTop = seating.querySelector('.side-right-top');
-          if (rightTop) rightTop.appendChild(playerEl);
-          else sideRight.appendChild(playerEl);
-        } else if (pos === 5) {
-          const rightBottom = seating.querySelector('.side-right-bottom');
-          if (rightBottom) rightBottom.appendChild(playerEl);
-          else sideRight.appendChild(playerEl);
-        }
-      }
-    }
-  }
-
-  private updatePlayers(params: {
-    players: PlayerConfig[];
-    hands: { [playerId: string]: CardDef[] };
-    currentTurnPlayerId: string;
-    dealerId: string;
-    starterId: string;
-  }): void {
-    const seating = this.container.querySelector('#circle-seating') as HTMLElement;
-    if (!seating) return;
-
-    for (const player of params.players) {
-      const hand = params.hands[player.id] || [];
-      const playerEl = seating.querySelector(`[data-player-id="${player.id}"]`) as HTMLElement;
-      if (!playerEl) continue;
-
-      playerEl.classList.toggle('active-turn', player.id === params.currentTurnPlayerId);
-
-      const cardsArea = playerEl.querySelector('.player-cards') as HTMLElement;
-      if (!cardsArea) continue;
-      cardsArea.innerHTML = '';
-
-      for (let i = 0; i < hand.length; i++) {
-        const cardEl = this.createCardElement(hand[i], player.isHuman);
-        if (player.isHuman) {
+          handEl.insertAdjacentHTML('beforeend', html);
+          const cardEl = handEl.lastElementChild as HTMLElement;
           cardEl.classList.add('clickable');
-          cardEl.style.cursor = player.id === params.currentTurnPlayerId ? 'pointer' : 'default';
-          cardEl.style.opacity = player.id === params.currentTurnPlayerId ? '1' : '0.75';
-          cardEl.addEventListener('click', () => {
-              this.callbacks.onCardPlayed(player.id, i);
-          });
-        } else {
-          cardEl.classList.add('card-back');
+          cardEl.setAttribute('data-testid', `hand-card-${this.cardId(card)}`);
+          cardEl.setAttribute('data-card-index', String(i));
+          if (handState === 'playable') {
+            cardEl.addEventListener('click', () => this.callbacks.onCardPlayed(player.id, i));
+          } else if (cardEl.tagName === 'BUTTON') {
+            (cardEl as HTMLButtonElement).disabled = true;
+          }
+        });
+        if (responseOpen && hand.length > 0) {
+          handEl.insertAdjacentHTML('beforeend',
+            '<div class="hand-lock-note">Tus cartas se liberan cuando respondas</div>');
         }
-        cardsArea.appendChild(cardEl);
+        wrap.appendChild(handEl);
+
+        if (handState === 'disabled' && responseOpen) {
+          seatEl.classList.add('hand-disabled');
+        }
       }
 
-      const badges = playerEl.querySelector('div[style*="display:flex"]');
-      if (badges) {
-        let html = '';
-        if (player.isAI) html += '<span style="font-size:9px;padding:1px 4px;background:rgba(0,0,0,0.5);color:#aaa;border-radius:3px;">IA</span>';
-        html += `<span style="font-size:9px;padding:1px 4px;background:rgba(0,0,0,0.5);color:#ffd700;border-radius:3px;">Eq ${player.team + 1}</span>`;
-        if (player.id === params.dealerId) html += '<span style="font-size:9px;padding:1px 4px;background:rgba(255,165,0,0.3);color:#ffa500;border-radius:3px;">📦</span>';
-        if (player.id === params.starterId) html += '<span style="font-size:9px;padding:1px 4px;background:rgba(255,215,0,0.3);color:#ffd700;border-radius:3px;">👑</span>';
-        badges.innerHTML = html;
+      // Cartas jugadas de la baza actual: frente al asiento, hacia el centro.
+      const playedMine = params.currentTrick.find((c) => c.playerId === player.id);
+      if (playedMine) {
+        const holder = document.createElement('div');
+        holder.className = 'seat-played';
+        holder.insertAdjacentHTML('beforeend', renderCard(playedMine.card, {
+          size: this.isMobile ? 'sm' : 'md',
+          state: trickWinner?.playerId === player.id ? 'winner' : 'normal',
+        }));
+        const pc = holder.firstElementChild as HTMLElement | null;
+        if (pc) {
+          pc.classList.add('played-card');
+          pc.setAttribute('data-testid', `played-card-${player.id}-${params.currentTrickNumber}`);
+        }
+        wrap.appendChild(holder);
       }
+
+      seatsLayer.appendChild(wrap);
     }
+
+    // Bazas ganadas históricas de la mano: en miniatura sobre el centro del paño.
+    this.renderHistoryRounds(params);
   }
 
-  private createCardElement(card: CardDef, faceUp: boolean = true): HTMLElement {
-    const cardEl = document.createElement('div');
-    cardEl.className = 'card';
-
-    if (faceUp) {
-      const suitEmojis: { [suit: string]: string } = {
-        espada: '⚔️', basto: '🪵', oro: '🪙', copa: '🍷'
-      };
-      const suitNames: { [suit: string]: string } = {
-        espada: 'Espada', basto: 'Basto', oro: 'Oro', copa: 'Copa'
-      };
-      const suitColors: { [suit: string]: string } = {
-        espada: '#1a1a2e', basto: '#2d5016', oro: '#b8860b', copa: '#8b0000'
-      };
-
-      cardEl.classList.add('card-front');
-      cardEl.innerHTML = `
-        <div class="card-content">
-          <div class="card-top-left">${card.number}</div>
-          <div class="card-center-suit" style="color: ${suitColors[card.suit]}">${suitEmojis[card.suit]}</div>
-          <div class="card-name">${suitNames[card.suit]}</div>
-        </div>
-      `;
-    }
-
-    return cardEl;
+  /** Carta más alta de la baza actual (usa el ranking del core, sin duplicarlo). */
+  private currentTrickWinner(params: RenderParams): PlayedCard | null {
+    if (params.currentTrick.length === 0) return null;
+    const resolved = resolverBaza(
+      params.currentTrick as unknown as Array<{ card: Card; playerId: string }>,
+      (pid) => params.players.find((p) => p.id === pid)?.team ?? -1,
+    );
+    if (resolved.tied || !resolved.winnerPlayerId || !resolved.highestCard) return null;
+    return params.currentTrick.find((c) => c.playerId === resolved.winnerPlayerId) ?? null;
   }
 
-  // ---- Render Played Cards ----
-
-  private renderPlayedCards(params: {
-    currentTrick: PlayedCard[];
-    roundResults: RoundResult[];
-    currentRound: number;
-    isPicaPica: boolean;
-    picaPicaSubmano: number;
-  }): void {
-    // Remove old played-card rows before re-rendering to prevent accumulation
-    this.container.querySelectorAll('.played-row').forEach(el => el.remove());
-
-    // Current trick cards — full opacity, clearly visible
-    for (const played of params.currentTrick) {
-      const playerEl = this.container.querySelector(`.player-area[data-player-id="${played.playerId}"]`);
-      if (playerEl) {
-        // Create a row for played cards near this player
-        let playedRow = playerEl.querySelector('.played-row');
-        if (!playedRow) {
-          playedRow = document.createElement('div');
-          playedRow.className = 'played-row';
-          playerEl.appendChild(playedRow);
-        }
-        // Current trick card - golden glow, full opacity
-        const cardEl = this.createCardElement(played.card, true);
-        cardEl.classList.add('played-small');
-        cardEl.style.cssText = 'margin: 0 4px 0 0; position: relative; display:inline-block; box-shadow: 0 0 12px rgba(255,215,0,0.6), 0 0 4px rgba(255,215,0,0.4);';
-        playedRow.appendChild(cardEl);
-
-        // Name badge with bright gold
-        const nameEl = document.createElement('div');
-        nameEl.style.cssText = 'font-size:9px;color:#ffd700;font-weight:700;background:rgba(0,0,0,0.85);padding:1px 5px;border-radius:3px;text-align:center;border:1px solid rgba(255,215,0,0.3);';
-        const suitNames: { [suit: string]: string } = { espada: 'Esp', basto: 'Bas', oro: 'Oro', copa: 'Cop' };
-        nameEl.textContent = `${played.card.number} ${suitNames[played.card.suit]}`;
-        playedRow.appendChild(nameEl);
-      }
-    }
-
-    // Historical cards (previous rounds) — side by side, slightly dimmed
+  /** Cartas de bazas ya resueltas en esta mano, en `xs`, pegadas al centro. */
+  private renderHistoryRounds(params: RenderParams): void {
+    const seatsLayer = this.container.querySelector('.seats-layer');
+    if (!seatsLayer) return;
+    seatsLayer.querySelectorAll('.history-round').forEach((el) => el.remove());
     for (const result of params.roundResults) {
       for (const played of result.cards) {
-        const playerEl = this.container.querySelector(`.player-area[data-player-id="${played.playerId}"]`);
-        if (playerEl) {
-          let playedRow = playerEl.querySelector('.played-row');
-          if (!playedRow) {
-            playedRow = document.createElement('div');
-            playedRow.className = 'played-row';
-            playerEl.appendChild(playedRow);
-          }
-          const cardEl = this.createCardElement(played.card, true);
-          cardEl.classList.add('played-small');
-          cardEl.style.cssText = 'margin: 0 4px 0 0; display:inline-block; opacity: 0.5; filter: grayscale(0.5);';
-          playedRow.appendChild(cardEl);
-          const nameEl = document.createElement('div');
-          nameEl.style.cssText = 'font-size:8px;color:#888;font-weight:400;background:rgba(0,0,0,0.7);padding:1px 3px;border-radius:2px;text-align:center;';
-          const suitNames: { [suit: string]: string } = { espada: 'Esp', basto: 'Bas', oro: 'Oro', copa: 'Cop' };
-          nameEl.textContent = `${played.card.number} ${suitNames[played.card.suit]}`;
-          playedRow.appendChild(nameEl);
+        const player = params.players.find((p) => p.id === played.playerId);
+        if (!player) continue;
+        const vp: Viewport = { width: window.innerWidth, height: window.innerHeight };
+        const box = this.seatBox();
+        const slot = seatPosition(player.position, params.players.length, vp,
+          { seatWidth: box.w, seatHeight: box.h });
+        const holder = document.createElement('div');
+        holder.className = 'history-round';
+        holder.style.left = `${slot.x + box.w / 2}px`;
+        holder.style.top = `${slot.y}px`;
+        holder.insertAdjacentHTML('beforeend', renderCard(played.card, {
+          size: 'xs',
+          state: result.highestCardPlayerId === played.playerId && result.teamWinner !== -1 ? 'winner' : 'normal',
+          tag: 'Ganó',
+        }));
+        const hist = holder.firstElementChild as HTMLElement | null;
+        if (hist) {
+          hist.classList.add('played-card', 'played-card--history');
+          hist.setAttribute('data-testid', `played-card-${played.playerId}-r${result.roundNumber}`);
         }
+        seatsLayer.appendChild(holder);
       }
     }
   }
 
-  // ---- Update Message ----
+  // ---- Panel de respuesta: apertura / feed / globos ----
 
-  private updateMessage(_params: {
-    currentRound: number;
-    firstHandCompleted: boolean;
-    isSecondHand: boolean;
-    isPicaPica: boolean;
-    picaPicaSubmano: number;
-  }): void {
-    // Message area kept empty per user request
+  /** True si hay un panel de respuesta abierto (canto pendiente del rival). */
+  private responsePanelOpen(params: RenderParams): boolean {
+    const humanTeam = this.humanPlayer(params)?.team ?? -1;
+    if (params.envido.phase === 'opening' || params.envido.phase === 'response') {
+      return params.envido.callerTeam !== humanTeam;
+    }
+    if (params.truco.level > 0 && !params.truco.accepted) {
+      return params.truco.lastChallengerTeam !== humanTeam;
+    }
+    return false;
+  }
+
+  private updateFeed(): void {
+    const slot = this.container.querySelector('.feed-slot');
+    if (!slot || this.isMobile) {
+      if (slot) slot.innerHTML = '';
+      return;
+    }
+    slot.innerHTML = renderFeed(this.feedLines);
+  }
+
+  /** Agrega una línea al feed "En esta mano" (últimas 3 visibles, AC 8). */
+  pushFeedLine(line: string): void {
+    this.feedLines.push(line);
+    if (this.feedLines.length > 12) this.feedLines = this.feedLines.slice(-12);
+    this.updateFeed();
+  }
+
+  /** Globo de canto junto al asiento del jugador, 2,5 s (AC 8). */
+  showBubble(playerId: string, text: string): void {
+    const seat = this.container.querySelector<HTMLElement>(`.seat-slot[data-player-id="${CSS.escape(playerId)}"]`);
+    if (!seat) return;
+    seat.insertAdjacentHTML('beforeend', renderBubble(text));
+    const bubble = seat.querySelector('.bubble-v2');
+    if (!bubble) return;
+    const t = window.setTimeout(() => bubble.remove(), 2500);
+    this.bubbleTimers.push(t);
   }
 
   // ---- Render Envido Panel ----
 
-  private renderEnvidoPanel(envido: EnvidoState, players: PlayerConfig[]): void {
-    const responsePanel = this.container.querySelector('.response-panel');
+  /** Abre el panel de respuesta como diálogo de papel con foco (AC 7). */
+  private openResponsePanel(html: string, kind: 'truco' | 'envido'): void {
+    const responsePanel = this.container.querySelector<HTMLElement>('.response-panel');
     if (!responsePanel) return;
+    const wasHidden = responsePanel.style.display !== 'flex';
+    responsePanel.style.display = 'flex';
+    responsePanel.setAttribute('role', 'dialog');
+    responsePanel.setAttribute('aria-modal', 'false');
+    responsePanel.setAttribute('data-kind', kind);
+    responsePanel.setAttribute('data-testid', 'response-panel');
+    responsePanel.innerHTML = html;
+    if (wasHidden) {
+      responsePanel.querySelector<HTMLElement>('button')?.focus();
+    }
+  }
 
+  private closeResponsePanel(): void {
+    const responsePanel = this.container.querySelector<HTMLElement>('.response-panel');
+    if (!responsePanel) return;
+    responsePanel.style.display = 'none';
+    responsePanel.innerHTML = '';
+    responsePanel.removeAttribute('role');
+    responsePanel.removeAttribute('data-kind');
+  }
+
+  private nameOfTeam(team: number | null, players: PlayerConfig[]): string {
+    if (team === null) return '';
+    const humanTeam = players.find((p) => p.isHuman)?.team;
+    if (team === humanTeam) return 'Tu equipo';
+    const rival = players.find((p) => p.team === team && !p.isHuman);
+    return rival ? rival.name : 'El rival';
+  }
+
+  private renderEnvidoPanel(envido: EnvidoState, players: PlayerConfig[]): void {
     if (envido.phase === 'none') {
-      (responsePanel as HTMLElement).style.display = 'none';
-      responsePanel.innerHTML = '';
+      this.closeResponsePanel();
       return;
     }
 
-    (responsePanel as HTMLElement).style.display = 'flex';
-
-    const humanPlayer = players.find(p => p.isHuman);
-    const humanTeam = humanPlayer ? humanPlayer.team : -1;
+    const humanTeam = players.find(p => p.isHuman)?.team ?? -1;
     const opponentCalled = envido.callerTeam !== humanTeam;
+    const caller = this.nameOfTeam(envido.callerTeam, players);
 
-    let html = `<div class="response-label">Envido</div>`;
+    let html = `<div class="response-head"><span class="response-kicker">Envido</span></div>`;
 
     if (envido.phase === 'opening') {
-      html += `<div class="response-label">Equipo ${envido.callerTeam! + 1} cantó Envido</div>`;
+      html += `<div class="response-label">${escapeHtml(caller)} cantó Envido</div>`;
       if (opponentCalled) {
         html += `<div class="response-buttons">
-          <button class="btn-accept" onclick="window._uiCallbacks?.onEnvidoWant()">Quiero</button>
-          <button class="btn-son-buenas" onclick="window._uiCallbacks?.onEnvidoSonBuenas()">Son buenas</button>
-          <button class="btn-reject" onclick="window._uiCallbacks?.onEnvidoNoWant()">No quiero</button>
+          <button class="btn-accept" data-testid="response-quiero" onclick="window._uiCallbacks?.onEnvidoWant()">Quiero<em>aceptar el envido</em></button>
+          <button class="btn-son-buenas" data-testid="response-envido-son-buenas" onclick="window._uiCallbacks?.onEnvidoSonBuenas()">Son buenas<em>empatar y seguir</em></button>
+          <button class="btn-reject" data-testid="response-no-quiero" onclick="window._uiCallbacks?.onEnvidoNoWant()">No quiero<em>Otros ganan 1</em></button>
         </div>`;
       } else {
-        html += `<div class="response-label">Esperando respuesta del equipo contrario...</div>`;
+        html += `<div class="response-label response-waiting">Esperando respuesta del rival…</div>`;
       }
     } else if (envido.phase === 'response') {
-      html += `<div class="response-label">Equipo ${envido.callerTeam! + 1} subió a ${envido.level === 'real-envido' ? 'Real Envido' : 'Envido'}</div>`;
+      html += `<div class="response-label">${escapeHtml(caller)} subió a ${envido.level === 'real-envido' ? 'Real Envido' : 'Envido'}</div>`;
       if (opponentCalled) {
         html += `<div class="response-buttons">
-          <button class="btn-falta" onclick="window._uiCallbacks?.onEnvidoRaise('real-envido')">Subir a Real Envido</button>
-          <button class="btn-accept" onclick="window._uiCallbacks?.onEnvidoWant()">Quiero</button>
-          <button class="btn-son-buenas" onclick="window._uiCallbacks?.onEnvidoSonBuenas()">Son buenas</button>
-          <button class="btn-reject" onclick="window._uiCallbacks?.onEnvidoNoWant()">No quiero</button>
+          <button class="btn-falta" data-testid="response-raise-envido-R" onclick="window._uiCallbacks?.onEnvidoRaise('real-envido')">Subir a Real<em>+</em></button>
+          <button class="btn-accept" data-testid="response-quiero" onclick="window._uiCallbacks?.onEnvidoWant()">Quiero<em>aceptar el canto</em></button>
+          <button class="btn-son-buenas" data-testid="response-envido-son-buenas" onclick="window._uiCallbacks?.onEnvidoSonBuenas()">Son buenas<em>empatar y seguir</em></button>
+          <button class="btn-reject" data-testid="response-no-quiero" onclick="window._uiCallbacks?.onEnvidoNoWant()">No quiero<em>Otros ganan 1</em></button>
         </div>`;
       } else {
-        html += `<div class="response-label">Esperando respuesta del equipo contrario...</div>`;
+        html += `<div class="response-label response-waiting">Esperando respuesta del rival…</div>`;
       }
     } else if (envido.phase === 'resolution') {
       html += `<div class="response-label">Envido resuelto: ${envido.pointsAwarded} pts</div>`;
     }
 
-    responsePanel.innerHTML = html;
+    this.openResponsePanel(html, 'envido');
   }
 
   // ---- Render Truco Panel ----
 
   private renderTrucoPanel(truco: TrucoState, players: PlayerConfig[]): void {
-    const responsePanel = this.container.querySelector('.response-panel');
-    if (!responsePanel) return;
-
     if (truco.level === 0) return;
 
-    (responsePanel as HTMLElement).style.display = 'flex';
-
-    const levelNames: { [level: number]: string } = { 1: 'Truco', 2: 'Retruco', 3: 'Vale 4' };
+    const levelNames: { [level: number]: string } = { 1: 'Truco', 2: 'Retruco', 3: 'Vale cuatro' };
     const levelPoints: { [level: number]: number } = { 1: 2, 2: 3, 3: 4 };
 
-    const humanPlayer = players.find(p => p.isHuman);
-    const humanTeam = humanPlayer ? humanPlayer.team : -1;
+    const humanTeam = players.find(p => p.isHuman)?.team ?? -1;
     const opponentCalled = truco.lastChallengerTeam !== humanTeam;
+    const caller = this.nameOfTeam(truco.lastChallengerTeam, players);
 
-    let html = `<div class="response-label">${levelNames[truco.level]} — ${levelPoints[truco.level]} pts</div>`;
+    let html = `<div class="response-head"><span class="response-kicker">${levelNames[truco.level]} · vale ${levelPoints[truco.level]}</span></div>`;
 
     if (!truco.accepted) {
-      html += `<div class="response-label">Equipo ${truco.lastChallengerTeam! + 1} cantó ${levelNames[truco.level]}</div>`;
+      html += `<div class="response-label">${escapeHtml(caller)} cantó ${levelNames[truco.level]}</div>`;
       if (opponentCalled) {
         html += `<div class="response-buttons">
-          <button class="btn-accept" onclick="window._uiCallbacks?.onTrucoAccept()">Quiero</button>
-          <button class="btn-reject" onclick="window._uiCallbacks?.onTrucoDecline()">No quiero</button>
-          ${truco.level < 3 ? `<button class="btn-falta" onclick="window._uiCallbacks?.onTrucoRaise()">Subir a ${levelNames[truco.level + 1]}</button>` : ''}
+          <button class="btn-accept" data-testid="response-quiero" onclick="window._uiCallbacks?.onTrucoAccept()">Quiero<em>jugar por ${levelPoints[truco.level]}</em></button>
+          <button class="btn-reject" data-testid="response-no-quiero" onclick="window._uiCallbacks?.onTrucoDecline()">No quiero<em>Otros ganan ${levelPoints[truco.level] - 1}</em></button>
+          ${truco.level < 3 ? `<button class="btn-falta" data-testid="response-raise-truco" onclick="window._uiCallbacks?.onTrucoRaise()">Subir a ${levelNames[truco.level + 1]}<em>+</em></button>` : ''}
         </div>`;
       } else {
-        html += `<div class="response-label">Esperando respuesta del equipo contrario...</div>`;
+        html += `<div class="response-label response-waiting">Esperando respuesta del rival…</div>`;
       }
     } else {
       html += `<div class="response-label">${levelNames[truco.level]} aceptado</div>`;
     }
 
-    responsePanel.innerHTML = html;
+    this.openResponsePanel(html, 'truco');
   }
 
   // ---- Render Round Over Panel ----
@@ -637,6 +721,7 @@ export class UIManager {
     gameOverScores: { team0: number; team1: number };
     currentRound: number;
     partidaHistory: PartidaHistory;
+    players: PlayerConfig[];
   }): void {
     document.querySelectorAll('.round-over-panel, .game-over-panel').forEach(el => el.remove());
 
@@ -644,7 +729,8 @@ export class UIManager {
       this.renderGameOverPanel({
         gameOverWinner: params.gameOverWinner,
         gameOverScores: params.gameOverScores,
-        partidaHistory: params.partidaHistory
+        partidaHistory: params.partidaHistory,
+        players: params.players
       });
       return;
     }
@@ -656,7 +742,8 @@ export class UIManager {
         scores: params.scores,
         roundResults: params.roundResults,
         isPicaPica: params.isPicaPica,
-        picapicaResults: params.picapicaResults
+        picapicaResults: params.picapicaResults,
+        players: params.players
       });
     }
   }
@@ -667,23 +754,34 @@ export class UIManager {
     roundResults: RoundResult[];
     isPicaPica: boolean;
     picapicaResults: PicaPicaSubmanoResult[];
+    players: PlayerConfig[];
   }): void {
     const panel = document.createElement('div');
-    panel.className = 'round-over-panel';
+    panel.className = 'round-over-panel paper-panel';
     panel.style.display = 'flex';
+    panel.setAttribute('data-testid', 'hand-summary');
+    panel.setAttribute('role', 'dialog');
+    panel.setAttribute('aria-label', 'Resumen de la mano');
 
-    let summary = 'Mano completada';
-    if (params.handWinnerTeam >= 0) {
-      summary = `Equipo ${params.handWinnerTeam + 1} gana la mano`;
-    }
+    const won = params.handWinnerTeam === (params.players.find((p) => p.isHuman)?.team ?? 0);
+    const summary = params.handWinnerTeam >= 0
+      ? (won ? 'Ganaste esta mano' : 'Ganó el rival')
+      : 'Mano completada';
+
+    const rounds = params.roundResults.map((r) => {
+      const label = r.teamWinner === -1 ? 'Parda' : r.teamWinner === 0 ? 'Nosotros' : 'Ellos';
+      return `<span class="round-chip round-chip--t${r.teamWinner}">${label}</span>`;
+    }).join('');
 
     panel.innerHTML = `
-      <div class="round-over-text">${summary}</div>
+      <div class="paper-kicker">Resumen de mano</div>
+      <div class="round-over-text">${escapeHtml(summary)}</div>
+      <div class="round-chips">${rounds}</div>
       <div class="round-over-scores">
-        <span>Equipo 1: ${params.scores.team0}</span>
-        <span>Equipo 2: ${params.scores.team1}</span>
+        <span>Nosotros <b>${params.scores.team0}</b></span>
+        <span>Ellos <b>${params.scores.team1}</b></span>
       </div>
-      <button class="btn-new-round" onclick="window._uiCallbacks?.onNewRound()">SIGUIENTE MANO</button>
+      <button class="btn-new-round" data-testid="next-hand" onclick="window._uiCallbacks?.onNewRound()">Siguiente mano</button>
     `;
 
     this.container.appendChild(panel);
@@ -693,43 +791,48 @@ export class UIManager {
     gameOverWinner: number | null;
     gameOverScores: { team0: number; team1: number };
     partidaHistory: PartidaHistory;
+    players: PlayerConfig[];
   }): void {
     if (params.gameOverWinner === null) return;
     const history = params.partidaHistory;
+    const humanTeam = params.players.find((p) => p.isHuman)?.team ?? 0;
+    const won = params.gameOverWinner === humanTeam;
     const totalHands = history.hands.length;
-    let handSummaryHtml = '<div class="hand-history">';
+
+    let handSummaryHtml = '<div class="hand-history" data-testid="game-over-history">';
     for (let i = 0; i < totalHands; i++) {
       const h = history.hands[i];
       const winnerLabel = h.handWinnerTeam >= 0
-        ? `Equipo ${h.handWinnerTeam + 1}`
+        ? (h.handWinnerTeam === humanTeam ? 'Nosotros' : 'Ellos')
         : 'Empate';
       handSummaryHtml += `
-        <div class="hand-entry" style="margin: 4px 0; padding: 4px 8px; background: rgba(255,255,255,0.05); border-radius: 4px; display: flex; justify-content: space-between; font-size: 12px;">
+        <div class="hand-entry">
           <span>Mano ${i + 1}: ${winnerLabel} (${h.pointsAwarded} pts)</span>
-          <span style="color: ${h.handWinnerTeam === 0 ? '#4caf50' : '#2196f3'}">
-            ${h.team0Score} - ${h.team1Score}
-          </span>
+          <span class="hand-entry-score">${h.team0Score} – ${h.team1Score}</span>
         </div>`;
     }
     handSummaryHtml += '</div>';
 
     const panel = document.createElement('div');
-    panel.className = 'game-over-panel';
+    panel.className = 'game-over-panel paper-panel';
     panel.style.display = 'flex';
+    panel.setAttribute('data-testid', 'game-over');
+    panel.setAttribute('role', 'dialog');
+    panel.setAttribute('aria-label', 'Fin de la partida');
     panel.innerHTML = `
-      <div class="game-over-text">🏆 ¡Equipo ${params.gameOverWinner + 1} gana el juego!</div>
+      <div class="paper-kicker">Fin de la partida</div>
+      <div class="game-over-text" data-testid="game-over-winner">${won ? '¡Ganaste la partida!' : 'Ganó el rival'}</div>
       <div class="round-over-scores">
-        <span>Equipo 1: ${params.gameOverScores.team0}</span>
-        <span>Equipo 2: ${params.gameOverScores.team1}</span>
+        <span>Nosotros <b>${params.gameOverScores.team0}</b></span>
+        <span>Ellos <b>${params.gameOverScores.team1}</b></span>
       </div>
-      <div class="hand-history-header" style="margin: 12px 0 4px; font-size: 14px; font-weight: 700; color: #ffd700;">📋 Historial de la partida</div>
+      <div class="hand-history-header">Historial de la partida</div>
       ${handSummaryHtml}
-      <div class="match-meta" style="margin-top: 8px; font-size: 11px; color: #888;">
-        <span>Mano inicial: ${history.initialDealerId} (aleatorio)</span>
-        <span>· ${totalHands} manos jugadas</span>
-        <span>· Iniciado: ${new Date(history.startedAt).toLocaleTimeString()}</span>
+      <div class="match-meta">
+        <span>${totalHands} manos jugadas</span>
+        <span>· Iniciado ${escapeHtml(new Date(history.startedAt).toLocaleTimeString())}</span>
       </div>
-      <button class="btn-new-game" onclick="window._uiCallbacks?.onNewGame()">NUEVO JUEGO</button>
+      <button class="btn-new-game" data-testid="new-game" onclick="window._uiCallbacks?.onNewGame()">Nuevo juego</button>
     `;
     this.container.appendChild(panel);
   }
@@ -774,21 +877,18 @@ export class UIManager {
 
     if (showEnvido) {
       const envidoGroup = document.createElement('div');
-      envidoGroup.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;';
-      const b1 = document.createElement('button');
-      b1.textContent = '🎯 Envido'; b1.style.borderColor = '#4caf50'; b1.style.color = '#4caf50';
-      b1.addEventListener('click', () => this.callbacks.onEnvidoOpen());
-      envidoGroup.appendChild(b1);
-      const b2 = document.createElement('button');
-      b2.textContent = 'Real Envido'; b2.style.fontSize = '11px'; b2.style.padding = '6px 8px';
-      b2.style.borderColor = '#ff9800'; b2.style.color = '#ff9800';
-      b2.addEventListener('click', () => this.callbacks.onEnvidoOpenType('real-envido'));
-      envidoGroup.appendChild(b2);
-      const b3 = document.createElement('button');
-      b3.textContent = 'Falta Envido'; b3.style.fontSize = '11px'; b3.style.padding = '6px 8px';
-      b3.style.borderColor = '#f44336'; b3.style.color = '#f44336';
-      b3.addEventListener('click', () => this.callbacks.onEnvidoOpenType('falta-envido'));
-      envidoGroup.appendChild(b3);
+      envidoGroup.className = 'envido-group';
+      const mk = (text: string, sub: string, testid: string, cls: string, onClick: () => void) => {
+        const b = document.createElement('button');
+        b.className = `action-btn ${cls}`;
+        b.setAttribute('data-testid', testid);
+        b.innerHTML = `${escapeHtml(text)}<em>${escapeHtml(sub)}</em>`;
+        b.addEventListener('click', onClick);
+        return b;
+      };
+      envidoGroup.appendChild(mk('Envido', '2 pts', 'action-envido', 'btn-envido', () => this.callbacks.onEnvidoOpen()));
+      envidoGroup.appendChild(mk('Real Envido', '3 pts', 'action-real-envido', 'btn-real', () => this.callbacks.onEnvidoOpenType('real-envido')));
+      envidoGroup.appendChild(mk('Falta Envido', 'a falta', 'action-falta-envido', 'btn-falta-envido', () => this.callbacks.onEnvidoOpenType('falta-envido')));
       controls.appendChild(envidoGroup);
     }
 
@@ -807,13 +907,16 @@ export class UIManager {
 
     if (showTrucoBtn) {
       const btnTruco = document.createElement('button');
+      btnTruco.className = 'action-btn btn-truco-primary';
+      btnTruco.setAttribute('data-testid', 'action-truco');
       // If we get here with level > 0, it means opponent challenged and we can raise
       if (params.truco.level > 0) {
-        const levelNames: { [level: number]: string } = { 1: 'Retruco', 2: 'Vale 4' };
-        btnTruco.textContent = `🔥 Subir a ${levelNames[params.truco.level] || 'Truco'}`;
+        const levelNames: { [level: number]: string } = { 1: 'Retruco', 2: 'Vale cuatro' };
+        const nextPts: { [level: number]: number } = { 1: 3, 2: 4 };
+        btnTruco.innerHTML = `Subir a ${escapeHtml(levelNames[params.truco.level] || 'Truco')}<em>vale ${nextPts[params.truco.level] ?? ''}</em>`;
         btnTruco.addEventListener('click', () => this.callbacks.onTrucoRaise());
       } else {
-        btnTruco.textContent = '🔥 Truco';
+        btnTruco.innerHTML = 'Truco<em>2 pts</em>';
         btnTruco.addEventListener('click', () => this.callbacks.onTrucoChallenge());
       }
       controls.appendChild(btnTruco);
@@ -826,11 +929,9 @@ export class UIManager {
 
     if (canIrseAlMazo) {
       const btnMazo = document.createElement('button');
-      btnMazo.textContent = '🏳️ Irse al Mazo';
-      btnMazo.style.borderColor = '#ff4444';
-      btnMazo.style.color = '#ff6666';
-      btnMazo.style.fontSize = '12px';
-      btnMazo.style.padding = '6px 12px';
+      btnMazo.className = 'action-btn btn-mazo';
+      btnMazo.setAttribute('data-testid', 'action-mazo');
+      btnMazo.innerHTML = 'Irse al mazo<em>otros ganan el canto</em>';
       btnMazo.addEventListener('click', () => this.callbacks.onIrseAlMazo());
       controls.appendChild(btnMazo);
     }
@@ -841,11 +942,7 @@ export class UIManager {
     } else if (params.truco.level > 0 && !params.truco.accepted) {
       this.renderTrucoPanel(params.truco, params.players);
     } else {
-      const responsePanel = this.container.querySelector('.response-panel');
-      if (responsePanel) {
-        (responsePanel as HTMLElement).style.display = 'none';
-        responsePanel.innerHTML = '';
-      }
+      this.closeResponsePanel();
     }
   }
 }
