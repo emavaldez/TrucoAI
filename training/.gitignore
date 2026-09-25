@@ -1,0 +1,11 @@
+# Resultados de entrenamiento: viven en la Mac, no en git (pesan y cambian todo el tiempo).
+runs/
+data/
+exports/
+*.pt
+*.onnx
+*.npz
+*.parquet
+__pycache__/
+.venv/
+.ipynb_checkpoints/

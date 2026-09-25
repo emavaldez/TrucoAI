@@ -1,0 +1,17 @@
+{
+  "_comment": "Configuración base del entrenamiento. La flor queda SIEMPRE apagada (pedido de Emmanuel 2026-09-25).",
+  "rules": { "flor": false, "targetScore": 30 },
+  "playerCounts": [2],
+  "seed": 1,
+  "checkpoint": {
+    "everyMinutes": 15,
+    "keepLast": 5,
+    "keepBest": 3,
+    "backupDir": null
+  },
+  "eval": {
+    "dealsFile": "data/eval-deals-v1.json",
+    "duplicateMatches": 2000,
+    "confidence": 0.9
+  }
+}
