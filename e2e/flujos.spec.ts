@@ -66,7 +66,14 @@ test('pausa: la IA no juega mientras el menú de la partida está abierto', asyn
     paused,
     { timeout: 10_000 },
   );
-  await page.getByTestId('menu-button').click();
+  // La IA sigue jugando y la mano puede terminar antes del clic (con esta semilla el
+  // pie no quiere el truco): el resumen de mano no abre el menú, así que se lo cierra primero.
+  await expect(async () => {
+    const next = page.getByTestId('next-hand');
+    if (await next.isVisible()) await next.click({ timeout: 1000 });
+    await page.getByTestId('menu-button').click({ timeout: 1000 });
+    await expect(page.getByTestId('to-menu')).toBeVisible({ timeout: 1000 });
+  }).toPass({ timeout: 15_000 });
   await page.getByTestId('to-menu').click();
   await expect(page.getByTestId('menu')).toBeVisible();
 });
