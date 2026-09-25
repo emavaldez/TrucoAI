@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "id": "1-6-observacion-y-simulacion",
   "title": "Motor v2: observación pública y simulación",
-  "status": "ready",
+  "status": "implemented",
   "branch": "task/1-6-observacion-y-simulacion",
-  "worktree": null,
+  "worktree": "/Users/emmanuelvaldez/GameDev/.worktrees/1-6-observacion-y-simulacion",
   "correctionCycle": 0,
   "dispatch": {
     "approved": true,
@@ -12,8 +12,8 @@
     "approvedAt": "2026-09-24T19:47:45.788533+00:00"
   },
   "implementation": {
-    "completed": false,
-    "commit": null
+    "completed": true,
+    "commit": "62dbdaa921ba48ab272d1cda3856d52fdd38e3c1"
   },
   "audit": {
     "decision": "pending",
@@ -28,7 +28,7 @@
   },
   "timestamps": {
     "createdAt": "2026-09-23T14:40:08.279746+00:00",
-    "updatedAt": "2026-09-24T19:47:45.788664+00:00"
+    "updatedAt": "2026-09-24T20:26:34.147522+00:00"
   },
   "scope": {
     "allow": [
@@ -39,5 +39,10 @@
       "docs/stories/1-6-observacion-y-simulacion.md"
     ]
   },
-  "kind": "default"
+  "kind": "default",
+  "verify": {
+    "ok": true,
+    "at": "2026-09-24T20:26:34.070448+00:00",
+    "skipped": false
+  }
 }

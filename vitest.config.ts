@@ -27,6 +27,8 @@ export default mergeConfig(
         thresholds: {
           'src/engine/**': { lines: 90, branches: 85 },
           'src/app/**': { lines: 80, branches: 70 },
+          // Historias 1-x y 2-x la usan como runtime de tests; sin umbral propio (1-6).
+          'src/sim/**': { lines: 0, branches: 0 },
         },
       },
     },
