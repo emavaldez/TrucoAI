@@ -26,7 +26,8 @@ La mejor red queda en `training/runs/r1/policies/best.{json,bin}`. PPO corta sol
 
 Cada iteración muestra además la **entropía por tipo de decisión** (cartas, turno con posibilidad de cantar,
 respuesta al truco, respuesta al envido) y el **estilo**: cuánto canta truco pudiendo, qué parte de esos
-cantos son farol (sin un 3 o algo mejor), cuánto canta envido y cuánto quiere/sube.
+cantos son farol (sin un 3 o algo mejor), cuánto canta envido, el farol de envido (cantos con 23 o menos
+de tantos), cuánto abre el envido según sus tantos y cuánto quiere/sube.
 
 **Prueba de explotabilidad** (se puede correr en paralelo, con menos actores):
 

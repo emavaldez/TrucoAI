@@ -514,6 +514,8 @@ class Run:
           resp_truco / resp_envido: le cantaron y tiene que responder.
         - truco: de las veces que pudo cantar truco en su turno, cuántas cantó; farol: de esos cantos,
           cuántos sin un 3 o algo mejor en la mano; envido: cuántas veces lo cantó pudiendo;
+          farol_envido: de sus cantos de envido (abrir o subir), cuántos con 23 o menos de tantos;
+          envido_<24 … envido_31+: cuánto abre el envido pudiendo, según sus tantos;
           quiere_truco / sube_truco / quiere_envido: respuestas.
         """
         n = len(data.act)
@@ -535,19 +537,36 @@ class Run:
         def rate(sel: np.ndarray, hit: np.ndarray) -> float | None:
             return round(float(hit[sel].mean()), 3) if sel.any() else None
 
+        def offset_of(name: str) -> int:
+            off = 0
+            for part in self.layout["layout"]:
+                if part["name"] == name:
+                    return off
+                off += part["size"]
+            raise KeyError(name)
+
         # La carta más fuerte que le queda: tramo "slot0" (rango en one-hot de 14) de la observación.
-        offset = 0
-        for part in self.layout["layout"]:
-            if part["name"] == "slot0":
-                break
-            offset += part["size"]
-        best_rank = data.obs[:, offset + 1: offset + 15].argmax(1)
+        slot0 = offset_of("slot0")
+        best_rank = data.obs[:, slot0 + 1: slot0 + 15].argmax(1)
+        # Sus tantos de envido: "myEnvido" guarda tantos/33 cuantizado a k/255.
+        tantos = np.rint(data.obs[:, offset_of("myEnvido")].astype(np.float64) / 255 * 33).astype(int)
         can_truco = ~resp_truco & ~resp_envido & m[:, 3]
         called = can_truco & (act == 3)
+        envido_call = (act >= 6) & (act <= 8)
+        can_open_envido = ~resp_envido & m[:, 6]
+        # Cualquier canto de envido: abrirlo (en su turno o "el envido está primero") o subirlo al responder.
+        sang_envido = (can_open_envido | resp_envido) & envido_call
         style = {
             "truco": rate(can_truco, act == 3),
             "farol": rate(called, best_rank < 9),
-            "envido": rate(~resp_truco & ~resp_envido & m[:, 6], (act >= 6) & (act <= 8)),
+            "envido": rate(~resp_truco & ~resp_envido & m[:, 6], envido_call),
+            # Farol de envido: cantos (abrir o subir) con 23 o menos de tantos.
+            "farol_envido": rate(sang_envido, tantos <= 23),
+            # Cuánto canta envido pudiendo abrirlo, según sus tantos.
+            "envido_<24": rate(can_open_envido & (tantos <= 23), envido_call),
+            "envido_24-27": rate(can_open_envido & (tantos >= 24) & (tantos <= 27), envido_call),
+            "envido_28-30": rate(can_open_envido & (tantos >= 28) & (tantos <= 30), envido_call),
+            "envido_31+": rate(can_open_envido & (tantos >= 31), envido_call),
             "quiere_truco": rate(resp_truco, act == 4),
             "sube_truco": rate(resp_truco, act == 3),
             "quiere_envido": rate(resp_envido, act == 9),
