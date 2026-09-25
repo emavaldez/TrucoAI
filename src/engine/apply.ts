@@ -2,6 +2,7 @@
 // Nunca muta el estado recibido (clona con `structuredClone`) y sube `version` en cada acción aplicada.
 
 import { applyAnswerEnvido, applyCallEnvido } from './envido.js';
+import { applyAnswerFlor, applyDeclareFlor } from './flor.js';
 import { getActor, getLegalActions, sameAction } from './legal.js';
 import { applyMazo } from './mazo.js';
 import { completeTrick } from './tricks.js';
@@ -71,10 +72,12 @@ export function applyAction(
     case 'MAZO':
       applyMazo(working, events, playerId);
       break;
-    default:
-      // DECLARE_FLOR y ANSWER_FLOR todavía no están en `getLegalActions`
-      // (historia 1-8): inalcanzable hoy.
-      return { ok: false, error: 'ILLEGAL_ACTION' };
+    case 'DECLARE_FLOR':
+      applyDeclareFlor(working, events, playerId);
+      break;
+    case 'ANSWER_FLOR':
+      applyAnswerFlor(working, events, playerId, chosen.answer);
+      break;
   }
 
   working.version += 1;

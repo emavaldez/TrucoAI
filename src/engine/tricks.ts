@@ -3,6 +3,7 @@
 // RNG ni timers. La jerarquía de las cartas vive solo en `cards.ts` [ENG-20].
 
 import { cardRank } from './cards.js';
+import { resolveSingleTeamFlor } from './flor.js';
 import { endHand } from './scoring.js';
 import { teamOfSeat } from './turns.js';
 import type { GameEvent, MatchState, PlayerId, Seat, TeamId, TrickPlay, TrickResult } from './types.js';
@@ -110,6 +111,12 @@ export function completeTrick(state: MatchState, events: GameEvent[]): void {
     winnerTeam: outcome.winnerTeam,
     winnerPlayerId: outcome.winnerPlayerId,
   });
+
+  // La flor de un solo equipo se cobra al completarse la primera baza (historia 1-8, AC 5).
+  if (hand.tricks.length === 1) {
+    resolveSingleTeamFlor(state, events);
+    if (state.phase === 'MATCH_OVER') return;
+  }
 
   const winner = resolveHandWinner(
     hand.tricks.map((trick) => trick.winnerTeam),

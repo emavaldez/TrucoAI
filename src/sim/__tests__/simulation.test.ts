@@ -34,6 +34,24 @@ describe.each<Mode>([2, 4, 6])('simulateMatch %ip con invariantes (AC 4)', (play
   );
 });
 
+describe.each<Mode>([2, 4, 6])('simulateMatch %ip con flor e invariantes (historia 1-8)', (playerCount) => {
+  it(
+    `[INV] ${GAMES_PER_MODE} partidas con flor terminan en MATCH_OVER sin violaciones`,
+    () => {
+      let florHands = 0;
+      for (let game = 0; game < GAMES_PER_MODE; game++) {
+        const seed = 50_000 + game * 11 + playerCount;
+        const result = simulateMatch({ rules: { ...rulesFor(playerCount), flor: true }, seed, check: true });
+        expect(result.state.phase).toBe('MATCH_OVER');
+        florHands += result.events.filter((event) => event.type === 'FLOR_DECLARED').length;
+      }
+      // Con 200 partidas la flor aparece seguro: el test ejercita de verdad el camino de la flor.
+      expect(florHands).toBeGreaterThan(20);
+    },
+    18_000,
+  );
+});
+
 describe('determinismo [INV-11] (AC 5)', () => {
   it('misma semilla → mismo estado final; otra semilla → estado distinto', () => {
     for (const playerCount of [2, 4, 6] as Mode[]) {

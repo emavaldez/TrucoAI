@@ -4,6 +4,7 @@
 // `history` ni la fase de fin de mano.
 
 import { envidoCantoPoints } from './envido.js';
+import { florCantoPoints, resolveSingleTeamFlor } from './flor.js';
 import { allHandTricks, startSubmano } from './picapica.js';
 import { trucoCantoPoints, trucoPoints } from './truco.js';
 import { teamOf } from './turns.js';
@@ -48,7 +49,8 @@ function completeCantos(state: MatchState, handWinnerTeam: TeamId): void {
   for (const canto of state.hand.cantos) {
     // Ya completado (una submano anterior de pica-pica): no se pisa con el ganador de otra.
     if (canto.points !== undefined) continue;
-    const payout = trucoCantoPoints(canto, handWinnerTeam) ?? envidoCantoPoints(state, canto);
+    const payout =
+      trucoCantoPoints(canto, handWinnerTeam) ?? envidoCantoPoints(state, canto) ?? florCantoPoints(state, canto);
     if (payout === null) continue;
     canto.points = payout.points;
     canto.pointsTo = payout.pointsTo;
@@ -108,6 +110,11 @@ export function addPoints(
   }
 }
 
+/** ¿La partida terminó? (función aparte: la fase cambia dentro de `addPoints`). */
+function isMatchOver(state: MatchState): boolean {
+  return state.phase === 'MATCH_OVER';
+}
+
 /**
  * Cierra la mano: puntos (vía `addPoints`), `hand.result`, `HandRecord` en el
  * historial y `HAND_OVER`. Si la mano terminó la partida, la fase queda en
@@ -115,6 +122,10 @@ export function addPoints(
  */
 export function endHand(state: MatchState, events: GameEvent[], opts: EndHandOptions): void {
   const points = opts.points ?? trucoPoints(state);
+
+  // Una flor declarada por un solo equipo se cobra aunque la mano termine antes de la 1ª baza.
+  resolveSingleTeamFlor(state, events);
+  if (isMatchOver(state)) return;
 
   if (state.hand.picaPica !== null) {
     endSubmano(state, events, { ...opts, points });
@@ -127,7 +138,7 @@ export function endHand(state: MatchState, events: GameEvent[], opts: EndHandOpt
   addPoints(state, events, opts.winnerTeam, points, POINTS_REASON[opts.reason]);
   pushRecord(state, { winnerTeam: opts.winnerTeam, points, reason: opts.reason });
 
-  if (state.phase === 'MATCH_OVER') return;
+  if (isMatchOver(state)) return;
   state.phase = 'HAND_OVER';
   events.push({ type: 'HAND_OVER', winnerTeam: opts.winnerTeam, points, reason: opts.reason });
 }

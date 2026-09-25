@@ -2,6 +2,7 @@
 // La UI y la IA derivan todo de acá: no existe acción fuera de turno.
 
 import { canCallEnvido, envidoFirstCalls, envidoResponseActions, openingEnvidoCalls } from './envido.js';
+import { florInterrupter, florResponseActions, owesFlor } from './flor.js';
 import { mazoActions } from './mazo.js';
 import { canCallTruco, trucoResponseActions } from './truco.js';
 import type { Action, MatchState, PlayerId } from './types.js';
@@ -18,10 +19,13 @@ export function getActor(state: MatchState): PlayerId | null {
     case 'PLAYING':
       return state.hand.turnId;
     case 'AWAITING_TRUCO':
-      return state.hand.truco.pending === null ? null : state.hand.truco.pending.responderId;
+      if (state.hand.truco.pending === null) return null;
+      return florInterrupter(state) ?? state.hand.truco.pending.responderId;
     case 'AWAITING_ENVIDO':
-      return state.hand.envido.pending === null ? null : state.hand.envido.pending.responderId;
+      if (state.hand.envido.pending === null) return null;
+      return florInterrupter(state) ?? state.hand.envido.pending.responderId;
     case 'AWAITING_FLOR':
+      return state.hand.flor.pending === null ? null : state.hand.flor.pending.responderId;
     case 'HAND_OVER':
     case 'MATCH_OVER':
       return null;
@@ -38,7 +42,16 @@ export function getLegalActions(state: MatchState, playerId: PlayerId): Action[]
   const actor = getActor(state);
   if (actor === null || playerId !== actor) return [];
 
+  // Flor obligatoria (historia 1-8): quien la debe no puede hacer otra cosa.
+  if ((state.phase === 'AWAITING_TRUCO' || state.phase === 'AWAITING_ENVIDO') && florInterrupter(state) === playerId) {
+    return [{ type: 'DECLARE_FLOR' }];
+  }
+  if (state.phase === 'PLAYING' && owesFlor(state, playerId)) return [{ type: 'DECLARE_FLOR' }];
+
   switch (state.phase) {
+    case 'AWAITING_FLOR':
+      // Con la flor pendiente no se juega carta, ni truco, ni envido, ni mazo.
+      return florResponseActions(state, playerId);
     case 'AWAITING_TRUCO':
       // Nunca PLAY_CARD con un canto pendiente [ENG-02]; el respondedor puede, además,
       // cantar envido si todavía tiene derecho ("el envido está primero", AC 3) [UI-05]
@@ -56,13 +69,12 @@ export function getLegalActions(state: MatchState, playerId: PlayerId): Action[]
       const actions: Action[] = [];
       if (canCallTruco(state, playerId)) actions.push({ type: 'CALL_TRUCO' });
       if (canCallEnvido(state, playerId)) actions.push(...openingEnvidoCalls());
-      // TODO(historia 1-8): flor.
       actions.push(...mazoActions(state, playerId));
       for (const card of state.hand.hands[playerId]) actions.push({ type: 'PLAY_CARD', cardId: card.id });
       return actions;
     }
     default:
-      // AWAITING_FLOR (1-8), HAND_OVER y MATCH_OVER: sin acciones.
+      // HAND_OVER y MATCH_OVER: sin acciones.
       return [];
   }
 }
