@@ -187,4 +187,9 @@ describe('arena (historias 2-1, 2-5)', () => {
     const vsEasy = runArena({ playerCount: 2 }, createPolicy('normal'), createPolicy('easy'), 80, 1);
     expect(vsEasy.low).toBeGreaterThan(0.5);
   }, 30_000);
+
+  it('difícil le gana a normal (2 jugadores, 150 partidas)', () => {
+    const result = runArena({ playerCount: 2 }, createPolicy('hard'), createPolicy('normal'), 150, 11);
+    expect(result.rate).toBeGreaterThan(0.55);
+  }, 60_000);
 });

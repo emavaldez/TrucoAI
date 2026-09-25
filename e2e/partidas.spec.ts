@@ -54,9 +54,11 @@ for (const players of [2, 4, 6] as const) {
     await playMatch(page, 11, { check: false });
     await page.getByTestId('play-again').click();
     await expect(page.getByTestId('game-over')).toHaveCount(0);
-    await expect(page.getByTestId('score-nos').locator('.score-num')).toHaveText('0');
-    await expect(page.getByTestId('score-ellos').locator('.score-num')).toHaveText('0');
+    // Partida nueva: mano 1 y marcador de cero (en modo rápido la IA ya puede haber sumado algo en la mano 1).
     await expect(page.getByTestId('hand-number')).toHaveText('Mano 1');
+    const fresh = await page.evaluate(() => (window as unknown as { __truco: { state: () => { history: unknown[]; scores: number[] } } }).__truco.state());
+    expect(fresh.history.length).toBeLessThanOrEqual(1);
+    expect(Math.max(...fresh.scores)).toBeLessThan(30);
     // Y la partida nueva también se puede jugar entera.
     await playMatch(page, 12, { check: false });
     await page.getByTestId('change-rules').click();

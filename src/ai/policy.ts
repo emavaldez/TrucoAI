@@ -6,7 +6,7 @@
 import { envidoScore, envidoValue } from '../engine/index.js';
 import type { Action, EnvidoCall, Observation, Rng } from '../engine/index.js';
 import { chooseCard } from './cardPlay.js';
-import { envidoWinProbability, handWinProbability } from './estimate.js';
+import { envidoWinProbability, handWinProbability, publicConstraints } from './estimate.js';
 import { nextToPlay, participantsOf, teamMap } from './table.js';
 
 export type Difficulty = 'easy' | 'normal' | 'hard';
@@ -24,6 +24,8 @@ export interface DifficultyProfile {
   bluffRate: number;
   /** tiene en cuenta el marcador (falta envido, riesgo de perder la partida) */
   useScorePressure: boolean;
+  /** lee lo público: envidos dichos y cantos → manos probables de los demás */
+  readPublic: boolean;
   /** umbrales de probabilidad */
   trucoCall: number;
   trucoRaise: number;
@@ -40,6 +42,7 @@ export const PROFILES: Record<Difficulty, DifficultyProfile> = {
     samples: 24,
     bluffRate: 0,
     useScorePressure: false,
+    readPublic: false,
     trucoCall: 0.75,
     trucoRaise: 0.85,
     trucoAccept: [0.5, 0.55, 0.6],
@@ -52,6 +55,7 @@ export const PROFILES: Record<Difficulty, DifficultyProfile> = {
     samples: 80,
     bluffRate: 0,
     useScorePressure: false,
+    readPublic: false,
     trucoCall: 0.66,
     trucoRaise: 0.74,
     trucoAccept: [0.4, 0.46, 0.52],
@@ -64,6 +68,7 @@ export const PROFILES: Record<Difficulty, DifficultyProfile> = {
     samples: 160,
     bluffRate: 0.08,
     useScorePressure: true,
+    readPublic: true,
     trucoCall: 0.62,
     trucoRaise: 0.72,
     trucoAccept: [0.36, 0.44, 0.5],
@@ -160,7 +165,8 @@ export class HeuristicPolicy implements Policy {
   // ---------- envido ----------
 
   private envidoWin(obs: Observation, rng: Rng): number {
-    return envidoWinProbability(obs, rng, this.profile.samples);
+    const constraints = this.profile.readPublic ? publicConstraints(obs) : undefined;
+    return envidoWinProbability(obs, rng, this.profile.samples, constraints);
   }
 
   /** Canto de apertura según la probabilidad de ganar el envido. */
@@ -216,7 +222,8 @@ export class HeuristicPolicy implements Policy {
   // ---------- truco ----------
 
   private handWin(obs: Observation, rng: Rng): number {
-    return handWinProbability(obs, rng, this.profile.samples);
+    const constraints = this.profile.readPublic ? publicConstraints(obs) : undefined;
+    return handWinProbability(obs, rng, this.profile.samples, constraints);
   }
 
   private answerTruco(obs: Observation, legal: readonly Action[], rng: Rng): Action {

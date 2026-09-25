@@ -37,29 +37,75 @@ function decidedWith(results: readonly TrickWinner[], manoTeam: TeamId): TeamId 
   return null;
 }
 
+/**
+ * Lectura de lo público (dificultad difícil, GDD §11.2): restricciones sobre el envido de los
+ * otros jugadores que salen de la `Observation` (envidos dichos, cantos de envido hechos).
+ */
+export interface EnvidoConstraint {
+  min: number;
+  max: number;
+}
+
+export type Constraints = Map<PlayerId, EnvidoConstraint>;
+
+/** Arma las restricciones a partir de lo que se vio y se dijo en la mano. */
+export function publicConstraints(obs: Observation): Constraints {
+  const out: Constraints = new Map();
+  for (const entry of obs.publicScores) {
+    if (entry.kind === 'ENVIDO' && entry.playerId !== obs.selfId) out.set(entry.playerId, { min: entry.score, max: entry.score });
+  }
+  for (const canto of obs.envidoChain) {
+    if (canto.by === obs.selfId || out.has(canto.by)) continue;
+    // Quien canta envido suele tener con qué: al menos 25 (real/falta, 27).
+    out.set(canto.by, { min: canto.call === 'E' ? 25 : 27, max: 33 });
+  }
+  return out;
+}
+
 /** Reparte las cartas no vistas entre los demás participantes (cantidad = lo que les queda). */
-function sampleHands(obs: Observation, participants: readonly PlayerId[], rng: Rng): Map<PlayerId, Card[]> {
+function sampleHands(
+  obs: Observation,
+  participants: readonly PlayerId[],
+  rng: Rng,
+  constraints?: Constraints,
+): Map<PlayerId, Card[]> {
   const left = cardsLeft(obs, participants);
-  const pool = shuffled(obs.unseenCards, rng);
-  const hands = new Map<PlayerId, Card[]>();
-  let cursor = 0;
-  for (const playerId of participants) {
-    if (playerId === obs.selfId) {
-      hands.set(playerId, obs.myHand.slice());
-      continue;
+  const tries = constraints && constraints.size > 0 ? 40 : 1;
+  let hands = new Map<PlayerId, Card[]>();
+  for (let attempt = 0; attempt < tries; attempt++) {
+    const pool = shuffled(obs.unseenCards, rng);
+    hands = new Map<PlayerId, Card[]>();
+    let cursor = 0;
+    for (const playerId of participants) {
+      if (playerId === obs.selfId) {
+        hands.set(playerId, obs.myHand.slice());
+        continue;
+      }
+      const count = left.get(playerId) ?? 0;
+      hands.set(playerId, pool.slice(cursor, cursor + count));
+      cursor += count;
     }
-    const count = left.get(playerId) ?? 0;
-    hands.set(playerId, pool.slice(cursor, cursor + count));
-    cursor += count;
+    if (!constraints || satisfies(obs, hands, constraints)) break;
   }
   return hands;
+}
+
+/** ¿El reparto respeta el envido público de cada uno? (lo mostrado + lo que tendría en la mano) */
+function satisfies(obs: Observation, hands: Map<PlayerId, Card[]>, constraints: Constraints): boolean {
+  for (const [playerId, range] of constraints) {
+    const hidden = hands.get(playerId);
+    if (hidden === undefined) continue;
+    const score = envidoScore([...shownBy(obs, playerId), ...hidden]);
+    if (score < range.min || score > range.max) return false;
+  }
+  return true;
 }
 
 /**
  * Probabilidad de que mi equipo gane la mano jugando las cartas que quedan
  * (sin contar cantos futuros). `samples` repartos al azar de lo no visto.
  */
-export function handWinProbability(obs: Observation, rng: Rng, samples: number): number {
+export function handWinProbability(obs: Observation, rng: Rng, samples: number, constraints?: Constraints): number {
   const participants = participantsOf(obs);
   const teams = teamMap(obs);
   const manoTeam = teams.get(participants[0]) as TeamId;
@@ -67,7 +113,7 @@ export function handWinProbability(obs: Observation, rng: Rng, samples: number):
   let wins = 0;
 
   for (let s = 0; s < samples; s++) {
-    const hands = sampleHands(obs, participants, rng);
+    const hands = sampleHands(obs, participants, rng, constraints);
     const results: TrickWinner[] = obs.tricks.map((trick) => trick.winnerTeam);
     let plays: TrickPlay[] = obs.currentTrick.plays.length >= n ? [] : obs.currentTrick.plays.slice();
     let leaderId = obs.currentTrick.leaderId;
@@ -113,7 +159,7 @@ export function handWinProbability(obs: Observation, rng: Rng, samples: number):
  * Probabilidad de que mi equipo gane el envido si se quiere: cada rival y compañero tiene
  * lo que ya mostró más cartas al azar de lo no visto. Empate: el que dice antes (desde el mano).
  */
-export function envidoWinProbability(obs: Observation, rng: Rng, samples: number): number {
+export function envidoWinProbability(obs: Observation, rng: Rng, samples: number, constraints?: Constraints): number {
   const participants = participantsOf(obs);
   const teams = teamMap(obs);
   const myTeam = obs.selfTeam;
@@ -121,26 +167,33 @@ export function envidoWinProbability(obs: Observation, rng: Rng, samples: number
   const shown = new Map(participants.map((playerId) => [playerId, shownBy(obs, playerId)]));
   let wins = 0;
 
+  const tries = constraints && constraints.size > 0 ? 40 : 1;
   for (let s = 0; s < samples; s++) {
-    const pool = shuffled(obs.unseenCards, rng);
-    let cursor = 0;
-    let bestScore = -1;
-    let bestTeam: TeamId = myTeam;
-    for (const playerId of participants) {
-      let score: number;
-      if (playerId === obs.selfId) {
-        score = myScore;
-      } else {
+    let scores: number[] = [];
+    for (let attempt = 0; attempt < tries; attempt++) {
+      const pool = shuffled(obs.unseenCards, rng);
+      let cursor = 0;
+      let ok = true;
+      scores = participants.map((playerId) => {
+        if (playerId === obs.selfId) return myScore;
         const known = shown.get(playerId) ?? [];
         const hidden = pool.slice(cursor, cursor + (3 - known.length));
         cursor += 3 - known.length;
-        score = envidoScore([...known, ...hidden]);
-      }
-      if (score > bestScore) {
-        bestScore = score;
+        const score = envidoScore([...known, ...hidden]);
+        const range = constraints?.get(playerId);
+        if (range && (score < range.min || score > range.max)) ok = false;
+        return score;
+      });
+      if (ok) break;
+    }
+    let bestScore = -1;
+    let bestTeam: TeamId = myTeam;
+    participants.forEach((playerId, index) => {
+      if (scores[index] > bestScore) {
+        bestScore = scores[index];
         bestTeam = teams.get(playerId) as TeamId;
       }
-    }
+    });
     if (bestTeam === myTeam) wins += 1;
   }
   return wins / samples;
