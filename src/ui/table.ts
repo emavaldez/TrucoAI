@@ -329,9 +329,13 @@ function actionButton(action: Action, label: string, sub: string, kind: string):
 function renderActions(ctx: GameViewContext, geo: TableGeometry): string {
   const { state, legal } = ctx;
   const style = `left:${geo.actions.x}px;top:${geo.actions.y}px;width:${geo.actions.w}px`;
-  if (ctx.actor !== HUMAN || state.phase !== 'PLAYING') {
+  if (ctx.actor !== HUMAN || state.phase !== 'PLAYING' || onlyFlor(legal)) {
     if (ctx.mode === 'portrait') return '';
-    const hint = humanInPlay(state) ? 'Cuando sea tu turno, acá vas a poder cantar.' : 'En esta submano no jugás: mirá cómo sale.';
+    const hint = !humanInPlay(state)
+      ? 'En esta submano no jugás: mirá cómo sale.'
+      : ctx.actor === HUMAN && onlyFlor(legal)
+        ? 'Tenés flor: se canta sola.'
+        : 'Cuando sea tu turno, acá vas a poder cantar.';
     return `<div class="actions actions--idle" style="${style}"><div class="actions-title">Cantar</div><div class="actions-hint">${hint}</div></div>`;
   }
 

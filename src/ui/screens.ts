@@ -113,7 +113,7 @@ export function renderHandSummary(state: MatchState, log: EventLog, autoAck: boo
             .join('');
           return (
             `<div class="submano-row"><span>Submano ${i + 1}: ${escapeHtml(playerName(state, result.pair[0]))} contra ${escapeHtml(playerName(state, result.pair[1]))}` +
-            ` · ganó ${teamName(result.winnerTeam)}</span><span class="submano-gains">${chips}</span></div>`
+            ` · ${result.winnerTeam === 0 ? 'la ganamos' : 'la ganaron ellos'}</span><span class="submano-gains">${chips}</span></div>`
           );
         })
         .join('') +
@@ -159,14 +159,15 @@ const TRUCO_NAMES: Record<string, string> = { TRUCO: 'truco', RETRUCO: 'retruco'
 
 function historyWhat(state: MatchState, record: HandRecord): string {
   const parts: string[] = [];
-  const envido = record.cantos.filter((c) => c.kind in ENVIDO_NAMES);
+  const envido = record.picaPica ? [] : record.cantos.filter((c) => c.kind in ENVIDO_NAMES);
   if (envido.length > 0) {
     const last = envido[envido.length - 1];
     const chain = envido.map((c) => ENVIDO_NAMES[c.kind]).join(' + ');
     parts.push(last.answer === 'NO_QUIERO' ? `${chain} no querido` : last.answer === 'QUIERO' ? `${chain} querido` : chain);
   }
-  if (record.cantos.some((c) => c.kind === 'FLOR')) parts.push('flor');
-  const trucos = record.cantos.filter((c) => c.kind in TRUCO_NAMES);
+  if (!record.picaPica && record.cantos.some((c) => c.kind === 'FLOR')) parts.push('flor');
+  // En pica-pica cada submano tiene sus cantos: el detalle está en el resumen de cada mano.
+  const trucos = record.picaPica ? [] : record.cantos.filter((c) => c.kind in TRUCO_NAMES);
   const lastTruco = trucos[trucos.length - 1];
   let how: string;
   switch (record.reason) {
