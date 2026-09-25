@@ -7,8 +7,11 @@ Reemplaza la sección 5 de `Papers/INVESTIGACION.md` en lo que se contradigan.
 
 - **Sin flor** en todo el entrenamiento. Si en el juego se activa la flor, juega la IA heurística actual.
 - **Se entrena en su Mac**, con checkpoints para no perder nada si se corta (ver `README.md`).
-- **El pie coordina al equipo:** recibe las señas de sus compañeros y les indica cómo jugar
-  (la lista de indicaciones está al final, **a confirmar**).
+- **El pie coordina al equipo** (confirmado 2026-09-25): recibe las señas de sus compañeros,
+  les da indicaciones, responde los cantos del rival y **es el único de su equipo que puede cantar envido**.
+  Con 2 jugadores cada uno es su propio pie, así que no cambia nada.
+- **Máquina:** MacBook Pro M5 Max, 18 núcleos de CPU, GPU de 40 núcleos, 128 GB. Se usa entera:
+  16 procesos Node juegan partidas en paralelo y la red entrena en la GPU (MPS).
 
 ## Lo que cambió por los papers
 
@@ -76,7 +79,7 @@ Reemplaza la sección 5 de `Papers/INVESTIGACION.md` en lo que se contradigan.
 - **Deep Monte Carlo solo:** la tesis vio colapsos que no pudo explicar.
 - **Recompensa por diferencia de puntos:** ignora el marcador.
 
-## El pie coordina (a confirmar)
+## El pie coordina (confirmado)
 
 Hoy todos los compañeros ven las señas de todos. La propuesta:
 
@@ -98,9 +101,20 @@ Hoy todos los compañeros ven las señas de todos. La propuesta:
   - Truco:
     - "Cantá truco".
     - "Esperá".
-- **¿Quién responde los cantos del rival?** Hoy responde el humano si está en el equipo, o el
-  siguiente rival. En el truco de 4 y 6 suele responder el pie (la tesis uruguaya también lo usa y
-  achica mucho el problema). Propuesta: responde el pie.
+- **Responde los cantos del rival el pie** (antes respondía el humano si estaba en el equipo, o el siguiente rival).
+- **Solo el pie canta envido** en su equipo (Emmanuel, 2026-09-25). El truco lo puede cantar cualquiera.
+
+## Lanzamiento (fases 0 a 2, 2 jugadores)
+
+Implementado en esta carpeta y probado de punta a punta:
+
+- `env/` (TypeScript): codificación (1006 valores, huella `78d8b04c`), 12 acciones con máscara,
+  red en TS y tabla W. Tests en `env/__tests__` y chequeo de que PyTorch y TS dan los mismos logits.
+- `actors/rollout.ts`: juega partidas con el motor real (modos bc, ppo, eval, wtable).
+- `learner/run.py`: tabla W → datos de imitación → imitación → PPO con liga. Retoma solo.
+- Prueba chica en la nube (2 núcleos, 2.000 partidas de imitación, 16 iteraciones de PPO de 256 partidas):
+  la imitación le ganó 31% a la difícil y PPO llegó a **66,5% (IC90 62,5–70,3) en 400 partidas**.
+  Es una muestra chica y puede estar aprovechando mañas de la heurística: la corrida grande lo confirma o no.
 
 ## Riesgos
 

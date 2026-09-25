@@ -6,7 +6,7 @@ export default mergeConfig(
   defineConfig({
     test: {
       environment: 'node',
-      include: ['src/**/*.test.ts'],
+      include: ['src/**/*.test.ts', 'training/**/*.test.ts'],
       exclude: ['**/node_modules/**', '**/dist/**', '**/e2e/**', '**/coverage/**'],
       coverage: {
         provider: 'v8',
