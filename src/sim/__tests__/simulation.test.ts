@@ -14,7 +14,7 @@ const GAMES_PER_MODE = 200;
 type Mode = 2 | 4 | 6;
 
 function rulesFor(playerCount: Mode): Partial<RuleSet> & Pick<RuleSet, 'playerCount'> {
-  return { playerCount, flor: false, picaPica: false };
+  return { playerCount, flor: false, picaPica: playerCount === 6 };
 }
 
 describe.each<Mode>([2, 4, 6])('simulateMatch %ip con invariantes (AC 4)', (playerCount) => {

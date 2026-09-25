@@ -7,15 +7,14 @@
 
 import { createDeck } from './cards.js';
 import { getLegalActions } from './legal.js';
+import { allHandPlays } from './picapica.js';
 import { teamOf } from './turns.js';
 import type { Card, MatchState, Observation, PlayerId } from './types.js';
 
 /** Todas las cartas jugadas en la mano actual: bazas cerradas + baza en curso. */
 function allPlays(state: MatchState): { playerId: PlayerId; card: Card }[] {
-  const plays: { playerId: PlayerId; card: Card }[] = [];
-  for (const trick of state.hand.tricks) plays.push(...trick.plays);
-  plays.push(...state.hand.currentTrick.plays);
-  return plays;
+  // En pica-pica incluye las submanos ya cerradas (también bazas que quedaron sin terminar).
+  return allHandPlays(state.hand);
 }
 
 /**

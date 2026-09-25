@@ -25,7 +25,7 @@ describe('createMatch — asientos y reglas', () => {
     expect(state.hand.number).toBe(1);
     expect(state.history).toEqual([]);
     expect(state.winnerTeam).toBeNull();
-    expect(state.picaPicaNext).toBe(false);
+    expect(state.picaPicaNext).toBe(true);
   });
 
   it('4 jugadores: equipos intercalados (0,1,0,1) y nombres por defecto', () => {

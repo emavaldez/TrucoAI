@@ -4,7 +4,9 @@
 // `history` ni la fase de fin de mano.
 
 import { envidoCantoPoints } from './envido.js';
+import { allHandTricks, startSubmano } from './picapica.js';
 import { trucoCantoPoints, trucoPoints } from './truco.js';
+import { teamOf } from './turns.js';
 import type { GameEvent, HandRecord, MatchState, TeamId } from './types.js';
 
 /** Razón del evento `POINTS` (la tabla de `types.ts`). */
@@ -44,6 +46,8 @@ export interface EndHandOptions {
  */
 function completeCantos(state: MatchState, handWinnerTeam: TeamId): void {
   for (const canto of state.hand.cantos) {
+    // Ya completado (una submano anterior de pica-pica): no se pisa con el ganador de otra.
+    if (canto.points !== undefined) continue;
     const payout = trucoCantoPoints(canto, handWinnerTeam) ?? envidoCantoPoints(state, canto);
     if (payout === null) continue;
     canto.points = payout.points;
@@ -62,7 +66,7 @@ function pushRecord(
     dealerId: state.hand.dealerId,
     manoId: state.hand.manoId,
     picaPica: state.hand.picaPica !== null,
-    tricks: state.hand.tricks.slice(),
+    tricks: allHandTricks(state.hand),
     cantos: state.hand.cantos.slice(),
     winnerTeam: opts.winnerTeam,
     points: opts.points,
@@ -112,6 +116,11 @@ export function addPoints(
 export function endHand(state: MatchState, events: GameEvent[], opts: EndHandOptions): void {
   const points = opts.points ?? trucoPoints(state);
 
+  if (state.hand.picaPica !== null) {
+    endSubmano(state, events, { ...opts, points });
+    return;
+  }
+
   // `hand.result` se escribe ANTES de sumar: `addPoints` usa ese campo para saber que la
   // mano ya la cerró `endHand` (y no agregar un `HandRecord` `MATCH_ENDED` de más).
   state.hand.result = { winnerTeam: opts.winnerTeam, points, reason: opts.reason };
@@ -121,4 +130,44 @@ export function endHand(state: MatchState, events: GameEvent[], opts: EndHandOpt
   if (state.phase === 'MATCH_OVER') return;
   state.phase = 'HAND_OVER';
   events.push({ type: 'HAND_OVER', winnerTeam: opts.winnerTeam, points, reason: opts.reason });
+}
+
+/**
+ * Cierre de una submano de pica-pica (historia 1-7, GDD §10): sus puntos van al equipo
+ * ganador **en el momento**; si quedan submanos, arranca la siguiente dentro de la misma
+ * acción (siempre hay actor [AI-04, UI-02]); si era la última, cierra la mano.
+ * Un "no quiero" o un mazo terminan **solo esa submano** [ENG-14].
+ */
+function endSubmano(state: MatchState, events: GameEvent[], opts: Required<EndHandOptions>): void {
+  const hand = state.hand;
+  const pica = hand.picaPica;
+  if (pica === null) throw new Error('NOT_PICA_PICA');
+
+  completeCantos(state, opts.winnerTeam);
+  pica.results.push({
+    pair: pica.pairs[pica.submano],
+    winnerTeam: opts.winnerTeam,
+    points: opts.points,
+    reason: opts.reason,
+    tricks: hand.tricks.slice(),
+    openPlays: hand.currentTrick.plays.length < hand.participants.length ? hand.currentTrick.plays.slice() : [],
+  });
+  addPoints(state, events, opts.winnerTeam, opts.points, POINTS_REASON[opts.reason]);
+  if (state.phase === 'MATCH_OVER') return;
+
+  if (pica.submano < 2) {
+    startSubmano(state, events, (pica.submano + 1) as 1 | 2);
+    return;
+  }
+
+  // Fin de la mano: gana el equipo que sumó más en las submanos (empate → equipo del mano).
+  const byTeam: [number, number] = [0, 0];
+  for (const result of pica.results) byTeam[result.winnerTeam] += result.points;
+  const manoTeam = teamOf(state, hand.manoId);
+  const winnerTeam: TeamId = byTeam[0] === byTeam[1] ? manoTeam : byTeam[0] > byTeam[1] ? 0 : 1;
+  const total = byTeam[0] + byTeam[1];
+  hand.result = { winnerTeam, points: total, reason: 'PICA_PICA' };
+  pushRecord(state, { winnerTeam, points: total, reason: 'PICA_PICA' });
+  state.phase = 'HAND_OVER';
+  events.push({ type: 'HAND_OVER', winnerTeam, points: total, reason: 'PICA_PICA' });
 }

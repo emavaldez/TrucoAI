@@ -58,7 +58,7 @@ const MAX_HANDS = 200;
 const PROBE_ILLEGAL: Action = { type: 'PLAY_CARD', cardId: '99-copa' };
 
 /** Motivos de `HandRecord` que pagan la mano por truco (nunca pueden pasar de 4) [INV-7]. */
-const TRUCO_CLOSE_REASONS = new Set(['BAZAS', 'NO_QUIERO', 'MAZO', 'PICA_PICA']);
+const TRUCO_CLOSE_REASONS = new Set(['BAZAS', 'NO_QUIERO', 'MAZO']);
 
 /** Ruptura de invariante: siempre con semilla, mano y última acción [AC 3]. */
 class InvariantError extends Error {
@@ -83,8 +83,20 @@ function pickRandomLegal(legal: Action[], rng: Rng): Action {
  */
 function handPlays(hand: MatchState['hand']): TrickPlay[] {
   const plays: TrickPlay[] = [];
-  for (const trick of hand.tricks) plays.push(...trick.plays);
-  if (hand.currentTrick.plays.length < hand.participants.length) plays.push(...hand.currentTrick.plays);
+  const pica = hand.picaPica;
+  // Pica-pica: las submanos cerradas guardan sus bazas en `results`; la submano en curso
+  // (si todavía no tiene resultado) las tiene en `hand.tricks`.
+  if (pica !== null) {
+    for (const result of pica.results) {
+      for (const trick of result.tricks) plays.push(...trick.plays);
+      plays.push(...result.openPlays);
+    }
+  }
+  const currentOpen = pica === null || pica.results.length <= pica.submano;
+  if (currentOpen) {
+    for (const trick of hand.tricks) plays.push(...trick.plays);
+    if (hand.currentTrick.plays.length < hand.participants.length) plays.push(...hand.currentTrick.plays);
+  }
   return plays;
 }
 
@@ -162,6 +174,12 @@ function checkHandPoints(seed: number, state: MatchState, lastAction: Action | n
       throw new InvariantError('INV-7', `mano ${record.number} pagó ${record.points} por truco (${record.reason})`, seed, state, lastAction);
     }
   }
+  // Pica-pica: cada submano paga su truco por separado (nunca más de 4); la mano suma las tres.
+  for (const result of state.hand.picaPica?.results ?? []) {
+    if (result.points > 4) {
+      throw new InvariantError('INV-7', `submano ${result.pair.join('-')} pagó ${result.points} por truco`, seed, state, lastAction);
+    }
+  }
   const envido = state.hand.envido.result;
   if (envido !== null) {
     const hasFalta = state.hand.envido.chain.some((canto) => canto.call === 'F');
@@ -220,7 +238,9 @@ function checkNoLeaks(seed: number, state: MatchState, lastAction: Action | null
 
     // [INV-9c] `unseenCards` depende solo de lo público: mis repartidas + jugadas de otros.
     const excluded = new Set<string>(obs.myDealt.map((card: Card) => card.id));
-    for (const play of obs.tricks.flatMap((trick) => trick.plays).concat(obs.currentTrick.plays)) {
+    const closedSubmanos = obs.picaPica?.results ?? [];
+    const closedPlays = closedSubmanos.flatMap((result) => result.tricks.flatMap((trick) => trick.plays).concat(result.openPlays));
+    for (const play of closedPlays.concat(obs.tricks.flatMap((trick) => trick.plays)).concat(obs.currentTrick.plays)) {
       if (play.playerId !== playerId) excluded.add(play.card.id);
     }
     const expected = deck.filter((card: Card) => !excluded.has(card.id));
@@ -276,6 +296,11 @@ export function simulateMatch(opts: SimulateMatchOptions): SimulateMatchResult {
   while (state.phase !== 'MATCH_OVER') {
     if (steps >= MAX_SIMULATE_STEPS) {
       throw new InvariantError('INV-3', `superó los ${MAX_SIMULATE_STEPS} pasos sin terminar`, state.seed, state, lastAction);
+    }
+
+    // [INV-10] siempre activo (aun sin `check`): un motor roto falla rápido en vez de colgarse.
+    if (state.hand.number > MAX_HANDS) {
+      throw new InvariantError('INV-10', `la partida superó las ${MAX_HANDS} manos`, state.seed, state, lastAction);
     }
 
     if (state.phase === 'HAND_OVER') {

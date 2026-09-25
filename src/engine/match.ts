@@ -2,6 +2,7 @@
 // Reparto y rotación viven acá; el RNG entra siempre por parámetro.
 
 import { createDeck } from './cards.js';
+import { nextHandIsPicaPica, setupPicaPicaHand } from './picapica.js';
 import { createRng, nextInt, shuffle } from './rng.js';
 import type {
   Card,
@@ -156,7 +157,8 @@ export function createMatch(opts: CreateMatchOptions): MatchState {
     scores: [0, 0],
     phase: 'PLAYING',
     hand,
-    picaPicaNext: false, // TODO(historia 1-7): condición de pica-pica en 6 jugadores
+    // La primera mano en la que el marcador habilita el pica-pica es de pica-pica (GDD §10).
+    picaPicaNext: true,
     history: [],
     winnerTeam: null,
   };
@@ -182,16 +184,17 @@ export function startNextHand(state: MatchState, opts?: { deck?: Card[] }): { st
   next.rngState = rng.getState();
   next.phase = 'PLAYING';
 
+  const isPicaPica = nextHandIsPicaPica(next);
   const events: GameEvent[] = [
     {
       type: 'HAND_STARTED',
       hand: next.hand.number,
       dealerId: next.hand.dealerId,
       manoId: next.hand.manoId,
-      // TODO(historia 1-7): pica-pica según la alternancia (`picaPicaNext`).
-      picaPica: false,
+      picaPica: isPicaPica,
     },
   ];
+  if (isPicaPica) setupPicaPicaHand(next, events);
 
   return { state: next, events };
 }

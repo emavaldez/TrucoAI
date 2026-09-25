@@ -119,6 +119,12 @@ export interface SubmanoResult {
   pair: [PlayerId, PlayerId];
   winnerTeam: TeamId;
   points: number;
+  /** motivo del cierre de la submano (bazas, no quiero o mazo) */
+  reason: 'BAZAS' | 'NO_QUIERO' | 'MAZO';
+  /** bazas jugadas en la submano */
+  tricks: TrickResult[];
+  /** cartas de una baza que quedó sin terminar (la submano cerró por no quiero o mazo) */
+  openPlays: TrickPlay[];
 }
 
 export interface CantoRecord {
