@@ -388,7 +388,7 @@ describe('ANSWER_TRUCO NO_QUIERO (AC 6) [ENG-03]', () => {
 });
 
 describe('4 jugadores: quién responde (AC 10)', () => {
-  it('p1 canta y responde el humano; p0 canta y responde p1; p2 canta y responde p3', () => {
+  it('responde siempre el pie rival: p1 canta y responde p0; p2 canta y responde p3; p0 canta y responde p3', () => {
     const state = match4p();
     expect(state.hand.participants).toEqual(['p1', 'p2', 'p3', 'p0']);
 
@@ -410,8 +410,9 @@ describe('4 jugadores: quién responde (AC 10)', () => {
       expect(getActor(antesDeP0)).toBe(esperado);
     }
     const porP0 = callTruco(antesDeP0, 'p0').state;
-    expect(porP0.hand.truco.pending).toMatchObject({ callerId: 'p0', callerTeam: 0, responderId: 'p1' });
-    expect(getActor(porP0)).toBe('p1');
+    // Pies: equipo 1 (p1, p3) → p3; equipo 0 (p2, p0) → p0.
+    expect(porP0.hand.truco.pending).toMatchObject({ callerId: 'p0', callerTeam: 0, responderId: 'p3' });
+    expect(getActor(porP0)).toBe('p3');
   });
 });
 

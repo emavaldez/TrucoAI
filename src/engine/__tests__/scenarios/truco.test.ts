@@ -202,11 +202,11 @@ describe('subir como respuesta: "quiero retruco" y después "quiero vale cuatro"
 });
 
 describe('4 jugadores: quién responde el canto (AC 2 y 10)', () => {
-  it('p1 canta y responde el humano; p0 canta y responde p1; p2 canta y responde p3', () => {
+  it('responde siempre el pie rival (p0 para el equipo 0, p3 para el equipo 1)', () => {
     let state = match4p(MANOS_4P);
     expect(state.hand.participants).toEqual(['p1', 'p2', 'p3', 'p0']);
 
-    // p1 canta: entre los rivales (p2 y p0) está el humano, así que responde p0
+    // p1 canta: responde el pie del equipo 0, p0 (el último de ese equipo en jugar)
     const porP1 = callTruco(state, 'p1').state;
     expect(porP1.hand.truco.pending).toEqual({ level: 1, callerId: 'p1', callerTeam: 1, responderId: 'p0' });
     expect(getActor(porP1)).toBe('p0');
@@ -230,13 +230,13 @@ describe('4 jugadores: quién responde el canto (AC 2 y 10)', () => {
     expect(porP2.hand.truco.pending).toEqual({ level: 1, callerId: 'p2', callerTeam: 0, responderId: 'p3' });
     expect(getActor(porP2)).toBe('p3');
 
-    // p0 canta en el último turno de la vuelta: responde p1
+    // p0 canta en el último turno de la vuelta: responde el pie del equipo 1, p3
     state = playFirstCard(state).state; // juega p2 → turno de p3
     state = playFirstCard(state).state; // juega p3 → turno de p0
     expect(getActor(state)).toBe('p0');
     const porP0 = callTruco(state, 'p0').state;
-    expect(porP0.hand.truco.pending).toEqual({ level: 1, callerId: 'p0', callerTeam: 0, responderId: 'p1' });
-    expect(getActor(porP0)).toBe('p1');
+    expect(porP0.hand.truco.pending).toEqual({ level: 1, callerId: 'p0', callerTeam: 0, responderId: 'p3' });
+    expect(getActor(porP0)).toBe('p3');
   });
 
   it('truco querido en 4 jugadores: la mano la paga el equipo que se lleva dos bazas', () => {

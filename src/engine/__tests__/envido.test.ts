@@ -10,7 +10,7 @@ import { envidoPoints, faltaValue, nextEnvidoCalls } from '../envido.js';
 import { getActor, getLegalActions } from '../legal.js';
 import { createMatch } from '../match.js';
 import type { EnvidoCall, MatchState, PlayerId } from '../types.js';
-import { answerEnvido, answerTruco, callEnvido, callTruco, deckFor, ids, playFirstCard, playTrick, withScores } from './helpers.js';
+import { answerEnvido, answerTruco, callEnvido, callTruco, deckFor, ids, playFirstCard, playTrick, untilTurnOf, withScores } from './helpers.js';
 
 /** Manos fijas de 2 jugadores: p1 tiene 33 de envido (7+6 de espada) y p0 25 (3+2 de basto). */
 const MANOS: Record<PlayerId, string[]> = {
@@ -436,8 +436,8 @@ describe('ANSWER_ENVIDO QUIERO (AC 8, AC 9)', () => {
     const state = createMatch({ rules: { playerCount: 4 }, seed: 1, firstDealerSeat: 1, deck: deckFor(manos, 2, 4) });
     expect(state.hand.participants).toEqual(['p2', 'p3', 'p0', 'p1']);
 
-    // canta el mano p2 (equipo 0) y responde p3 (el primero del equipo 1 en el orden de la mano)
-    const querido = answerEnvido(callEnvido(state, 'p2', 'E').state, 'p3', 'QUIERO').state;
+    // Solo los pies cantan y responden: canta p0 (pie del equipo 0) y responde p1 (pie del equipo 1).
+    const querido = answerEnvido(callEnvido(untilTurnOf(state, 'p0'), 'p0', 'E').state, 'p1', 'QUIERO').state;
 
     expect(querido.hand.envido.result).toMatchObject({
       winnerTeam: 1, // p3 dice antes que p0 con el mismo puntaje (y p0 es el humano)
@@ -456,8 +456,8 @@ describe('ANSWER_ENVIDO QUIERO (AC 8, AC 9)', () => {
     const state = match4p(1);
     expect(state.hand.participants).toEqual(['p1', 'p2', 'p3', 'p0']);
 
-    // responde p0: es el humano y está en el equipo contrario al que cantó
-    const querido = answerEnvido(callEnvido(state, 'p1', 'E').state, 'p0', 'QUIERO').state;
+    // canta p3 (pie del equipo 1) y responde p0 (pie del equipo 0)
+    const querido = answerEnvido(callEnvido(untilTurnOf(state, 'p3'), 'p3', 'E').state, 'p0', 'QUIERO').state;
 
     expect(querido.hand.envido.result).toMatchObject({
       winnerTeam: 0,
@@ -471,7 +471,7 @@ describe('ANSWER_ENVIDO QUIERO (AC 8, AC 9)', () => {
     expect(querido.scores).toEqual([2, 0]);
 
     // con el mano en p2 el orden cambia y el ganador sigue siendo el mismo jugador
-    const conManoEnP2 = answerEnvido(callEnvido(match4p(2), 'p2', 'E').state, 'p3', 'QUIERO').state;
+    const conManoEnP2 = answerEnvido(callEnvido(untilTurnOf(match4p(2), 'p0'), 'p0', 'E').state, 'p1', 'QUIERO').state;
     expect(conManoEnP2.hand.envido.result).toMatchObject({
       winnerTeam: 0,
       points: 2,

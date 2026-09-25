@@ -3,18 +3,21 @@
 // fácil (mucho azar, umbrales gruesos), normal (reglas firmes) y difícil (más muestras,
 // presión de marcador y farol controlado).
 
-import { envidoScore, envidoValue } from '../engine/index.js';
-import type { Action, EnvidoCall, Observation, Rng } from '../engine/index.js';
-import { chooseCard } from './cardPlay.js';
+import { cardRank, envidoScore, envidoValue } from '../engine/index.js';
+import type { Action, Card, EnvidoCall, Observation, Rng } from '../engine/index.js';
+import { chooseCard, lowest, trickLeader } from './cardPlay.js';
 import { envidoWinProbability, handWinProbability, publicConstraints } from './estimate.js';
-import { signalKnowledge, signaledTopRank, type Signal, type SignalKnowledge } from './signs.js';
+import { signalKnowledge, signaledTopRank, type Instruction, type Signal, type SignalKnowledge } from './signs.js';
 import { nextToPlay, participantsOf, playsThisHand, teamMap } from './table.js';
 
 export type Difficulty = 'easy' | 'normal' | 'hard';
 
 export interface Policy {
-  /** `signals` = señas que me hicieron mis compañeros en esta mano (nunca las de los rivales). */
-  decide(obs: Observation, rng: Rng, signals?: readonly Signal[]): Action;
+  /**
+   * `signals` = señas que me hicieron mis compañeros en esta mano (solo las recibe el pie).
+   * `instructions` = lo que me indicó el pie de mi equipo (si no soy el pie).
+   */
+  decide(obs: Observation, rng: Rng, signals?: readonly Signal[], instructions?: readonly Instruction[]): Action;
 }
 
 export interface DifficultyProfile {
@@ -127,10 +130,13 @@ export class HeuristicPolicy implements Policy {
   /** señas de los compañeros para la decisión en curso */
   private signals: readonly Signal[] = [];
   private knowledge: SignalKnowledge | undefined;
+  /** indicaciones del pie para la decisión en curso */
+  private instructions: readonly Instruction[] = [];
 
   constructor(private readonly profile: DifficultyProfile) {}
 
-  decide(obs: Observation, rng: Rng, signals: readonly Signal[] = []): Action {
+  decide(obs: Observation, rng: Rng, signals: readonly Signal[] = [], instructions: readonly Instruction[] = []): Action {
+    this.instructions = obs.picaPica === null ? instructions : [];
     // En pica-pica no hay señas; y solo cuentan las de compañeros (de mi equipo, no mías).
     const team = new Map(obs.seats.map((seat) => [seat.id, seat.team]));
     this.signals =
@@ -267,7 +273,9 @@ export class HeuristicPolicy implements Policy {
 
     const truco = has(legal, (a) => a.type === 'CALL_TRUCO');
     const cards = legal.filter((a): a is Extract<Action, { type: 'PLAY_CARD' }> => a.type === 'PLAY_CARD');
-    if (truco) {
+    // Lo que dice el pie manda sobre el truco: "cantá truco" / "esperá".
+    if (truco && obs.truco.level === 0 && this.instructions.includes('CANTA_TRUCO')) return truco;
+    if (truco && !this.instructions.includes('ESPERA')) {
       const p = this.handWin(obs, rng);
       const level = obs.truco.level;
       const threshold = level === 0 ? this.profile.trucoCall : this.profile.trucoRaise;
@@ -293,6 +301,8 @@ export class HeuristicPolicy implements Policy {
     }
     // Defensa: si por algún motivo no soy el que juega según la mesa, juego la más baja.
     if (nextToPlay(obs, participants) !== obs.selfId) return cards[0];
+    const ordered = this.followInstruction(obs, teams);
+    if (ordered) return cards.find((a) => a.cardId === ordered.id) ?? cards[0];
     const card = chooseCard({
       hand: obs.myHand,
       plays: obs.currentTrick.plays,
@@ -303,6 +313,25 @@ export class HeuristicPolicy implements Policy {
       teammateAfterTop,
     });
     return cards.find((a) => a.cardId === card.id) ?? cards[0];
+  }
+
+  /** La carta que pide el pie ("¡matá!", "pasá", "pardá"), o `null` si juego a mi criterio. */
+  private followInstruction(obs: Observation, teams: ReturnType<typeof teamMap>): Card | null {
+    const hand = obs.myHand;
+    if (hand.length === 0) return null;
+    const plays = obs.currentTrick.plays.length >= participantsOf(obs).length ? [] : obs.currentTrick.plays;
+    const lead = trickLeader(plays, teams);
+    const byRank = [...hand].sort((a, b) => cardRank(a) - cardRank(b));
+    if (this.instructions.includes('PASA')) return lowest(hand);
+    if (this.instructions.includes('MATA')) {
+      if (plays.length === 0) return byRank[byRank.length - 1];
+      if (lead.winner === obs.selfTeam) return lowest(hand);
+      return byRank.find((card) => cardRank(card) > lead.rank) ?? lowest(hand);
+    }
+    if (this.instructions.includes('PARDA')) {
+      return byRank.find((card) => cardRank(card) === lead.rank) ?? byRank.find((card) => cardRank(card) > lead.rank) ?? lowest(hand);
+    }
+    return null;
   }
 }
 

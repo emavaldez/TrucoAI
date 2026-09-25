@@ -5,7 +5,7 @@
 import { getActor } from '../engine/index.js';
 import type { Action } from '../engine/index.js';
 import type { Difficulty } from '../ai/policy.js';
-import type { SignKind } from '../ai/signs.js';
+import type { Instruction, SignKind } from '../ai/signs.js';
 import {
   FAST_TIMING,
   GameController,
@@ -204,7 +204,10 @@ export class TrucoApp {
     const actor = getActor(state);
     const legal = this.controller.humanLegalActions();
     const signOptions = this.paused ? [] : this.controller.humanSignalOptions();
-    if (signOptions.length === 0 || responsePanelOpen({ state, actor, legal })) this.signsOpen = false;
+    const instructionOptions = this.paused ? [] : this.controller.humanInstructionOptions();
+    const humanIsPie = snap.humanIsPie;
+    const canTalk = humanIsPie ? instructionOptions.length > 0 : signOptions.length > 0;
+    if (!canTalk || responsePanelOpen({ state, actor, legal })) this.signsOpen = false;
     let html = renderGame({
       state,
       settings: snap.settings,
@@ -213,9 +216,14 @@ export class TrucoApp {
       actor,
       log: this.log,
       now,
-      signals: snap.signals,
-      signOptions,
-      signsOpen: this.signsOpen,
+      talk: {
+        signals: snap.signals,
+        signOptions,
+        instructions: snap.instructions,
+        instructionOptions,
+        humanIsPie,
+        open: this.signsOpen,
+      },
     });
     let dialog = '';
     if (state.phase === 'MATCH_OVER') {
@@ -351,6 +359,11 @@ export class TrucoApp {
         // Si ya no se puede (jugaste tu carta), no pasa nada: se vuelve a dibujar sin la lista.
         if (!this.controller.sendHumanSignal(value as SignKind)) this.render();
         break;
+      case 'instr':
+        if (this.paused || !this.controller) return;
+        this.signsOpen = false;
+        if (!this.controller.sendHumanInstruction(value as Instruction)) this.render();
+        break;
       case 'menu':
         this.paused = false;
         this.controller?.stop();
@@ -433,6 +446,8 @@ export class TrucoApp {
       settings: () => ({ ...this.settings }),
       summaryVisible: () => this.snapshot?.summaryVisible ?? false,
       signals: () => this.snapshot?.signals ?? [],
+      instructions: () => this.snapshot?.instructions ?? [],
+      humanIsPie: () => this.snapshot?.humanIsPie ?? false,
     };
   }
 }

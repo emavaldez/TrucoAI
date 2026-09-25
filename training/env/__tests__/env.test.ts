@@ -4,14 +4,15 @@
 import { describe, expect, it } from 'vitest';
 import { applyAction, createMatch, createRng, getActor, getObservation, startNextHand } from '../../../src/engine/index.js';
 import type { MatchState } from '../../../src/engine/index.js';
-import { createPolicy } from '../../../src/ai/policy.js';
+import { randomPolicy } from '../../../src/ai/policy.js';
 import { actionIndex, legalMask, N_ACTIONS } from '../actions.js';
 import { encodeObs, encodePriv, layoutHash, obsLayout, PRIV_DIM } from '../encode.js';
 import { Mlp } from '../mlp.js';
 import { computeWTable, wValue } from '../wtable.js';
 
 function states(players: 2 | 4 | 6, count: number, seed: number): MatchState[] {
-  const policy = createPolicy('normal');
+  // Política al azar: rápida (la heurística con muestreo hacía que el test tardara más de 5 s en CI).
+  const policy = randomPolicy;
   const rng = createRng(seed);
   const out: MatchState[] = [];
   let state = createMatch({ rules: { playerCount: players, flor: false, picaPica: false }, seed });
@@ -44,15 +45,13 @@ describe('codificación de la observación', () => {
         const actor = getActor(state) as string;
         const x = encodeObs(getObservation(state, actor));
         expect(x.length).toBe(dim);
-        for (const v of x) {
-          expect(v).toBeGreaterThanOrEqual(0);
-          expect(v).toBeLessThanOrEqual(1);
-          expect(Math.abs(v * 255 - Math.round(v * 255))).toBeLessThan(1e-4);
-        }
+        // Un solo expect por vector (miles de expects por valor hacían lento el test).
+        const bad = Array.from(x).filter((v) => v < 0 || v > 1 || Math.abs(v * 255 - Math.round(v * 255)) >= 1e-4);
+        expect(bad).toEqual([]);
         const priv = encodePriv(state, actor);
         expect(priv.length).toBe(PRIV_DIM);
       }
-    });
+    }, 30_000);
   }
 
   it('la observación no depende de las manos ajenas (la privada sí)', () => {
@@ -81,7 +80,7 @@ describe('acciones', () => {
           expect(actions[index]).toEqual(action);
         }
       }
-    });
+    }, 30_000);
   }
 });
 

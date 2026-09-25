@@ -8,6 +8,7 @@ import { envidoWinProbability, handWinProbability } from '../estimate.js';
 import { HeuristicPolicy, PROFILES } from '../policy.js';
 import {
   SIGNS,
+  aiInstructions,
   aiSigns,
   availableSigns,
   signalKnowledge,
@@ -166,5 +167,31 @@ describe('lo que la IA saca de las señas', () => {
     const a = policy.decide(obs, createRng(9), rivalOnly);
     const b = policy.decide(obs, createRng(9), []);
     expect(a).toEqual(b);
+  });
+});
+
+describe('indicaciones del pie', () => {
+  it('el pie de la IA: con una grande propia "pasá"; con una grande del compañero "¡matá!"; si no, "tranquilo"', () => {
+    const none = new Map<string, Card[]>();
+    expect(aiInstructions('p2', cards('1-espada', '4-copa', '5-oro'), [], none, false).map((g) => g.kind)).toEqual(['PASA']);
+    const partner: Signal[] = [{ from: 'p0', kind: 'TRES', cardId: '3-oro' }];
+    expect(aiInstructions('p2', cards('4-copa', '5-oro', '6-basto'), partner, none, false).map((g) => g.kind)).toEqual(['MATA']);
+    expect(aiInstructions('p2', cards('4-copa', '5-oro', '6-basto'), [], none, true).map((g) => g.kind)).toEqual(['TRANQUILO', 'ESPERA']);
+    const strong: Signal[] = [{ from: 'p0', kind: 'ANCHO_BASTO', cardId: '1-basto' }];
+    expect(aiInstructions('p2', cards('7-oro', '4-copa', '5-oro'), strong, none, true).map((g) => g.kind)).toEqual(['PASA', 'CANTA_TRUCO']);
+  });
+
+  it('el compañero de la IA sigue la indicación: "pasá" juega la más baja, "¡matá!" gana si puede', () => {
+    const state = match4([
+      ['4-copa', '5-copa', '6-basto'],
+      ['7-espada', '3-oro', '2-oro'],
+      ['1-espada', '3-basto', '5-oro'],
+      ['1-basto', '3-copa', '2-basto'],
+    ]);
+    const policy = new HeuristicPolicy({ ...PROFILES.normal, randomActionRate: 0, trucoCall: 2, trucoRaise: 2, envidoCall: 2, envidoReal: 2, envidoFalta: 2 });
+    // p0 es mano y juega primero: con "¡matá!" abre con la más alta; con "pasá", con la más baja.
+    const obs = getObservation(state, 'p0');
+    expect(policy.decide(obs, createRng(1), [], ['MATA'])).toEqual({ type: 'PLAY_CARD', cardId: '6-basto' });
+    expect(policy.decide(obs, createRng(1), [], ['PASA'])).toEqual({ type: 'PLAY_CARD', cardId: '4-copa' });
   });
 });

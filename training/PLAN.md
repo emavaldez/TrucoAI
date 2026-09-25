@@ -95,9 +95,7 @@ Hoy todos los compañeros ven las señas de todos. La propuesta:
     - "Pasá": jugá la más baja, yo la mato.
     - "Pardá": empardá si podés.
     - "Jugá tranquilo": lo que quieras.
-  - Envido:
-    - "Cantá envido".
-    - "No cantes, yo tengo".
+  - (Las de envido se sacaron: como solo el pie canta envido, no hacen falta.)
   - Truco:
     - "Cantá truco".
     - "Esperá".

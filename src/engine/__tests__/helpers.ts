@@ -110,6 +110,17 @@ export function playFirstCard(state: MatchState): { state: MatchState; events: G
   return act(state, actor, { type: 'PLAY_CARD', cardId }, 'playFirstCard');
 }
 
+/** Juega la primera carta de cada actor hasta que le toque a `playerId` (p. ej. al pie, que es quien canta envido). */
+export function untilTurnOf(state: MatchState, playerId: PlayerId): MatchState {
+  let current = state;
+  let guard = 0;
+  while (getActor(current) !== playerId) {
+    if (guard++ > 12) throw new Error(`untilTurnOf: nunca le toca a ${playerId}`);
+    current = playFirstCard(current).state;
+  }
+  return current;
+}
+
 /** Responde el canto de truco pendiente; tira si no es legal. */
 export function answerTruco(
   state: MatchState,

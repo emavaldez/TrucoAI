@@ -10,6 +10,7 @@ import { CANVAS, canvasScale, chooseLayout, tableGeometry, type LayoutMode } fro
 import { decodeAction, encodeAction, renderScore } from '../pieces.js';
 import { renderGameOver, renderHandSummary, renderMenu } from '../screens.js';
 import { renderGame } from '../table.js';
+import { NO_TALK, type TeamTalk } from '../signsView.js';
 
 function states(playerCount: 2 | 4 | 6, flor: boolean, count: number, seed: number): MatchState[] {
   const policy = createPolicy('normal');
@@ -164,7 +165,7 @@ describe('layout', () => {
   });
 });
 
-describe('señas en la mesa', () => {
+describe('señas e indicaciones del pie en la mesa', () => {
   const state = createMatch({ rules: { playerCount: 4 }, seed: 4 });
   const base = {
     state,
@@ -175,28 +176,55 @@ describe('señas en la mesa', () => {
     now: 0,
   };
   const partnerCard = state.hand.dealt.p2[0];
+  const talk = (over: Partial<TeamTalk>): TeamTalk => ({ ...NO_TALK, ...over });
 
   for (const mode of ['desktop', 'portrait'] as const) {
-    it(`${mode}: se ven las señas del compañero y el botón para hacer las tuyas`, () => {
+    it(`${mode}: si sos el pie, ves las señas de tu compañero y podés indicar`, () => {
       const html = renderGame({
         ...base,
         mode,
-        signals: [
-          { from: 'p2', kind: 'ANCHO_ESPADA', cardId: '1-espada' },
-          { from: 'p2', kind: 'ENVIDO', cardId: null },
-          { from: 'p0', kind: 'NADA', cardId: null },
-        ],
-        signOptions: ['TRES'],
-        signsOpen: true,
+        talk: talk({
+          humanIsPie: true,
+          signals: [
+            { from: 'p2', kind: 'ANCHO_ESPADA', cardId: '1-espada' },
+            { from: 'p2', kind: 'ENVIDO', cardId: null },
+          ],
+          instructionOptions: ['MATA', 'PASA', 'CANTA_TRUCO'],
+          instructions: [{ from: 'p0', kind: 'MATA' }],
+          open: true,
+        }),
       });
       expect(html).toContain('data-testid="signs-p2"');
       expect(html).toContain('data-sign="ANCHO_ESPADA"');
       expect(html).toContain('data-sign="ENVIDO"');
       expect(html).toContain('data-testid="signs-button"');
-      expect(html).toContain('data-testid="sign-picker"');
-      expect(html).toContain('data-ui="sign:TRES"');
-      // Tus propias señas nunca aparecen como "señas de" alguien.
+      expect(html).toContain('>Indicar<');
+      expect(html).toContain('data-ui="instr:PASA"');
+      expect(html).not.toContain('data-ui="sign:');
       expect(html).not.toContain('data-testid="signs-p0"');
+    });
+
+    it(`${mode}: si no sos el pie, no ves señas ajenas: le hacés señas al pie y ves lo que te indica`, () => {
+      const html = renderGame({
+        ...base,
+        mode,
+        talk: talk({
+          humanIsPie: false,
+          signals: [{ from: 'p0', kind: 'NADA', cardId: null }],
+          signOptions: ['TRES'],
+          instructions: [{ from: 'p2', kind: 'PASA' }],
+          open: true,
+        }),
+      });
+      expect(html).not.toContain('data-testid="signs-p2"');
+      expect(html).toContain('data-ui="sign:TRES"');
+      expect(html).toContain('>Señas<');
+      if (mode === 'desktop') {
+        expect(html).toContain('Tu pie te dice:');
+        expect(html).toContain('data-instruction="PASA"');
+      } else {
+        expect(html).toContain('data-testid="pie-chip"');
+      }
     });
   }
 
@@ -206,15 +234,15 @@ describe('señas en la mesa', () => {
       ...state,
       hand: { ...state.hand, currentTrick: { ...state.hand.currentTrick, plays: [{ playerId: 'p2', card: partnerCard }] } },
     };
-    const before = renderGame({ ...base, mode: 'desktop', signals: [signal] });
-    const after = renderGame({ ...base, state: played, mode: 'desktop', signals: [signal] });
+    const before = renderGame({ ...base, mode: 'desktop', talk: talk({ humanIsPie: true, signals: [signal] }) });
+    const after = renderGame({ ...base, state: played, mode: 'desktop', talk: talk({ humanIsPie: true, signals: [signal] }) });
     expect(before).toContain('data-testid="signs-p2"');
     expect(after).not.toContain('data-testid="signs-p2"');
   });
 
-  it('el pie de la mano se marca como "Pie"', () => {
+  it('los dos pies llevan la marca "Pie" (y el mano no)', () => {
     const html = renderGame({ ...base, mode: 'desktop' });
-    expect(html).toContain('>Pie<');
+    expect(html.match(/>Pie</g)?.length).toBe(2);
     expect(html).not.toContain('>Da<');
   });
 });

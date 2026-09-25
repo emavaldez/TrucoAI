@@ -6,7 +6,7 @@
 // Nunca en pica-pica ni con 2 jugadores (el controlador no las ofrece).
 
 import type { Card, MatchState } from '../engine/index.js';
-import { CARD_SIGNS, signInfo, type Signal, type SignKind } from '../ai/signs.js';
+import { CARD_SIGNS, INSTRUCTIONS, instructionInfo, signInfo, type GivenInstruction, type Instruction, type Signal, type SignKind } from '../ai/signs.js';
 import { renderCard } from './cardView.js';
 import { escapeHtml } from './escape.js';
 import type { LayoutMode, TableGeometry } from './layout.js';
@@ -131,33 +131,71 @@ export function renderPartnerSigns(state: MatchState, signals: readonly Signal[]
   return out.join('');
 }
 
-/** Botón "Señas" (y lo que ya hiciste) en escritorio, debajo de tu asiento. */
-export function renderSignControl(
-  state: MatchState,
-  signals: readonly Signal[],
-  options: readonly SignKind[],
-  open: boolean,
-  mode: LayoutMode,
-): string {
-  const sent = mySignals(state, signals);
-  if (options.length === 0 && sent.length === 0) return '';
-  const button =
-    options.length > 0
-      ? `<button type="button" class="signs-btn${open ? ' signs-btn--open' : ''}" data-ui="signs" data-testid="signs-button" aria-expanded="${open}">Señas</button>`
-      : '';
-  if (mode === 'portrait') return button;
-  const chips = sent
-    .map((signal) => `<span class="sign-chip" data-sign="${signal.kind}" title="${escapeHtml(signInfo(signal.kind).gesture)}">${escapeHtml(signInfo(signal.kind).meaning)}</span>`)
-    .join('');
-  return (
-    `<div class="signs-control" data-testid="signs-control">${button}` +
-    (sent.length > 0 ? `<span class="signs-sent-label">Les hiciste:</span>${chips}` : '') +
-    `</div>`
-  );
+/** Lo que el humano ve y puede hacer con su equipo en esta mano (señas e indicaciones del pie). */
+export interface TeamTalk {
+  /** señas visibles (si sos el pie, las de tus compañeros; si no, las que le hiciste a tu pie) */
+  signals: readonly Signal[];
+  signOptions: readonly SignKind[];
+  /** indicaciones vigentes del pie de tu equipo */
+  instructions: readonly GivenInstruction[];
+  instructionOptions: readonly Instruction[];
+  humanIsPie: boolean;
+  open: boolean;
 }
 
-/** Lista de señas para elegir (solo las que podés hacer con tus cartas). */
-export function renderSignPicker(options: readonly SignKind[], mode: LayoutMode): string {
+export const NO_TALK: TeamTalk = { signals: [], signOptions: [], instructions: [], instructionOptions: [], humanIsPie: false, open: false };
+
+function live(state: MatchState): boolean {
+  return state.phase !== 'HAND_OVER' && state.phase !== 'MATCH_OVER' && state.hand.picaPica === null;
+}
+
+/** Indicaciones del pie que se muestran (durante la mano). */
+export function visibleInstructions(state: MatchState, talk: TeamTalk): GivenInstruction[] {
+  return live(state) ? [...talk.instructions] : [];
+}
+
+function instructionChips(given: readonly GivenInstruction[]): string {
+  return given
+    .map((g) => `<span class="sign-chip sign-chip--pie" data-instruction="${g.kind}" title="${escapeHtml(instructionInfo(g.kind).meaning)}">${escapeHtml(instructionInfo(g.kind).label)}</span>`)
+    .join('');
+}
+
+/**
+ * Debajo de tu asiento (escritorio): si sos el pie, el botón "Indicar" y lo que indicaste; si no,
+ * el botón "Señas", lo que le hiciste a tu pie y lo que tu pie te indica. En el celular, solo el botón.
+ */
+export function renderSignControl(state: MatchState, talk: TeamTalk, mode: LayoutMode): string {
+  const given = visibleInstructions(state, talk);
+  const sent = talk.humanIsPie ? [] : mySignals(state, talk.signals);
+  const options = talk.humanIsPie ? talk.instructionOptions : talk.signOptions;
+  const label = talk.humanIsPie ? 'Indicar' : 'Señas';
+  const button =
+    options.length > 0
+      ? `<button type="button" class="signs-btn${talk.open ? ' signs-btn--open' : ''}" data-ui="signs" data-testid="signs-button" aria-expanded="${talk.open}">${label}</button>`
+      : '';
+  if (mode === 'portrait') return button;
+  if (!button && sent.length === 0 && given.length === 0) return '';
+  const sentChips = sent
+    .map((signal) => `<span class="sign-chip" data-sign="${signal.kind}" title="${escapeHtml(signInfo(signal.kind).gesture)}">${escapeHtml(signInfo(signal.kind).meaning)}</span>`)
+    .join('');
+  const parts = [button];
+  if (sent.length > 0) parts.push(`<span class="signs-sent-label">Le hiciste a tu pie:</span>${sentChips}`);
+  if (given.length > 0) parts.push(`<span class="signs-sent-label">${talk.humanIsPie ? 'Les dijiste:' : 'Tu pie te dice:'}</span>${instructionChips(given)}`);
+  return `<div class="signs-control" data-testid="signs-control">${parts.join('')}</div>`;
+}
+
+/** Ficha corta para el celular con lo que indica tu pie (va en la fila de estado). */
+export function pieChip(state: MatchState, talk: TeamTalk): string {
+  if (talk.humanIsPie) return '';
+  const given = visibleInstructions(state, talk);
+  if (given.length === 0) return '';
+  return `<span class="chip chip--pie" data-testid="pie-chip">Pie: ${escapeHtml(given.map((g) => instructionInfo(g.kind).label).join(' · '))}</span>`;
+}
+
+/** Lista para elegir: señas (si no sos el pie) o indicaciones (si sos el pie). */
+export function renderSignPicker(talk: TeamTalk, mode: LayoutMode): string {
+  if (talk.humanIsPie) return renderInstructionPicker(talk, mode);
+  const options = talk.signOptions;
   if (options.length === 0) return '';
   const rows = options
     .map((kind) => {
@@ -171,9 +209,34 @@ export function renderSignPicker(options: readonly SignKind[], mode: LayoutMode)
     .join('');
   return (
     `<div class="sign-picker sign-picker--${mode}" role="dialog" aria-modal="false" aria-labelledby="sign-picker-title" data-testid="sign-picker" data-anim="sign-picker">` +
-    `<div class="sign-picker-head"><div id="sign-picker-title" class="sign-picker-title">Hacerles una seña</div>` +
+    `<div class="sign-picker-head"><div id="sign-picker-title" class="sign-picker-title">Hacerle una seña a tu pie</div>` +
     `<button type="button" class="sign-picker-close" data-ui="signs" aria-label="Cerrar">×</button></div>` +
-    `<div class="sign-picker-note">Solo la ven tus compañeros. Podés hacer señas hasta jugar tu primera carta.</div>` +
+    `<div class="sign-picker-note">Solo la ve tu pie, que después te indica cómo jugar. Podés hacer señas hasta jugar tu primera carta.</div>` +
     `<div class="sign-picker-list">${rows}</div></div>`
+  );
+}
+
+function renderInstructionPicker(talk: TeamTalk, mode: LayoutMode): string {
+  if (talk.instructionOptions.length === 0) return '';
+  const current = new Set(talk.instructions.map((g) => g.kind));
+  const group = (name: 'cartas' | 'truco', title: string): string => {
+    const rows = INSTRUCTIONS.filter((info) => info.group === name && talk.instructionOptions.includes(info.kind))
+      .map(
+        (info) =>
+          `<button type="button" class="sign-option${current.has(info.kind) ? ' sign-option--on' : ''}" data-ui="instr:${info.kind}" data-testid="instr-${info.kind}" aria-pressed="${current.has(info.kind)}">` +
+          `<span class="sign-option-text"><span class="sign-option-gesture">${escapeHtml(info.label)}</span>` +
+          `<span class="sign-option-meaning">${escapeHtml(info.meaning)}</span></span></button>`,
+      )
+      .join('');
+    return rows ? `<div class="sign-picker-group">${title}</div><div class="sign-picker-list">${rows}</div>` : '';
+  };
+  return (
+    `<div class="sign-picker sign-picker--${mode}" role="dialog" aria-modal="false" aria-labelledby="sign-picker-title" data-testid="sign-picker" data-anim="sign-picker">` +
+    `<div class="sign-picker-head"><div id="sign-picker-title" class="sign-picker-title">Sos el pie: indicales</div>` +
+    `<button type="button" class="sign-picker-close" data-ui="signs" aria-label="Cerrar">×</button></div>` +
+    `<div class="sign-picker-note">Tus compañeros te hacen las señas a vos (las ves al lado de sus asientos). Lo que indiques lo siguen.</div>` +
+    group('cartas', 'Para la baza') +
+    group('truco', 'Truco') +
+    `</div>`
   );
 }

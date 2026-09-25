@@ -8,7 +8,7 @@
 import { createDeck } from './cards.js';
 import { getLegalActions } from './legal.js';
 import { allHandPlays } from './picapica.js';
-import { teamOf } from './turns.js';
+import { isPie } from './turns.js';
 import type { Card, MatchState, Observation, PlayerId } from './types.js';
 
 /** Todas las cartas jugadas en la mano actual: bazas cerradas + baza en curso. */
@@ -37,9 +37,7 @@ function isManoOf(state: MatchState, playerId: PlayerId): boolean {
 
 /** ¿`playerId` es el pie: el último de su equipo en `participants`? */
 function isPieOf(state: MatchState, playerId: PlayerId): boolean {
-  const team = teamOf(state, playerId);
-  const teammates = state.hand.participants.filter((candidate) => teamOf(state, candidate) === team);
-  return teammates[teammates.length - 1] === playerId;
+  return isPie(state, playerId);
 }
 
 /**

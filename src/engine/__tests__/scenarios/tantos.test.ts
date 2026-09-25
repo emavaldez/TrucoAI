@@ -6,12 +6,15 @@ import { describe, expect, it } from 'vitest';
 import { createMatch } from '../../match.js';
 import { getObservation } from '../../observation.js';
 import type { EnvidoSaying, MatchState, PlayerId } from '../../types.js';
-import { answerEnvido, callEnvido, deckFor } from '../helpers.js';
+import { answerEnvido, callEnvido, deckFor, untilTurnOf } from '../helpers.js';
 
-/** Partida de 4 con mano p0 (orden p0 p1 p2 p3; equipo A = p0 p2, B = p1 p3): p0 canta, p1 quiere. */
+/**
+ * Partida de 4 con mano p0 (orden p0 p1 p2 p3; equipo A = p0 p2, B = p1 p3). Canta el pie de A (p2)
+ * y quiere el pie de B (p3): solo los pies cantan y responden el envido.
+ */
 function tantos4(hands: Record<PlayerId, string[]>): MatchState {
   const state = createMatch({ rules: { playerCount: 4 }, seed: 1, firstDealerSeat: 3, deck: deckFor(hands, 0, 4) });
-  return answerEnvido(callEnvido(state, 'p0', 'E').state, 'p1', 'QUIERO').state;
+  return answerEnvido(callEnvido(untilTurnOf(state, 'p2'), 'p2', 'E').state, 'p3', 'QUIERO').state;
 }
 
 function said(state: MatchState): string[] {
@@ -101,7 +104,8 @@ describe('cantar los tantos en 6 y en 2', () => {
       p5: ['5-copa', '12-copa', '6-oro'], // 25
     };
     let state = createMatch({ rules: { playerCount: 6 }, seed: 1, firstDealerSeat: 5, deck: deckFor(hands, 0, 6) });
-    state = answerEnvido(callEnvido(state, 'p0', 'E').state, 'p1', 'QUIERO').state;
+    // Pies: p4 (equipo del mano) y p5 (el que reparte).
+    state = answerEnvido(callEnvido(untilTurnOf(state, 'p4'), 'p4', 'E').state, 'p5', 'QUIERO').state;
     expect(said(state)).toEqual(['p0 27', 'p1 30', 'p2 33', 'p3 me dio', 'p5 son buenas']);
     expect(state.hand.envido.result).toMatchObject({ winnerTeam: 0, winnerId: 'p2' });
   });

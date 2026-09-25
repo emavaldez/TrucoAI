@@ -195,3 +195,71 @@ export function signaledTopRank(playerId: PlayerId, signals: readonly Signal[], 
   }
   return best;
 }
+
+// ---------- indicaciones del pie (decisión de Emmanuel 2026-09-25) ----------
+// El pie recibe las señas y les dice a sus compañeros cómo jugar. Como solo el pie canta envido,
+// no hay indicaciones de envido.
+
+export type Instruction = 'MATA' | 'PASA' | 'PARDA' | 'TRANQUILO' | 'CANTA_TRUCO' | 'ESPERA';
+
+export interface InstructionInfo {
+  kind: Instruction;
+  /** grupo: una indicación de cartas y una de truco pueden estar vigentes a la vez */
+  group: 'cartas' | 'truco';
+  /** para el botón y para el globo */
+  label: string;
+  /** qué quiere decir */
+  meaning: string;
+}
+
+export const INSTRUCTIONS: InstructionInfo[] = [
+  { kind: 'MATA', group: 'cartas', label: '¡Matá!', meaning: 'Ganá la baza si podés' },
+  { kind: 'PASA', group: 'cartas', label: 'Pasá, la mato yo', meaning: 'Jugá la más baja' },
+  { kind: 'PARDA', group: 'cartas', label: 'Pardá', meaning: 'Empardá si podés' },
+  { kind: 'TRANQUILO', group: 'cartas', label: 'Jugá tranquilo', meaning: 'Lo que quieras' },
+  { kind: 'CANTA_TRUCO', group: 'truco', label: 'Cantá truco', meaning: 'Tenemos con qué' },
+  { kind: 'ESPERA', group: 'truco', label: 'Esperá', meaning: 'No cantes truco' },
+];
+
+export function instructionInfo(kind: Instruction): InstructionInfo {
+  return INSTRUCTIONS.find((info) => info.kind === kind) as InstructionInfo;
+}
+
+export interface GivenInstruction {
+  from: PlayerId;
+  kind: Instruction;
+}
+
+/**
+ * Lo que indica un pie de la IA: con una carta grande propia (7 de oro o más) "pasá, la mato yo";
+ * si un compañero le señó una grande (un 3 o más), "¡matá!"; si no, "jugá tranquilo". Para el truco:
+ * con dos o más cartas grandes entre la suya y las señadas, "cantá truco"; sin ninguna, "esperá".
+ */
+export function aiInstructions(
+  pieId: PlayerId,
+  hand: readonly Card[],
+  partnerSignals: readonly Signal[],
+  partnerPlayed: ReadonlyMap<PlayerId, readonly Card[]>,
+  withTruco: boolean,
+): GivenInstruction[] {
+  const myBest = hand.length > 0 ? Math.max(...hand.map(cardRank)) : -1;
+  let partnerBest = -1;
+  let bigCards = hand.filter((card) => cardRank(card) >= 10).length;
+  const partners = new Set(partnerSignals.map((signal) => signal.from));
+  for (const partner of partners) {
+    const top = signaledTopRank(partner, partnerSignals, partnerPlayed.get(partner) ?? []);
+    partnerBest = Math.max(partnerBest, top);
+    bigCards += partnerSignals.filter(
+      (signal) => signal.from === partner && (SIGN_RANK[signal.kind] ?? -1) >= 10 && !(partnerPlayed.get(partner) ?? []).some((card) => matchesSign(signal.kind, card)),
+    ).length;
+  }
+  const out: GivenInstruction[] = [];
+  if (myBest >= 10) out.push({ from: pieId, kind: 'PASA' });
+  else if (partnerBest >= 9) out.push({ from: pieId, kind: 'MATA' });
+  else out.push({ from: pieId, kind: 'TRANQUILO' });
+  if (withTruco) {
+    if (bigCards >= 2) out.push({ from: pieId, kind: 'CANTA_TRUCO' });
+    else if (bigCards === 0 && myBest < 9 && partnerBest < 9) out.push({ from: pieId, kind: 'ESPERA' });
+  }
+  return out;
+}

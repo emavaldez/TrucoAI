@@ -755,3 +755,7 @@ button.card--playable:hover, button.card--playable:focus-visible { transform: tr
 .sign-option-text { display: flex; flex-direction: column; gap: 2px; }
 .sign-option-gesture { font-size: 15px; font-weight: 700; }
 .sign-option-meaning { font-size: 13px; color: var(--paper-ink-mid); }
+.sign-chip--pie { background: var(--gold-tint); color: var(--gold); }
+.chip--pie { background: var(--gold-tint); border-color: var(--gold-line); color: var(--gold); max-width: 170px; overflow: hidden; text-overflow: ellipsis; }
+.sign-picker-group { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--paper-ink-mid); margin-top: 2px; }
+.sign-option--on { border-color: var(--go); box-shadow: inset 0 0 0 1px var(--go); }

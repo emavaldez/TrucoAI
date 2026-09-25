@@ -7,7 +7,7 @@ import { applyAction } from '../../apply.js';
 import { getActor, getLegalActions } from '../../legal.js';
 import { createMatch } from '../../match.js';
 import type { EnvidoCall, MatchState, PlayerId, TeamId } from '../../types.js';
-import { answerEnvido, answerTruco, callEnvido, callTruco, deckFor, playTrick, seatOf, withScores } from '../helpers.js';
+import { answerEnvido, answerTruco, callEnvido, callTruco, deckFor, playTrick, seatOf, untilTurnOf, withScores } from '../helpers.js';
 
 /** Manos fijas de 2 jugadores: p1 (mano, equipo 1) tiene 33 de envido y gana las dos primeras bazas. */
 const MANOS: Record<PlayerId, string[]> = {
@@ -186,10 +186,11 @@ describe('empate de envido en 4 jugadores (AC 11) [ENG-12]', () => {
     const state = createMatch({ rules: { playerCount: 4 }, seed: 1, firstDealerSeat: 3, deck: deckFor(MANOS_4P, 0, 4) });
     expect(state.hand.participants).toEqual(['p0', 'p1', 'p2', 'p3']);
 
-    const conCadena = callEnvido(state, 'p0', 'E').state;
-    expect(getActor(conCadena)).toBe('p1'); // responde el rival más cercano al mano
+    // Canta el pie del equipo 0 (p2) y responde el pie del equipo 1 (p3).
+    const conCadena = callEnvido(untilTurnOf(state, 'p2'), 'p2', 'E').state;
+    expect(getActor(conCadena)).toBe('p3');
 
-    const { state: fin, events } = answerEnvido(conCadena, 'p1', 'QUIERO');
+    const { state: fin, events } = answerEnvido(conCadena, 'p3', 'QUIERO');
 
     // p1 (equipo 1, 25) dice antes que p2 (equipo 0, 25): gana el equipo 1
     expect(events[1]).toMatchObject({

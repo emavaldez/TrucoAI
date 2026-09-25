@@ -36,3 +36,4 @@ export { applyAction } from './apply.js';
 export { cardName, cardNickname, cardRank, createDeck, envidoValue } from './cards.js';
 export { envidoScore } from './envidoScore.js';
 export { createRng } from './rng.js';
+export { isPie, pieOf } from './turns.js';

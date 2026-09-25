@@ -91,14 +91,13 @@ test('celular acostado muy bajo: pide girar el teléfono', async ({ page }) => {
   await expect(page.getByRole('alert')).toHaveCount(0);
 });
 
-test('señas con 4 jugadores: se ven las del compañero y podés hacer las tuyas hasta jugar tu carta', async ({ page }) => {
+test('señas con 4 jugadores, sin ser el pie: no ves señas ajenas, le hacés señas al pie y ves lo que te indica', async ({ page }) => {
   const errors = collectErrors(page);
-  // IA lenta: nadie juega durante la prueba.
+  // Semilla 3: mano p3, pies p2 (tu compañero) y p1. IA lenta: nadie juega durante la prueba.
   await page.goto(gameUrl({ players: 4, seed: 3, fast: false, aiDelay: 60000 }));
-  await expect(page.getByTestId('signs-p2')).toBeVisible();
-  // Nunca se ven las de los rivales.
-  await expect(page.getByTestId('signs-p1')).toHaveCount(0);
-  await expect(page.getByTestId('signs-p3')).toHaveCount(0);
+  await expect(page.getByTestId('seat-p0')).toBeVisible();
+  await expect(page.locator('[data-testid^="signs-p"]')).toHaveCount(0);
+  await expect(page.locator('[data-instruction]').first()).toBeVisible();
   await page.getByTestId('signs-button').click();
   await expect(page.getByTestId('sign-picker')).toBeVisible();
   const option = page.locator('.sign-option').first();
@@ -108,6 +107,22 @@ test('señas con 4 jugadores: se ven las del compañero y podés hacer las tuyas
   await expect(page.locator(`.sign-chip[data-sign="${kind}"]`)).toBeVisible();
   const signals = await page.evaluate(() => (window as unknown as { __truco: { signals: () => { from: string; kind: string }[] } }).__truco.signals());
   expect(signals.some((signal) => signal.from === 'p0' && signal.kind === kind)).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('señas con 4 jugadores, siendo el pie: ves las de tu compañero y le indicás', async ({ page }) => {
+  const errors = collectErrors(page);
+  // Semilla 7: mano p1, pies p0 (vos) y p3.
+  await page.goto(gameUrl({ players: 4, seed: 7, fast: false, aiDelay: 60000 }));
+  await expect(page.getByTestId('signs-p2')).toBeVisible();
+  await expect(page.getByTestId('signs-p1')).toHaveCount(0);
+  await expect(page.getByTestId('signs-p3')).toHaveCount(0);
+  await page.getByTestId('signs-button').click();
+  await page.getByTestId('instr-PASA').click();
+  await expect(page.getByTestId('sign-picker')).toHaveCount(0);
+  await expect(page.locator('[data-instruction="PASA"]')).toBeVisible();
+  const given = await page.evaluate(() => (window as unknown as { __truco: { instructions: () => { from: string; kind: string }[] } }).__truco.instructions());
+  expect(given).toEqual([{ from: 'p0', kind: 'PASA' }]);
   expect(errors).toEqual([]);
 });
 

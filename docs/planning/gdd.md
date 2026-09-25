@@ -41,9 +41,11 @@ IA entrenada (CFR/RL — queda planificada como épica futura, ver §11.4).
 - **Pie:** el último en jugar de cada equipo en la primera baza (en 2 jugadores, el repartidor).
 - **Reparto:** 3 cartas a cada uno, empezando por el mano. Las 3 cartas repartidas quedan registradas
   (el envido y la flor se calculan siempre sobre esas 3, aunque ya se hayan jugado).
-- En la mesa, el repartidor lleva la marca **"Pie"** (es el último en jugar) y el mano la marca **"Mano"** [DECISIÓN 2026-09-25].
+- En la mesa, los dos pies llevan la marca **"Pie"** y el mano la marca **"Mano"** [DECISIÓN 2026-09-25]. Con 4 y 6
+  jugadores los pies son el repartidor y, en el otro equipo, el que juega justo antes que él. Con 2 jugadores
+  cada uno es su propio pie (se marca solo el repartidor).
 
-### 2.1 Señas entre compañeros [DECISIÓN 2026-09-25]
+### 2.1 Señas entre compañeros [DECISIÓN 2026-09-25, se le hacen al pie]
 
 Con 4 y 6 jugadores los compañeros se hacen señas para decirse qué cartas tienen. **En pica-pica no hay señas**,
 y con 2 jugadores tampoco. Las señas no son acciones del reglamento: no cambian el turno ni el estado de la mano.
@@ -61,16 +63,35 @@ y con 2 jugadores tampoco. Las señas no son acciones del reglamento: no cambian
 | Subir la nariz (como oliendo algo) | Envido de 27 o más |
 | Cerrar los ojos | Nada que valga (ninguna carta con seña) |
 
-- **Quién las ve:** solo los del mismo equipo. Por ahora los rivales **no pescan** señas.
-- **Cuándo:** al empezar la mano. La IA hace las suyas al repartir: sus dos cartas más fuertes con seña,
-  más flor o envido si tiene; si no tiene ninguna carta con seña, "nada". El humano puede hacer señas
-  (botón "Señas") **hasta jugar su primera carta**; solo las verdaderas (lo que tiene), cada una una vez.
-- **En la mesa:** las señas de cada compañero se ven junto a su asiento: la carta señada (el ancho, el 7) o lo que
-  dice la seña (un 3, 27+, flor, nada) y el gesto. Una seña de carta se ve hasta que el compañero juega esa carta;
-  las demás, durante la primera baza.
-- **La IA las usa** (sin romper §11.1: es información que un compañero humano también tendría): al estimar la mano
-  y el envido reparte las cartas no vistas respetando las señas de sus compañeros, y si un compañero que juega
-  después le señó una carta grande (7 de oro o más) que gana la baza, se guarda las suyas.
+- **Quién las ve:** **solo el pie** de ese equipo (§2.2). Por ahora los rivales **no pescan** señas.
+- **Quién las hace:** los compañeros del pie, al empezar la mano. La IA hace las suyas al repartir: sus dos cartas
+  más fuertes con seña, más flor o envido si tiene; si no tiene ninguna carta con seña, "nada". El humano, si no es
+  el pie, puede hacerlas (botón "Señas") **hasta jugar su primera carta**; solo las verdaderas, cada una una vez.
+- **En la mesa:** si sos el pie, las señas de cada compañero se ven junto a su asiento: la carta señada (el ancho,
+  el 7) o lo que dice la seña (un 3, 27+, flor, nada) y el gesto. Una seña de carta se ve hasta que el compañero
+  juega esa carta; las demás, durante la primera baza.
+- **La IA las usa** (sin romper §11.1: es información que un compañero humano también tendría): el pie, al estimar
+  la mano y el envido, reparte las cartas no vistas respetando las señas de sus compañeros.
+
+### 2.2 El pie coordina al equipo [DECISIÓN 2026-09-25]
+
+Con 4 y 6 jugadores (fuera de pica-pica):
+
+- **Recibe las señas** de sus compañeros (§2.1) y **les da indicaciones**, que siguen:
+
+  | Indicación | Qué pide |
+  |---|---|
+  | ¡Matá! | Ganá la baza si podés |
+  | Pasá, la mato yo | Jugá la más baja |
+  | Pardá | Empardá si podés |
+  | Jugá tranquilo | Lo que quieras |
+  | Cantá truco | Tenemos con qué |
+  | Esperá | No cantes truco |
+
+  Vale una de cartas y una de truco a la vez; una nueva reemplaza a la anterior del mismo tipo. La IA pie indica al
+  empezar la mano y en cada baza; el humano pie, cuando quiere (botón "Indicar").
+- **Responde los cantos** del equipo rival (truco, envido y flor).
+- **Es el único de su equipo que puede cantar envido** (también "el envido está primero").
 
 ## 3. Cartas
 
@@ -127,8 +148,7 @@ Baraja española de 40 (sin 8 ni 9). Palos: espada, basto, oro, copa.
 - **Escalera:** Truco → Retruco → Vale cuatro. Solo se puede subir un escalón por vez.
 - **Quién puede subir:** solo el equipo que **tiene el quiero** (el que aceptó el último canto),
   en su turno o al responder ("quiero retruco"). Nunca el equipo que hizo el último canto.
-- **Quién responde:** si el desafiado es el equipo del humano, **responde el humano**. Si es un equipo de IA,
-  responde el jugador de ese equipo más cercano en orden de juego al que cantó.
+- **Quién responde:** el **pie** del equipo desafiado (§2.2) [DECISIÓN 2026-09-25].
 - **Respuestas:** Quiero · No quiero · Subir (siguiente escalón) · Irse al mazo (equivale a no quiero).
 - **Mientras hay un canto sin responder no se puede jugar ninguna carta** ni hacer otra acción que no sea responder
   (salvo "el envido está primero", §6.4).
@@ -154,7 +174,7 @@ Baraja española de 40 (sin 8 ni 9). Palos: espada, basto, oro, copa.
 
 ### 6.2 Cuándo se puede cantar
 
-- Solo durante la **primera baza**, por un jugador en su turno **antes de jugar su primera carta**.
+- Solo durante la **primera baza**, por el **pie** de su equipo (§2.2) en su turno **antes de jugar su primera carta**.
 - Solo una vez por mano (una cadena de cantos).
 - **No** se puede cantar después de que se aceptó un truco. Sí como respuesta a un truco en primera baza (§6.4).
 - Con flor habilitada, si algún jugador cantó flor, el envido queda anulado (§7).
@@ -309,7 +329,8 @@ en la línea de los papers de `Papers/` y del plan para AI and Games Conference.
 - **Fin de partida:** ganador, marcador, historial desplegable con scroll, "Nueva partida".
 - **Sonido [DECISIÓN 2026-09-25]:** una voz dice cada canto y respuesta ("¡Truco!", "¡Quiero!", los tantos, "Me dio",
   "Son buenas"…) con un "tin" corto; golpecito al jugar carta. Se apaga desde el menú o la pausa.
-- **Señas (4 y 6 jugadores, §2.1):** las de tus compañeros al lado de su asiento; botón "Señas" para hacer las tuyas.
+- **Señas e indicaciones (4 y 6 jugadores, §2.1–2.2):** si sos el pie, las señas de tus compañeros al lado de su
+  asiento y el botón "Indicar"; si no, el botón "Señas" para hacérselas a tu pie y lo que tu pie te indica.
 - **Responsive:** jugable en 390×844 (móvil) y 1280×800, en 2, 4 y 6 jugadores, sin jugadores cortados;
   botones táctiles ≥ 44 px. Jugable con teclado.
 

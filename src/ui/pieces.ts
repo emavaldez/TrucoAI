@@ -44,6 +44,7 @@ export interface SeatProps {
   isHuman: boolean;
   cards: number;
   mano: boolean;
+  /** es el pie de su equipo */
   dealer: boolean;
   active: boolean;
   activeLabel: string;

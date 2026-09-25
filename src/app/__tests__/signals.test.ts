@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { Action, Observation, Rng } from '../../engine/index.js';
-import { getActor } from '../../engine/index.js';
+import { getActor, pieOf } from '../../engine/index.js';
 import type { Policy } from '../../ai/policy.js';
 import type { Signal } from '../../ai/signs.js';
 import { FAST_TIMING, GameController, HUMAN_ID, type MatchSettings } from '../GameController.js';
@@ -17,12 +17,47 @@ function make(settings: Partial<MatchSettings> = {}, seed = 3) {
 }
 
 describe('señas en el controlador', () => {
-  it('con 4 jugadores tus compañeros te hacen señas al empezar la mano; nunca ves las de los rivales', () => {
-    const { controller } = make();
-    controller.start();
-    const signals = controller.snapshot().signals;
-    expect(signals.length).toBeGreaterThan(0);
-    expect(signals.every((signal) => signal.from === 'p2')).toBe(true);
+  /** Busca una semilla en la que el humano sea (o no) el pie de la primera mano. */
+  function withPie(humanIsPie: boolean) {
+    for (let seed = 1; seed < 200; seed++) {
+      const made = make({}, seed);
+      made.controller.start();
+      if (made.controller.humanIsPie() === humanIsPie) return made;
+    }
+    throw new Error('no encontré semilla');
+  }
+
+  it('si el humano es el pie, ve las señas de su compañero (nunca las de los rivales) y puede indicar', () => {
+    const { controller } = withPie(true);
+    const snap = controller.snapshot();
+    expect(snap.humanIsPie).toBe(true);
+    expect(snap.signals.length).toBeGreaterThan(0);
+    expect(snap.signals.every((signal) => signal.from === 'p2')).toBe(true);
+    expect(controller.humanSignalOptions()).toEqual([]);
+    expect(controller.humanInstructionOptions()).toContain('MATA');
+    expect(controller.sendHumanInstruction('PASA')).toBe(true);
+    expect(controller.snapshot().instructions).toEqual([{ from: 'p0', kind: 'PASA' }]);
+    // Una nueva de cartas reemplaza a la anterior; una de truco se suma.
+    controller.sendHumanInstruction('MATA');
+    controller.sendHumanInstruction('ESPERA');
+    expect(controller.snapshot().instructions).toEqual([
+      { from: 'p0', kind: 'MATA' },
+      { from: 'p0', kind: 'ESPERA' },
+    ]);
+  });
+
+  it('si el humano no es el pie, no ve señas ajenas: se las hace al pie y recibe sus indicaciones', () => {
+    const { controller } = withPie(false);
+    const snap = controller.snapshot();
+    expect(snap.humanIsPie).toBe(false);
+    expect(snap.signals).toEqual([]);
+    expect(controller.humanInstructionOptions()).toEqual([]);
+    // El pie (IA) ya indicó algo de cartas.
+    expect(snap.instructions.length).toBeGreaterThan(0);
+    expect(snap.instructions.every((given) => given.from === 'p2')).toBe(true);
+    const kind = controller.humanSignalOptions()[0];
+    expect(controller.sendHumanSignal(kind)).toBe(true);
+    expect(controller.snapshot().signals).toEqual([expect.objectContaining({ from: 'p0', kind })]);
   });
 
   it('con 2 jugadores no hay señas', () => {
@@ -113,16 +148,22 @@ describe('señas en el controlador', () => {
   it('las señas se renuevan en cada mano', () => {
     const { controller, scheduler } = make({}, 5);
     controller.start();
-    const first = controller.snapshot().signals;
+    const internal = (): Signal[] => (controller as unknown as { signals: Signal[] }).signals;
+    const first = internal();
+    expect(first.length).toBeGreaterThan(0);
     let guard = 0;
     while (controller.getState().phase !== 'HAND_OVER' && guard++ < 200) {
       if (getActor(controller.getState()) === HUMAN_ID) controller.dispatchHuman(controller.humanLegalActions()[0]);
       else if (!scheduler.runNext()) break;
     }
     controller.continueAfterHand();
-    const second = controller.snapshot().signals;
+    const second = internal();
     expect(second.length).toBeGreaterThan(0);
     expect(second.every((signal) => signal.from !== HUMAN_ID)).toBe(true);
     expect(first).not.toBe(second);
+    // Los pies no hacen señas.
+    const state = controller.getState();
+    const pies = [pieOf(state, 0), pieOf(state, 1)];
+    expect(second.some((signal) => pies.includes(signal.from))).toBe(false);
   });
 });

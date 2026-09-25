@@ -2,16 +2,15 @@
 // acciones o panel de respuesta, globos y feed. Todo se deriva del estado del motor y de las
 // acciones legales del humano (arquitectura §8): no hay botón que el motor vaya a rechazar.
 
-import { cardRank, envidoScore } from '../engine/index.js';
+import { cardRank, envidoScore, isPie, pieOf } from '../engine/index.js';
 import type { Action, Card, MatchState, PlayerId, TeamId, TrickPlay } from '../engine/index.js';
 import type { MatchSettings } from '../app/GameController.js';
-import type { Signal, SignKind } from '../ai/signs.js';
 import { renderCard } from './cardView.js';
 import { escapeHtml } from './escape.js';
 import { EventLog } from './eventLog.js';
 import { tableGeometry, type LayoutMode, type TableGeometry } from './layout.js';
 import { encodeAction, lockIcon, menuIcon, renderScore, renderSeat } from './pieces.js';
-import { renderPartnerSigns, renderSignControl, renderSignPicker } from './signsView.js';
+import { NO_TALK, pieChip, renderPartnerSigns, renderSignControl, renderSignPicker, type TeamTalk } from './signsView.js';
 import { ENVIDO_LABELS, TRUCO_LABELS, cardName, ordinal, playerName, teamName } from './text.js';
 
 export const HUMAN: PlayerId = 'p0';
@@ -25,12 +24,8 @@ export interface GameViewContext {
   actor: PlayerId | null;
   log: EventLog;
   now: number;
-  /** señas del equipo del humano en esta mano */
-  signals?: Signal[];
-  /** señas que el humano todavía puede hacer */
-  signOptions?: SignKind[];
-  /** la lista de señas está abierta */
-  signsOpen?: boolean;
+  /** señas e indicaciones del pie con el equipo del humano (4 y 6 jugadores) */
+  talk?: TeamTalk;
 }
 
 // ---------- utilidades de estado (solo información pública) ----------
@@ -121,10 +116,11 @@ function renderTopBar(ctx: GameViewContext): string {
   const chips =
     `<span class="chip" data-testid="hand-number">Mano ${state.hand.number}</span>` +
     (pica ? `<span class="chip chip--gold">${pica}</span>` : '') +
-    (chip ? `<span class="chip chip--gold" data-testid="canto-chip">${escapeHtml(chip)}</span>` : '');
+    (chip ? `<span class="chip chip--gold" data-testid="canto-chip">${escapeHtml(chip)}</span>` : '') +
+    (ctx.mode === 'portrait' ? pieChip(state, ctx.talk ?? NO_TALK) : '');
   const menu = `<button type="button" class="icon-btn" data-ui="pause" data-testid="menu-button" aria-label="Menú de la partida">${menuIcon()}</button>`;
   if (ctx.mode === 'portrait') {
-    const signs = renderSignControl(state, ctx.signals ?? [], ctx.signOptions ?? [], ctx.signsOpen === true, 'portrait');
+    const signs = renderSignControl(state, ctx.talk ?? NO_TALK, 'portrait');
     return (
       `<div class="p-score">${renderScore(state.scores, true)}</div>` +
       `<div class="p-status-row"><div class="chips">${chips}</div><div class="p-status-btns">${signs}${menu}</div></div>`
@@ -162,7 +158,8 @@ function renderSeats(ctx: GameViewContext, geo: TableGeometry): string {
           cards: seat.isHuman ? 0 : state.hand.hands[seat.id].length,
           // En pica-pica, "Mano" es el mano de la submano en juego (decide los empates de envido).
           mano: (state.hand.picaPica ? state.hand.participants[0] : state.hand.manoId) === seat.id,
-          dealer: state.hand.dealerId === seat.id,
+          // "Pie": el último de su equipo en jugar la primera baza (no se marca en el mano ni en pica-pica).
+          dealer: state.hand.picaPica === null && pieOf(state, seat.team) === seat.id && state.hand.manoId !== seat.id,
           active,
           activeLabel: seatLabel(state, seat.id),
           dim,
@@ -414,7 +411,11 @@ function renderActions(ctx: GameViewContext, geo: TableGeometry): string {
   }
 
   const envidoClosed =
-    envidos.length === 0 && state.hand.tricks.length > 0 ? '<div class="actions-hint">Envido cerrado: ya pasó la primera baza.</div>' : '';
+    envidos.length === 0 && state.hand.tricks.length > 0
+      ? '<div class="actions-hint">Envido cerrado: ya pasó la primera baza.</div>'
+      : envidos.length === 0 && state.hand.envido.status === 'none' && state.hand.picaPica === null && !isPie(state, HUMAN)
+        ? '<div class="actions-hint">El envido lo canta tu pie.</div>'
+        : '';
   return (
     `<div class="actions" style="${style}" data-testid="actions"><div class="actions-title">Cantar</div>` +
     (trucoButton ? `<div class="act-row">${trucoButton}</div>` : '') +
@@ -566,10 +567,10 @@ export function renderGame(ctx: GameViewContext): string {
     (panel && ctx.mode === 'portrait' ? '' : renderHand(ctx, geo, panel)) +
     (panel ? renderResponsePanel(ctx) : renderActions(ctx, geo)) +
     renderFeed(ctx) +
-    renderPartnerSigns(ctx.state, ctx.signals ?? [], ctx.mode, geo) +
-    (ctx.mode === 'desktop' ? renderSignControl(ctx.state, ctx.signals ?? [], ctx.signOptions ?? [], ctx.signsOpen === true, 'desktop') : '') +
+    renderPartnerSigns(ctx.state, (ctx.talk ?? NO_TALK).humanIsPie ? (ctx.talk ?? NO_TALK).signals : [], ctx.mode, geo) +
+    (ctx.mode === 'desktop' ? renderSignControl(ctx.state, ctx.talk ?? NO_TALK, 'desktop') : '') +
     renderEnvidoShow(ctx, geo) +
     renderBubbles(ctx, geo) +
-    (ctx.signsOpen && !panel ? renderSignPicker(ctx.signOptions ?? [], ctx.mode) : '')
+    (ctx.talk?.open && !panel ? renderSignPicker(ctx.talk, ctx.mode) : '')
   );
 }

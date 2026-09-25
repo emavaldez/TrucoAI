@@ -7,7 +7,7 @@
 
 import { envidoScore } from './envidoScore.js';
 import { addPoints } from './scoring.js';
-import { responderFor, teamOf } from './turns.js';
+import { isPie, responderFor, teamOf } from './turns.js';
 import type { Action, CantoRecord, EnvidoCall, EnvidoSaying, GameEvent, MatchState, PlayerId, TeamId } from './types.js';
 
 /** Puntos de cada canto de la cadena cuando se quiere (GDD §6.3): E = 2, R = 3. */
@@ -96,11 +96,13 @@ export function openingEnvidoCalls(): Action[] {
 
 /**
  * ¿`playerId` puede abrir el envido en su turno de `PLAYING`? (AC 2)
- * Solo en la primera baza, antes de jugar su carta, con la cadena sin cantar y sin truco
+ * Solo el pie de su equipo, en la primera baza, antes de jugar su carta, con la cadena sin cantar y sin truco
  * querido ni pendiente: **después de un truco querido no hay envido** [ENG-13].
  */
 export function canCallEnvido(state: MatchState, playerId: PlayerId): boolean {
   if (state.phase !== 'PLAYING' || state.hand.turnId !== playerId) return false;
+  // Solo el pie de cada equipo canta envido (GDD §2.2, decisión 2026-09-25).
+  if (!isPie(state, playerId)) return false;
   if (state.hand.truco.pending !== null) return false;
   return envidoWindowOpen(state);
 }

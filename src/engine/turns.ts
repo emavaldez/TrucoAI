@@ -17,33 +17,26 @@ export function teamOf(state: MatchState, playerId: PlayerId): TeamId {
   return teamOfSeat(state.seats, playerId);
 }
 
-/** ¿El asiento de `playerId` es el humano? (falso si no está sentado) */
-function isHuman(state: MatchState, playerId: PlayerId): boolean {
-  return state.seats.some((seat) => seat.id === playerId && seat.isHuman);
+/**
+ * El pie de un equipo (GDD §2): el último de ese equipo en `participants` (el orden de juego
+ * desde el mano). Con 2 jugadores, y en cada submano de pica-pica, cada uno es su propio pie.
+ */
+export function pieOf(state: MatchState, team: TeamId): PlayerId {
+  const members = state.hand.participants.filter((playerId) => teamOfSeat(state.seats, playerId) === team);
+  if (members.length === 0) throw new Error(`NO_PIE: equipo ${team}`);
+  return members[members.length - 1];
+}
+
+/** ¿`playerId` es el pie de su equipo? */
+export function isPie(state: MatchState, playerId: PlayerId): boolean {
+  return pieOf(state, teamOf(state, playerId)) === playerId;
 }
 
 /**
- * Quién responde el canto de `callerId` (AC 2, GDD §5): entre los `participants`
- * del equipo contrario al que cantó, si está el humano responde el humano; si no,
- * el primero de ese equipo **después** del que cantó en el orden de `participants`
- * (circular). En una submano de pica-pica `participants` es el par, así que el
- * humano solo responde si está en el par [ENG-14].
+ * Quién responde el canto de `callerId` (GDD §2.2, decisión 2026-09-25): **el pie del equipo
+ * contrario** (en una submano de pica-pica `participants` es el par, así que responde el rival del par).
  */
 export function responderFor(state: MatchState, callerId: PlayerId): PlayerId {
-  const participants = state.hand.participants;
   const callerTeam = teamOf(state, callerId);
-  const rivals = participants.filter((playerId) => teamOfSeat(state.seats, playerId) !== callerTeam);
-
-  const human = rivals.find((playerId) => isHuman(state, playerId));
-  if (human !== undefined) return human;
-  if (rivals.length === 0) throw new Error(`NO_RIVAL: ${callerId}`);
-
-  const start = participants.indexOf(callerId);
-  if (start === -1) throw new Error(`UNKNOWN_PLAYER: ${callerId}`);
-  for (let step = 1; step <= participants.length; step++) {
-    const candidate = participants[(start + step) % participants.length];
-    if (teamOfSeat(state.seats, candidate) !== callerTeam) return candidate;
-  }
-
-  throw new Error(`NO_RIVAL: ${callerId}`);
+  return pieOf(state, callerTeam === 0 ? 1 : 0);
 }
