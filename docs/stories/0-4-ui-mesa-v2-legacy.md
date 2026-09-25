@@ -1,6 +1,6 @@
 # Historia 0-4: UI "mesa v2" sobre el juego actual
 
-Status: ready-for-dev
+Status: review
 wf-id: `0-4-ui-mesa-v2-legacy` · kind: `default`
 Depende de: 0-3 (mergeada: trae el gate `partidas` sin fallas conocidas y toca `App.ts`)
 
@@ -60,16 +60,16 @@ sobre el motor v2 con el mismo diseño, así que escribí CSS y funciones de ren
 
 ## Tareas
 
-- [ ] Tokens + fuentes (AC 1)
-- [ ] `cardView.ts` con SVG de palos y estados (AC 2)
-- [ ] `layout.ts` + tests unitarios de posiciones (AC 3)
-- [ ] Render de mesa, asientos, baza, centro y marcador (AC 3, 4, 5)
-- [ ] Acciones, panel de respuesta, globos y feed (AC 6, 7, 8)
-- [ ] Avisos, resumen, fin, menú (AC 9)
-- [ ] Celular (AC 10)
-- [ ] Selectores + `data-testid` (AC 11)
-- [ ] `e2e/layout.spec.ts` + capturas (AC 12)
-- [ ] Partidas 10 semillas ×2 (AC 13) y Dev Agent Record
+- [x] Tokens + fuentes (AC 1)
+- [x] `cardView.ts` con SVG de palos y estados (AC 2)
+- [x] `layout.ts` + tests unitarios de posiciones (AC 3)
+- [x] Render de mesa, asientos, baza, centro y marcador (AC 3, 4, 5)
+- [x] Acciones, panel de respuesta, globos y feed (AC 6, 7, 8)
+- [x] Avisos, resumen, fin, menú (AC 9)
+- [x] Celular (AC 10)
+- [x] Selectores + `data-testid` (AC 11)
+- [x] `e2e/layout.spec.ts` + capturas (AC 12)
+- [x] Partidas 10 semillas ×2 (AC 13) y Dev Agent Record
 
 ## Dev Notes
 
@@ -101,9 +101,50 @@ PARTIDAS_SEEDS=1,2,3,4,5,6,7,8,9,10 npm run test:partidas   # 2 veces, mismas fi
 ## Dev Agent Record
 
 ### Agent Model Used
+Hermes perfil `trucoai` · modelo `qwen3.8-flash` (provider custom) · sesión 2026-09-24
+
 ### Debug Log References
+- `workflow/runs/0-4-ui-mesa-v2-legacy/implementation.md` (evidencia de verificación completa)
+- Fix clave 1: `--cnum`/`--cr2`/`--cframe` ya no llevan `px` en `cardView.ts` — `calc(var(--cnum) * 1px)` quedaba inválido y el número caía al `font-size` heredado (13 px en celular, AC 12 fallaba).
+- Fix clave 2: el layout de asientos usa el rectángulo de `.felt-room` (`tableViewport()`), no `window.innerHeight`, y descuenta la mano del humano (`extraBelow`) del clamp inferior — antes el asiento de abajo + cartas se salían del viewport (AC 12).
+- Fix clave 3: axe no funciona con el reloj congelado de Playwright (`page.clock`); los tests axe hacen `page.clock.resume()` antes de `analyze()`.
+
 ### Completion Notes List
+- AC 1–14 cumplidos. UI "mesa v2" integrada sobre el juego legacy sin tocar `src/core/` (ver `git diff main..HEAD`: solo `src/ui/*`, `src/styles.css`, `src/App.ts`, `index.html`, `e2e/*`, `docs/design/capturas/*`, `package.json`/lock).
+- El driver legacy (`e2e/driver/legacy.ts`) NO necesitó cambios: `.human-area`, `.player-area.active-turn`, `.clickable`, `.team-points`, `.btn-*`, `.response-panel` y `.controls button` se conservan en el markup nuevo (AC 11).
+- `SLOT_ANGLES[4] = [90, 180, 270, 0]`: la posición 2 (compañero del humano, `team = posición % 2` en App.ts) va arriba — AC 3.
+- `npm run test:partidas` ahora incluye `e2e/layout.spec.ts` (AC 12 pide que el gate lo corra).
+- Partidas 10 semillas ×2: 45/45 verdes y **firmas idénticas entre corridas** (AC 13). Firma 4p seed 7 = `060f523c` (coincide con la de 0-3: el orden de lectura del DOM no cambió).
+- axe (AC 14): sin violaciones serious/critical en 4p desktop y 4p celular.
+- Riesgo conocido: `handExtra()` es una estimación (186/156 px de carta + margen); si el diseño de la mano del humano cambia de tamaño, revisar el clamp.
+
+### Firmas de partidas (2026-09-24, corrida 1 = corrida 2)
+```
+2p: s1 8cecd082 · s2 f7dd6a2b · s3 14261841 · s4 e83ada44 · s5 9fad1cd3
+    s6 9282bdf1 · s7 87af1062 · s8 b8f89856 · s9 f6109c73 · s10 cc430264
+4p: s1 94859c94 · s2 bae7e12c · s3 a2e8fcbc · s4 03d51ded · s5 0bcda204
+    s6 7b314153 · s7 060f523c · s8 42137fb3 · s9 f46d6f23 · s10 edb50a9a
+6p: s1 734ea70d · s2 f134a7d3 · s3 294f6d2f · s4 00eeb109 · s5 e05c1d66
+    s6 32a9b30e · s7 7296f4d7 · s8 e2339a7e · s9 6e9f1d76 · s10 5199c0fe
+nueva: 2p 8cecd082 · 4p 94859c94 · 6p 734ea70d
+determinismo 4p seed 7: 060f523c == 060f523c
+```
+
 ### File List
+- `index.html` — fuentes Fraunces/Figtree (preconnect + link)
+- `src/styles.css` — tokens `:root`, piezas v2 (carta, mesa elíptica, asiento, marcador, paneles de papel, celular)
+- `src/ui/escape.ts` — `escapeHtml` (nuevo)
+- `src/ui/cardView.ts` — `renderCard` con SVG de palos, tamaños/estados (nuevo)
+- `src/ui/layout.ts` — `tableEllipse`/`seatPosition`/`SLOT_ANGLES` (nuevo)
+- `src/ui/seatView.ts` — `renderSeat`/`seatInitials` (nuevo)
+- `src/ui/scoreView.ts` — `renderScore`/fósforos (nuevo)
+- `src/ui/boardView.ts` — top bar, indicador de bazas, feed, globo (nuevo)
+- `src/ui/UIManager.ts` — render de mesa v2, integración de componentes, panel de respuesta, feed/globos, celular
+- `src/App.ts` — listeners de feed/globos, `setBusy`, (sin cambios de lógica de juego)
+- `src/ui/__tests__/cardView.test.ts`, `src/ui/__tests__/layout.test.ts`, `src/ui/__tests__/seatScoreView.test.ts` — tests unitarios (nuevos)
+- `e2e/layout.spec.ts` — test de layout 2/4/6 × 3 viewports + axe (nuevo)
+- `docs/design/capturas/*.png` — 9 capturas AC 12 (nuevo)
+- `package.json` / `package-lock.json` — devDeps: `jsdom`, `@types/jsdom`, `@axe-core/playwright`; `test:partidas` incluye `layout.spec.ts`
 
 ## Change Log
 - 2026-09-23 · Claude (SM/UX) · Historia creada a pedido de Emmanuel ("no se ven las cartas; rediseñame toda la UI y la UX"), diseño aprobado para aplicar ya.

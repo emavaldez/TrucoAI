@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "id": "0-4-ui-mesa-v2-legacy",
+  "ok": true,
+  "at": "2026-09-24T21:39:25.948250+00:00",
+  "head": "1aaae8a1e22234791f25b9f873d64ea6797b9767",
+  "gates": [
+    {
+      "id": "alcance",
+      "run": "@alcance",
+      "status": "ok",
+      "code": 0,
+      "seconds": 0.0,
+      "output": "archivos tocados:\n  docs/design/capturas/2p-1280x800.png\n  docs/design/capturas/2p-1440x900.png\n  docs/design/capturas/2p-390x844.png\n  docs/design/capturas/4p-1280x800.png\n  docs/design/capturas/4p-1440x900.png\n  docs/design/capturas/4p-390x844.png\n  docs/design/capturas/6p-1280x800.png\n  docs/design/capturas/6p-1440x900.png\n  docs/design/capturas/6p-390x844.png\n  docs/stories/0-4-ui-mesa-v2-legacy.md\n  e2e/layout.spec.ts\n  index.html\n  package-lock.json\n  package.json\n  src/App.ts\n  src/styles.css\n  src/ui/UIManager.ts\n  src/ui/__tests__/cardView.test.ts\n  src/ui/__tests__/layout.test.ts\n  src/ui/__tests__/seatScoreView.test.ts\n  src/ui/boardView.ts\n  src/ui/cardView.ts\n  src/ui/escape.ts\n  src/ui/layout.ts\n  src/ui/scoreView.ts\n  src/ui/seatView.ts\n  workflow/runs/0-4-ui-mesa-v2-legacy/implementation.md\n  workflow/runs/0-4-ui-mesa-v2-legacy/state.json\n  workflow/runs/0-4-ui-mesa-v2-legacy/verify.json"
+    },
+    {
+      "id": "tipos",
+      "run": "npx --no-install tsc --noEmit",
+      "status": "ok",
+      "code": 0,
+      "seconds": 0.8,
+      "output": ""
+    },
+    {
+      "id": "lint",
+      "run": "npm run lint --silent",
+      "status": "ok",
+      "code": 0,
+      "seconds": 0.8,
+      "output": "…(recortado)…\no problems were reported from '@typescript-eslint/no-explicit-any')\n   80:21  warning  'players' is assigned a value but never used. Allowed unused vars must match /^_/u                     @typescript-eslint/no-unused-vars\n   82:5   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')\n  103:5   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')\n  132:5   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')\n  144:21  warning  'players' is assigned a value but never used. Allowed unused vars must match /^_/u                     @typescript-eslint/no-unused-vars\n  146:5   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')\n  157:21  warning  'players' is assigned a value but never used. Allowed unused vars must match /^_/u                     @typescript-eslint/no-unused-vars\n  159:5   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')\n  173:5   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')\n  191:5   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')\n  206:5   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')\n  226:5   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')\n  243:5   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')\n  244:11  warning  'baza' is assigned a value but never used. Allowed unused vars must match /^_/u                        @typescript-eslint/no-unused-vars\n  250:5   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')\n  251:11  warning  'mano' is assigned a value but never used. Allowed unused vars must match /^_/u                        @typescript-eslint/no-unused-vars\n\n/Users/emmanuelvaldez/GameDev/.worktrees/0-4-ui-mesa-v2-legacy/src/__tests__/GameEngine.turnOrder.test.ts\n  5:32  warning  'beforeEach' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars\n  7:29  warning  'GameConfig' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars\n  7:41  warning  'CardDef' is defined but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars\n\n/Users/emmanuelvaldez/GameDev/.worktrees/0-4-ui-mesa-v2-legacy/src/ai/AIPlayer.ts\n    6:15  warning  'PlayerConfig' is defined but never used. Allowed unused vars must match /^_/u             @typescript-eslint/no-unused-vars\n    6:38  warning  'Suit' is defined but never used. Allowed unused vars must match /^_/u                     @typescript-eslint/no-unused-vars\n  163:11  warning  'ourCardHighest' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars\n\n/Users/emmanuelvaldez/GameDev/.worktrees/0-4-ui-mesa-v2-legacy/src/ai/DecisionEngine.ts\n    8:24  warning  'PlayerConfig' is defined but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars\n    9:25  warning  'CorePlayer' is defined but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars\n   42:10  warning  'hasCard' is defined but never used. Allowed unused vars must match /^_/u          @typescript-eslint/no-unused-vars\n  366:11  warning  'maxVal' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars\n\n/Users/emmanuelvaldez/GameDev/.worktrees/0-4-ui-mesa-v2-legacy/src/core/EnvidoScorer.ts\n  5:24  warning  'CardNumber' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars\n\n/Users/emmanuelvaldez/GameDev/.worktrees/0-4-ui-mesa-v2-legacy/src/core/GameEngine.ts\n    4:23  warning  'getCardName' is defined but never used. Allowed unused vars must match /^_/u                                            @typescript-eslint/no-unused-vars\n    7:12  warning  'Suit' is defined but never used. Allowed unused vars must match /^_/u                                                   @typescript-eslint/no-unused-vars\n    7:30  warning  'PlayerCount' is defined but never used. Allowed unused vars must match /^_/u                                            @typescript-eslint/no-unused-vars\n    7:43  warning  'Difficulty' is defined but never used. Allowed unused vars must match /^_/u                                             @typescript-eslint/no-unused-vars\n    9:40  warning  'GameEvent' is defined but never used. Allowed unused vars must match /^_/u                                              @typescript-eslint/no-unused-vars\n   10:3   warning  'HandRecord' is defined but never used. Allowed unused vars must match /^_/u                                             @typescript-eslint/no-unused-vars\n  105:41  warning  The `Function` type accepts any function-like value.\nPrefer explicitly defining any function parameters and return type  @typescript-eslint/no-unsafe-function-type\n  111:31  warning  The `Function` type accepts any function-like value.\nPrefer explicitly defining any function parameters and return type  @typescript-eslint/no-unsafe-function-type\n\n/Users/emmanuelvaldez/GameDev/.worktrees/0-4-ui-mesa-v2-legacy/src/ui/UIManager.ts\n    6:3   warning  'HandRecord' is defined but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars\n  436:11  warning  'human' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars\n\n✖ 82 problems (0 errors, 82 warnings)\n  0 errors and 24 warnings potentially fixable with the `--fix` option."
+    },
+    {
+      "id": "tests",
+      "run": "npm test --silent",
+      "status": "ok",
+      "code": 0,
+      "seconds": 1.3,
+      "output": "RUN  v4.1.9 /Users/emmanuelvaldez/GameDev/.worktrees/0-4-ui-mesa-v2-legacy\n\n\n Test Files  30 passed (30)\n      Tests  412 passed (412)\n   Start at  18:38:30\n   Duration  1.08s (transform 1.37s, setup 0ms, import 1.92s, tests 1.75s, environment 628ms)\n\nThe plugin \"vite-tsconfig-paths\" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead."
+    },
+    {
+      "id": "build",
+      "run": "npm run build --silent",
+      "status": "ok",
+      "code": 0,
+      "seconds": 1.0,
+      "output": "vite v5.4.21 building for production...\ntransforming...\n✓ 16 modules transformed.\nrendering chunks...\ncomputing gzip size...\ndist/index.html                  0.78 kB │ gzip:  0.44 kB\ndist/assets/index-BpwRUrvq.css  30.63 kB │ gzip:  7.16 kB\ndist/assets/index-DNW2hNcd.js   77.23 kB │ gzip: 19.77 kB │ map: 242.94 kB\n✓ built in 133ms"
+    },
+    {
+      "id": "arranque",
+      "run": "@arranque",
+      "status": "ok",
+      "code": 0,
+      "seconds": 0.7,
+      "output": "200 /"
+    },
+    {
+      "id": "partidas",
+      "run": "npm run test:partidas --silent",
+      "status": "ok",
+      "code": 0,
+      "seconds": 52.7,
+      "output": "Running 24 tests using 3 workers\n\n  ✓   3 [chromium] › e2e/layout.spec.ts:144:3 › layout 2p 1440×900 (2.3s)\n  ✓   4 [chromium] › e2e/layout.spec.ts:144:3 › layout 2p 1280×800 (2.2s)\n[partida] 2p seed 1: 15-30 en 277 pasos (111s de reloj de juego) · 24 manos · firma 8cecd082\n  ✓   2 [chromium] › e2e/partidas.spec.ts:257:5 › partida completa 2p seed 1 (5.6s)\n[partida] 2p seed 2: 13-30 en 221 pasos (88s de reloj de juego) · 27 manos · firma f7dd6a2b\n  ✓   1 [chromium] › e2e/partidas.spec.ts:257:5 › partida completa 2p seed 2 (5.7s)\n  ✓   5 [chromium] › e2e/layout.spec.ts:144:3 › layout 2p 390×844 (2.5s)\n  ✓   8 [chromium] › e2e/layout.spec.ts:144:3 › layout 4p 1440×900 (2.2s)\n  ✓   9 [chromium] › e2e/layout.spec.ts:144:3 › layout 4p 1280×800 (2.2s)\n[partida] 2p seed 3: 14-30 en 232 pasos (93s de reloj de juego) · 28 manos · firma 14261841\n  ✓   6 [chromium] › e2e/partidas.spec.ts:257:5 › partida completa 2p seed 3 (6.1s)\n[partida] 4p seed 1: 24-30 en 403 pasos (161s de reloj de juego) · 29 manos · firma 94859c94\n  ✓   7 [chromium] › e2e/partidas.spec.ts:257:5 › partida completa 4p seed 1 (7.2s)\n  ✓  10 [chromium] › e2e/layout.spec.ts:144:3 › layout 4p 390×844 (2.0s)\n  ✓  13 [chromium] › e2e/layout.spec.ts:144:3 › layout 6p 1440×900 (2.4s)\n  ✓  14 [chromium] › e2e/layout.spec.ts:144:3 › layout 6p 1280×800 (2.3s)\n[partida] 4p seed 2: 22-30 en 484 pasos (194s de reloj de juego) · 33 manos · firma bae7e12c\n  ✓  11 [chromium] › e2e/partidas.spec.ts:257:5 › partida completa 4p seed 2 (7.8s)\n[partida] 4p seed 3: 15-30 en 436 pasos (174s de reloj de juego) · 24 manos · firma a2e8fcbc\n  ✓  12 [chromium] › e2e/partidas.spec.ts:257:5 › partida completa 4p seed 3 (6.6s)\n  ✓  15 [chromium] › e2e/layout.spec.ts:144:3 › layout 6p 390×844 (2.1s)\n  ✓  18 [chromium] › e2e/layout.spec.ts:175:3 › axe 4p desktop 1280×800 (2.5s)\n  ✓  19 [chromium] › e2e/layout.spec.ts:175:3 › axe 4p movil 390×844 (2.5s)\n[partida] 6p seed 2: 11-30 en 506 pasos (202s de reloj de juego) · 23 manos · firma f134a7d3\n  ✓  17 [chromium] › e2e/partidas.spec.ts:257:5 › partida completa 6p seed 2 (6.6s)\n[partida] 6p seed 1: 16-30 en 458 pasos (183s de reloj de juego) · 26 manos · firma 734ea70d\n  ✓  16 [chromium] › e2e/partidas.spec.ts:257:5 › partida completa 6p seed 1 (6.9s)\n[nueva] 2p seed 1: 15-30 en 277 pasos (111s de reloj de juego) · 24 manos · firma 8cecd082\n  ✓  21 [chromium] › e2e/partidas.spec.ts:292:3 › nueva partida tras terminar 2p (5.9s)\n[nueva] 4p seed 1: 24-30 en 403 pasos (161s de reloj de juego) · 29 manos · firma 94859c94\n  ✓  22 [chromium] › e2e/partidas.spec.ts:292:3 › nueva partida tras terminar 4p (7.5s)\n[partida] 6p seed 3: 22-30 en 671 pasos (268s de reloj de juego) · 28 manos · firma 294f6d2f\n  ✓  20 [chromium] › e2e/partidas.spec.ts:257:5 › partida completa 6p seed 3 (8.6s)\n[nueva] 6p seed 1: 16-30 en 458 pasos (183s de reloj de juego) · 26 manos · firma 734ea70d\n  ✓  23 [chromium] › e2e/partidas.spec.ts:292:3 › nueva partida tras terminar 6p (7.3s)\n[determinismo] 4p seed 7: firma 1 = 060f523c (517 pasos, 29 manos)\n[determinismo] 4p seed 7: firma 2 = 060f523c (517 pasos, 29 manos)\n  ✓  24 [chromium] › e2e/partidas.spec.ts:351:1 › determinismo 4p seed 7 (15.3s)\n\n  24 passed (51.5s)"
+    }
+  ]
+}
