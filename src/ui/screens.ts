@@ -1,14 +1,15 @@
 // Pantallas y paneles que bloquean (GDD §12): menú, resumen de mano, fin de partida y pausa.
 // Diseño: docs/design/mesa-v2 (Menu, FinMano, FinPartida).
 
-import type { HandRecord, MatchState, TeamId, TrickResult } from '../engine/index.js';
+import type { Card, HandRecord, MatchState, PlayerId, TeamId, TrickPlay } from '../engine/index.js';
+import { envidoValue } from '../engine/index.js';
 import type { MatchSettings } from '../app/GameController.js';
 import type { Difficulty } from '../ai/policy.js';
-import { renderCard } from './cardView.js';
+import { renderCard, type CardSize } from './cardView.js';
 import { escapeHtml } from './escape.js';
 import type { EventLog, PointsEntry } from './eventLog.js';
 import type { LayoutMode } from './layout.js';
-import { cardName, ordinal, playerName, teamName } from './text.js';
+import { initials, ordinal, playerName, teamName, teamOfPlayer } from './text.js';
 
 const DIFFICULTY_TEXT: Record<Difficulty, { name: string; desc: string }> = {
   easy: { name: 'Fácil', desc: 'Juega las cartas obvias, pero muchas veces decide al azar. Nunca farolea.' },
@@ -69,19 +70,95 @@ function teamClass(team: TeamId): string {
   return team === 0 ? 'nos' : 'ellos';
 }
 
-function trickCard(state: MatchState, trick: TrickResult, index: number, size: 'sm' | 'xs'): string {
-  const result =
-    trick.winnerTeam === 'PARDA'
-      ? '<span class="trick-result">Parda</span>'
-      : `<span class="trick-result trick-result--${teamClass(trick.winnerTeam)}">${teamName(trick.winnerTeam)}</span>`;
-  const cards = trick.plays
-    .map((play) => renderCard(play.card, { size, state: play.playerId === trick.winnerPlayerId ? 'winner' : 'normal', tag: 'Ganó' }))
+/**
+ * Cartas que forman el envido de un jugador (GDD §6.1): las dos más altas del palo repetido
+ * o, sin palo repetido, la más alta. Sin tanto (tres figuras de distinto palo) no marca ninguna.
+ */
+export function envidoCards(cards: readonly Card[]): Card[] {
+  const bySuit = new Map<string, Card[]>();
+  for (const card of cards) bySuit.set(card.suit, [...(bySuit.get(card.suit) ?? []), card]);
+  const byValue = (a: Card, b: Card): number => envidoValue(b) - envidoValue(a);
+  let best: Card[] = [];
+  let bestSum = -1;
+  for (const group of bySuit.values()) {
+    if (group.length < 2) continue;
+    const pair = [...group].sort(byValue).slice(0, 2);
+    const sum = envidoValue(pair[0]) + envidoValue(pair[1]);
+    if (sum > bestSum) [best, bestSum] = [pair, sum];
+  }
+  if (best.length > 0) return best;
+  const highest = [...cards].sort(byValue)[0];
+  return highest && envidoValue(highest) > 0 ? [highest] : [];
+}
+
+function sameCard(a: Pick<Card, 'number' | 'suit'>, b: Pick<Card, 'number' | 'suit'>): boolean {
+  return a.number === b.number && a.suit === b.suit;
+}
+
+interface PlayRow {
+  label: string;
+  result: string;
+  plays: TrickPlay[];
+  winnerPlayerId: PlayerId | null;
+}
+
+/**
+ * Las cartas de la mano como quedaron en la mesa: una columna por jugador (en el orden en que
+ * juegan, empezando por el mano) y una fila por baza. Dorado = ganó la baza; violeta = envido.
+ */
+function playTable(state: MatchState, record: HandRecord, envidoMarks: Card[], size: CardSize, compact: boolean): string {
+  const hand = state.hand;
+  const start = Math.max(0, hand.participants.indexOf(record.manoId));
+  const order = [...hand.participants.slice(start), ...hand.participants.slice(0, start)];
+  const rows: PlayRow[] = record.tricks.map((trick, i) => ({
+    label: `${ordinal(i)} baza`,
+    result:
+      trick.winnerTeam === 'PARDA'
+        ? '<span class="trick-result">Parda</span>'
+        : `<span class="trick-result trick-result--${teamClass(trick.winnerTeam)}">${teamName(trick.winnerTeam)}</span>`,
+    plays: trick.plays,
+    winnerPlayerId: trick.winnerPlayerId,
+  }));
+  const open = hand.currentTrick.plays;
+  if (open.length > 0 && open.length < hand.participants.length && rows.length < 3) {
+    rows.push({ label: `${ordinal(rows.length)} baza`, result: '<span class="trick-result">Sin terminar</span>', plays: open, winnerPlayerId: null });
+  }
+  const head =
+    `<div class="pt-corner"></div>` +
+    order
+      .map((playerId) => {
+        const seat = state.seats.find((candidate) => candidate.id === playerId);
+        const name = playerName(state, playerId);
+        const shown = compact ? initials(name, seat?.isHuman ?? false) : name;
+        const mano = playerId === record.manoId ? '<span class="pt-mano">mano</span>' : '';
+        return `<div class="pt-player pt-player--${teamClass(teamOfPlayer(state, playerId))}" title="${escapeHtml(name)}"><span>${escapeHtml(shown)}</span>${mano}</div>`;
+      })
+      .join('');
+  const body = rows
+    .map((row) => {
+      const cells = order
+        .map((playerId) => {
+          const play = row.plays.find((candidate) => candidate.playerId === playerId);
+          if (!play) return '<div class="pt-cell pt-cell--empty" aria-hidden="true">·</div>';
+          const envido = envidoMarks.some((card) => sameCard(card, play.card));
+          const card = renderCard(play.card, {
+            size,
+            state: playerId === row.winnerPlayerId ? 'winner' : 'normal',
+            tag: 'Ganó',
+            className: envido ? 'card--envido' : undefined,
+          });
+          return `<div class="pt-cell">${card}</div>`;
+        })
+        .join('');
+      return `<div class="pt-trick"><span>${row.label}</span>${row.result}</div>${cells}`;
+    })
     .join('');
-  const winnerPlay = trick.plays.find((play) => play.playerId === trick.winnerPlayerId);
-  const note = winnerPlay ? `${playerName(state, winnerPlay.playerId)} con ${cardName(winnerPlay.card)}` : 'Empate de cartas';
+  const legend =
+    `<div class="pt-legend"><span class="pt-key pt-key--win">Ganó la baza</span>` +
+    (envidoMarks.length > 0 ? `<span class="pt-key pt-key--envido">Cartas del envido</span>` : '') +
+    `</div>`;
   return (
-    `<div class="trick-box"><div class="trick-head"><span>${ordinal(index)} baza</span>${result}</div>` +
-    `<div class="trick-cards trick-cards--${size}">${cards}</div><div class="trick-note">${escapeHtml(note)}</div></div>`
+    `<div class="play-table" data-testid="summary-play-table" style="--pt-cols:${order.length}">${head}${body}</div>` + legend
   );
 }
 
@@ -99,7 +176,9 @@ export function renderHandSummary(state: MatchState, log: EventLog, autoAck: boo
     .filter((team) => totals[team] > 0)
     .map((team) => `<span class="gain gain--${teamClass(team)}">${teamName(team)} +${totals[team]}</span>`)
     .join('');
-  const size = state.rules.playerCount === 2 && mode === 'desktop' ? 'sm' : 'xs';
+  const compact = mode === 'portrait';
+  const size: CardSize = compact && state.rules.playerCount === 6 ? 'xs' : 'mini';
+  const envidoMarks = log.lastEnvidoShow.flatMap((show) => envidoCards(state.hand.dealt[show.playerId] ?? []));
   let tricksHtml: string;
   if (record.picaPica && state.hand.picaPica) {
     tricksHtml =
@@ -120,13 +199,17 @@ export function renderHandSummary(state: MatchState, log: EventLog, autoAck: boo
         .join('') +
       `</div>`;
   } else {
-    tricksHtml = `<div class="trick-grid">${record.tricks.map((trick, i) => trickCard(state, trick, i, size)).join('')}</div>`;
+    tricksHtml = playTable(state, record, envidoMarks, size, compact);
   }
   const shown = log.lastEnvidoShow
     .map((show) => {
       const who = show.playerId === 'p0' ? 'Vos tenías' : `${escapeHtml(playerName(state, show.playerId))} tenía`;
       const prefix = show.submano === null ? '' : `Pica Pica ${show.submano + 1} · `;
-      const cards = state.hand.dealt[show.playerId].map((card) => renderCard(card, { size: 'mini' })).join('');
+      const dealt = state.hand.dealt[show.playerId];
+      const marks = envidoCards(dealt);
+      const cards = dealt
+        .map((card) => renderCard(card, { size: 'mini', className: marks.some((m) => sameCard(m, card)) ? 'card--envido' : undefined }))
+        .join('');
       return `<div class="sum-show" data-testid="summary-envido-show"><span>${prefix}Envido: ${who} ${show.score}</span><span class="sum-show-cards">${cards}</span></div>`;
     })
     .join('');
