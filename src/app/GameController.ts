@@ -32,6 +32,8 @@ export interface Timing {
   handOverDelay: number;
   /** espera antes de cantar sola la flor del humano */
   autoFlorDelay: number;
+  /** pausa por cada cosa que se dice al cantar los tantos ("33", "me dio", "son buenas") */
+  sayingGap: number;
 }
 
 export const NORMAL_TIMING: Timing = {
@@ -40,9 +42,17 @@ export const NORMAL_TIMING: Timing = {
   submanoPause: 1400,
   handOverDelay: 1300,
   autoFlorDelay: 700,
+  sayingGap: 900,
 };
 
-export const FAST_TIMING: Timing = { aiDelay: [0, 0], trickPause: 0, submanoPause: 0, handOverDelay: 0, autoFlorDelay: 0 };
+export const FAST_TIMING: Timing = {
+  aiDelay: [0, 0],
+  trickPause: 0,
+  submanoPause: 0,
+  handOverDelay: 0,
+  autoFlorDelay: 0,
+  sayingGap: 0,
+};
 
 export interface ControllerOptions {
   settings: MatchSettings;
@@ -254,6 +264,8 @@ export class GameController {
     let wait = 0;
     if (events.some((event) => event.type === 'TRICK_WON')) wait += this.timing.trickPause;
     if (events.some((event) => event.type === 'SUBMANO_STARTED')) wait += this.timing.submanoPause;
+    // Que se lleguen a escuchar los tantos antes de seguir jugando.
+    for (const event of events) if (event.type === 'ENVIDO_RESOLVED') wait += event.sayings.length * this.timing.sayingGap;
 
     if (actor === HUMAN_ID && this.humanPolicy === undefined) {
       const legal = getLegalActions(state, HUMAN_ID);

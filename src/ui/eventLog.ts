@@ -8,6 +8,8 @@ import { ENVIDO_LABELS, TRUCO_LABELS, ordinal, playerName, teamName, teamOfPlaye
 export interface Bubble {
   playerId: PlayerId;
   text: string;
+  /** desde cuándo se ve (los tantos se dicen de a uno) */
+  from: number;
   until: number;
 }
 
@@ -18,7 +20,15 @@ export interface FeedLine {
 
 export interface Notice {
   text: string;
+  from: number;
   until: number;
+}
+
+/** Lo que muestra el que ganó el envido al terminar la mano (GDD §6.6). */
+export interface EnvidoShow {
+  playerId: PlayerId;
+  score: number;
+  submano: number | null;
 }
 
 export interface PointsEntry {
@@ -38,6 +48,8 @@ export interface MatchStats {
 
 export const BUBBLE_MS = 2500;
 export const NOTICE_MS = 3200;
+/** Pausa entre lo que dice cada uno al cantar los tantos. */
+export const SAYING_GAP_MS = 900;
 
 function escape(text: string): string {
   return text.replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`);
@@ -69,6 +81,11 @@ export class EventLog {
   /** puntos de la última mano cerrada (para el resumen) */
   lastHandPoints: PointsEntry[] = [];
   stats: MatchStats = { envidosPlayed: 0, envidosWon: 0, trucosQueridos: 0 };
+  /** ganadores del envido de la mano en curso / de la última mano cerrada */
+  envidoShow: EnvidoShow[] = [];
+  lastEnvidoShow: EnvidoShow[] = [];
+  /** separación entre los dichos de los tantos (0 en modo rápido) */
+  sayingGap = SAYING_GAP_MS;
   /** último texto para `aria-live` */
   announcement = '';
   /** submano en curso (según los eventos), para anotar de qué submano son unos puntos */
@@ -81,7 +98,14 @@ export class EventLog {
     this.handPoints = [];
     this.lastHandPoints = [];
     this.stats = { envidosPlayed: 0, envidosWon: 0, trucosQueridos: 0 };
+    this.envidoShow = [];
+    this.lastEnvidoShow = [];
     this.announcement = '';
+  }
+
+  /** ¿Se ve ahora? */
+  static visible(item: { from: number; until: number }, now: number): boolean {
+    return item.from <= now && now < item.until;
   }
 
   /** Quita globos y aviso vencidos. Devuelve true si cambió algo. */
@@ -92,16 +116,21 @@ export class EventLog {
     return before !== this.bubbles.length + (this.notice ? 1 : 0);
   }
 
-  /** Próximo vencimiento (para programar un re-render), o null. */
-  nextExpiry(): number | null {
-    const times = this.bubbles.map((bubble) => bubble.until);
-    if (this.notice) times.push(this.notice.until);
+  /** Próximo momento en que cambia lo que se ve (aparece o se va algo), o null. */
+  nextExpiry(now: number = Date.now()): number | null {
+    const items: { from: number; until: number }[] = [...this.bubbles];
+    if (this.notice) items.push(this.notice);
+    const times = items.map((item) => (item.from > now ? item.from : item.until));
     return times.length === 0 ? null : Math.min(...times);
   }
 
-  private bubble(playerId: PlayerId, text: string, now: number): void {
-    this.bubbles = this.bubbles.filter((bubble) => bubble.playerId !== playerId);
-    this.bubbles.push({ playerId, text, until: now + BUBBLE_MS });
+  private bubble(playerId: PlayerId, text: string, now: number, delay = 0): void {
+    const from = now + delay;
+    // El globo nuevo corta al anterior del mismo jugador (si no, se superpondrían).
+    this.bubbles = this.bubbles
+      .map((bubble) => (bubble.playerId === playerId && bubble.until > from ? { ...bubble, until: from } : bubble))
+      .filter((bubble) => bubble.until > bubble.from);
+    this.bubbles.push({ playerId, text, from, until: from + BUBBLE_MS });
   }
 
   private line(html: string): void {
@@ -109,9 +138,9 @@ export class EventLog {
     if (this.feed.length > 3) this.feed = this.feed.slice(-3);
   }
 
-  private say(text: string, now: number, notice = false): void {
+  private say(text: string, now: number, notice = false, delay = 0): void {
     this.announcement = text;
-    if (notice) this.notice = { text, until: now + NOTICE_MS };
+    if (notice) this.notice = { text, from: now + delay, until: now + delay + NOTICE_MS };
   }
 
   /** Procesa los eventos de un cambio; `state` es el estado DESPUÉS de esos eventos. */
@@ -125,14 +154,15 @@ export class EventLog {
           this.feed = [];
           this.notice = null;
           this.handPoints = [];
+          this.envidoShow = [];
           this.currentSubmano = null;
           this.announcement = `Mano ${event.hand}: da ${playerName(state, event.dealerId)}.`;
           break;
         case 'SUBMANO_STARTED': {
           const [a, b] = event.pair;
           this.currentSubmano = event.submano;
-          const text = `Submano ${event.submano + 1} de 3: ${playerName(state, a)} contra ${playerName(state, b)}`;
-          this.line(`Pica-pica · submano ${event.submano + 1}: ${who(state, a)} contra ${who(state, b)}`);
+          const text = `Pica Pica ${event.submano + 1} de 3: ${playerName(state, a)} contra ${playerName(state, b)}`;
+          this.line(`Pica Pica ${event.submano + 1}: ${who(state, a)} contra ${who(state, b)}`);
           this.say(text, now, true);
           break;
         }
@@ -183,17 +213,17 @@ export class EventLog {
             this.say(`Envido no querido: ${teamName(event.winnerTeam)} suman ${event.points}.`, now, true);
             break;
           }
-          for (const entry of event.revealed) this.bubble(entry.playerId, `${entry.score}`, now);
-          const winner = event.revealed[event.revealed.length - 1];
-          // Los que venían después del ganador y son del otro equipo dicen "son buenas".
-          const order = state.hand.participants;
-          const winnerIndex = order.indexOf(winner.playerId);
-          for (const playerId of order.slice(winnerIndex + 1)) {
-            if (teamOfPlayer(state, playerId) !== event.winnerTeam) this.bubble(playerId, 'Son buenas', now);
-          }
-          const text = `Envido: ${playerName(state, winner.playerId)} ${verb(winner.playerId, 'tenías', 'tenía')} ${winner.score} · ${teamName(event.winnerTeam)} +${event.points}`;
-          this.line(`Envido: ${who(state, winner.playerId)} con ${winner.score} · ${teamSpan(event.winnerTeam)} +${event.points}`);
-          this.say(text, now, true);
+          // Los tantos se dicen de a uno, en el orden en que se cantan (GDD §6.6).
+          event.sayings.forEach((saying, i) => {
+            const text = saying.kind === 'SCORE' ? `${saying.score}` : saying.kind === 'ME_DIO' ? 'Me dio' : 'Son buenas';
+            this.bubble(saying.playerId, text, now, i * this.sayingGap);
+          });
+          const winnerId = event.winnerId ?? event.revealed[event.revealed.length - 1].playerId;
+          const winnerScore = event.revealed.find((entry) => entry.playerId === winnerId)?.score ?? 0;
+          this.envidoShow.push({ playerId: winnerId, score: winnerScore, submano: this.currentSubmano });
+          const text = `Envido: ${playerName(state, winnerId)} ${verb(winnerId, 'tenías', 'tenía')} ${winnerScore} · ${teamName(event.winnerTeam)} +${event.points}`;
+          this.line(`Envido: ${who(state, winnerId)} con ${winnerScore} · ${teamSpan(event.winnerTeam)} +${event.points}`);
+          this.say(text, now, true, event.sayings.length * this.sayingGap);
           break;
         }
         case 'FLOR_DECLARED':
@@ -227,6 +257,7 @@ export class EventLog {
         case 'HAND_OVER':
         case 'MATCH_OVER':
           this.lastHandPoints = this.handPoints.slice();
+          this.lastEnvidoShow = this.envidoShow.slice();
           break;
         default:
           break;

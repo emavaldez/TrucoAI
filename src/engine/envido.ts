@@ -8,7 +8,7 @@
 import { envidoScore } from './envidoScore.js';
 import { addPoints } from './scoring.js';
 import { responderFor, teamOf } from './turns.js';
-import type { Action, CantoRecord, EnvidoCall, GameEvent, MatchState, PlayerId, TeamId } from './types.js';
+import type { Action, CantoRecord, EnvidoCall, EnvidoSaying, GameEvent, MatchState, PlayerId, TeamId } from './types.js';
 
 /** Puntos de cada canto de la cadena cuando se quiere (GDD §6.3): E = 2, R = 3. */
 const CALL_POINTS: Record<'E' | 'R', number> = { E: 2, R: 3 };
@@ -187,28 +187,59 @@ export function applyCallEnvido(state: MatchState, events: GameEvent[], playerId
   state.hand.cantos.push({ kind: CANTO_KIND[call], by: playerId, team });
 }
 
-/** Puntajes de los participantes en el orden en que "dicen" (desde el mano efectivo) [ENG-05] [ENG-17]. */
-function envidoSayings(state: MatchState): { playerId: PlayerId; score: number }[] {
-  return state.hand.participants.map((playerId) => ({
-    playerId,
-    score: envidoScore(state.hand.dealt[playerId]),
-  }));
-}
+/**
+ * Cantar los tantos (GDD §6.6, decisión de Emmanuel 2026-09-25) [ENG-05] [ENG-12] [ENG-17]:
+ * - se canta en orden desde el mano (`participants`); el mano siempre dice su número;
+ * - el equipo que va ganando no habla; le toca al siguiente del otro equipo (en ronda);
+ * - si supera al que va ganando dice su número y la delantera cambia de equipo; si no,
+ *   dice "me dio" si todavía le queda un compañero por hablar, o "son buenas" si era el último;
+ * - empate: gana el que está antes en el orden desde el mano;
+ * - cada uno habla una sola vez; se termina cuando no queda nadie del equipo que va perdiendo.
+ * Siempre en el envido de las 3 cartas repartidas.
+ */
+export function cantarTantos(state: MatchState): { sayings: EnvidoSaying[]; winnerId: PlayerId } {
+  const order = state.hand.participants;
+  const score = (playerId: PlayerId): number => envidoScore(state.hand.dealt[playerId]);
+  const beats = (a: PlayerId, b: PlayerId): boolean =>
+    score(a) > score(b) || (score(a) === score(b) && order.indexOf(a) < order.indexOf(b));
 
-/** Gana el mayor puntaje; en empate, el primero en el orden de "decir" [ENG-12]. */
-function envidoWinner(sayings: readonly { playerId: PlayerId; score: number }[]): {
-  playerId: PlayerId;
-  score: number;
-} {
-  return sayings.reduce((best, current) => (current.score > best.score ? current : best));
+  const spoken = new Set<PlayerId>([order[0]]);
+  const sayings: EnvidoSaying[] = [{ playerId: order[0], kind: 'SCORE', score: score(order[0]) }];
+  let leader = order[0];
+  let last = 0;
+
+  for (;;) {
+    const leaderTeam = teamOf(state, leader);
+    let next = -1;
+    for (let step = 1; step <= order.length; step++) {
+      const index = (last + step) % order.length;
+      const candidate = order[index];
+      if (!spoken.has(candidate) && teamOf(state, candidate) !== leaderTeam) {
+        next = index;
+        break;
+      }
+    }
+    if (next === -1) break;
+    const playerId = order[next];
+    spoken.add(playerId);
+    last = next;
+    if (beats(playerId, leader)) {
+      sayings.push({ playerId, kind: 'SCORE', score: score(playerId) });
+      leader = playerId;
+      continue;
+    }
+    const team = teamOf(state, playerId);
+    const teammatePending = order.some((other) => !spoken.has(other) && teamOf(state, other) === team);
+    sayings.push({ playerId, kind: teammatePending ? 'ME_DIO' : 'SON_BUENAS', against: score(leader) });
+  }
+  return { sayings, winnerId: leader };
 }
 
 /**
  * Respuesta al canto pendiente (AC 7, AC 8):
  * - `NO_QUIERO`: el equipo del **último** que cantó suma el valor no querido de la cadena.
- * - `QUIERO`: se dicen los envidos de los `participants` desde el mano, gana el mayor
- *   (empate al que dice antes [ENG-12]) y `revealed` llega hasta el ganador inclusive:
- *   los que venían después dicen "son buenas" y no se revelan.
+ * - `QUIERO`: se cantan los tantos (`cantarTantos`): solo se revelan los números dichos;
+ *   los que no llegan dicen "me dio" o "son buenas".
  * Los puntos se suman en el momento (AC 9). Después: si nadie llegó al objetivo, vuelve a
  * `PLAYING` con el mismo `turnId` o a `AWAITING_TRUCO` con el mismo canto pendiente si esto
  * era "el envido está primero" [UI-05].
@@ -230,15 +261,18 @@ export function applyAnswerEnvido(
   envido.pending = null;
   envido.status = 'resolved';
 
-  const sayings = answer === 'QUIERO' ? envidoSayings(state) : [];
-  const winner = sayings.length === 0 ? null : envidoWinner(sayings);
-  const winnerTeam = winner === null ? lastCallerTeam : teamOf(state, winner.playerId);
-  const revealed = winner === null ? [] : sayings.slice(0, sayings.findIndex((saying) => saying.playerId === winner.playerId) + 1);
+  const said = answer === 'QUIERO' ? cantarTantos(state) : null;
+  const sayings = said?.sayings ?? [];
+  const winnerId = said?.winnerId ?? null;
+  const winnerTeam = winnerId === null ? lastCallerTeam : teamOf(state, winnerId);
+  const revealed = sayings
+    .filter((saying) => saying.kind === 'SCORE')
+    .map((saying) => ({ playerId: saying.playerId, score: saying.score as number }));
   const points = envidoPoints(chain, faltaValue(state, winnerTeam));
   const awarded = answer === 'QUIERO' ? points.querido : points.noQuerido;
 
-  envido.result = { winnerTeam, points: awarded, accepted: answer === 'QUIERO', revealed };
-  events.push({ type: 'ENVIDO_RESOLVED', winnerTeam, points: awarded, revealed });
+  envido.result = { winnerTeam, points: awarded, accepted: answer === 'QUIERO', revealed, sayings, winnerId };
+  events.push({ type: 'ENVIDO_RESOLVED', winnerTeam, points: awarded, revealed, sayings, winnerId });
   addPoints(state, events, winnerTeam, awarded, 'ENVIDO');
 
   // AC 9: si el envido terminó la partida, no hay fase a la que volver.

@@ -54,6 +54,12 @@ export function publicConstraints(obs: Observation): Constraints {
   for (const entry of obs.publicScores) {
     if (entry.kind === 'ENVIDO' && entry.playerId !== obs.selfId) out.set(entry.playerId, { min: entry.score, max: entry.score });
   }
+  // "Me dio" / "Son buenas": no llegaba al número que se había dicho.
+  for (const saying of obs.envidoSayings) {
+    if (saying.kind === 'SCORE' || saying.playerId === obs.selfId || saying.against === undefined) continue;
+    const current = out.get(saying.playerId);
+    out.set(saying.playerId, { min: current?.min ?? 0, max: Math.min(current?.max ?? 33, saying.against) });
+  }
   for (const canto of obs.envidoChain) {
     if (canto.by === obs.selfId || out.has(canto.by)) continue;
     // Quien canta envido suele tener con qué: al menos 25 (real/falta, 27).

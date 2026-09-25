@@ -69,6 +69,19 @@ export interface TrucoState {
 
 export type EnvidoCall = 'E' | 'R' | 'F';
 
+/**
+ * Lo que dice cada jugador al cantar los tantos (GDD §6.6, decisión 2026-09-25):
+ * `SCORE` dice su número; `ME_DIO` no llega pero todavía le queda un compañero por hablar;
+ * `SON_BUENAS` no llega y era el último de su equipo: el equipo se rinde. `against` es el
+ * número que no pudo superar (público: sirve para acotar su envido).
+ */
+export interface EnvidoSaying {
+  playerId: PlayerId;
+  kind: 'SCORE' | 'ME_DIO' | 'SON_BUENAS';
+  score?: number;
+  against?: number;
+}
+
 export interface EnvidoState {
   chain: { call: EnvidoCall; by: PlayerId; team: TeamId }[];
   pending: null | { responderId: PlayerId };
@@ -81,7 +94,12 @@ export interface EnvidoState {
     winnerTeam: TeamId;
     points: number;
     accepted: boolean;
+    /** los números dichos en voz alta (solo `SCORE`) */
     revealed: { playerId: PlayerId; score: number }[];
+    /** todo lo dicho, en orden (vacío si no se quiso) */
+    sayings: EnvidoSaying[];
+    /** quién ganó (muestra sus cartas al final de la mano); null si no se quiso */
+    winnerId: PlayerId | null;
   };
 }
 
@@ -230,7 +248,14 @@ export type GameEvent =
   | { type: 'TRUCO_ANSWERED'; playerId: PlayerId; answer: 'QUIERO' | 'NO_QUIERO' }
   | { type: 'ENVIDO_CALLED'; playerId: PlayerId; call: EnvidoCall }
   | { type: 'ENVIDO_ANSWERED'; playerId: PlayerId; answer: 'QUIERO' | 'NO_QUIERO' }
-  | { type: 'ENVIDO_RESOLVED'; winnerTeam: TeamId; points: number; revealed: { playerId: PlayerId; score: number }[] }
+  | {
+      type: 'ENVIDO_RESOLVED';
+      winnerTeam: TeamId;
+      points: number;
+      revealed: { playerId: PlayerId; score: number }[];
+      sayings: EnvidoSaying[];
+      winnerId: PlayerId | null;
+    }
   | { type: 'FLOR_DECLARED'; playerId: PlayerId }
   | { type: 'FLOR_ANSWERED'; playerId: PlayerId; answer: string }
   | { type: 'FLOR_RESOLVED'; winnerTeam: TeamId; points: number; revealed: { playerId: PlayerId; score: number }[] }
@@ -264,6 +289,8 @@ export interface Observation {
   envidoChain: EnvidoState['chain'];
   envidoStatus: EnvidoState['status'];
   publicScores: { playerId: PlayerId; score: number; kind: 'ENVIDO' | 'FLOR' }[];
+  /** lo que se dijo al cantar los tantos en esta mano/submano (números, "me dio", "son buenas") */
+  envidoSayings: EnvidoSaying[];
   florDeclared: PlayerId[];
   picaPica: HandState['picaPica'];
   legalActions: Action[];

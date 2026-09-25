@@ -89,7 +89,7 @@ describe('tabla de puntos de punta a punta (AC 5, AC 11)', () => {
 
       const { state, events } = answerEnvido(conCadena, answerer(row.chain), 'QUIERO');
 
-      expect(events.slice(0, 3)).toEqual([
+      expect(events.slice(0, 3)).toMatchObject([
         { type: 'ENVIDO_ANSWERED', playerId: answerer(row.chain), answer: 'QUIERO' },
         {
           type: 'ENVIDO_RESOLVED',
@@ -136,13 +136,13 @@ describe('tabla de puntos de punta a punta (AC 5, AC 11)', () => {
 
       const { state, events } = answerEnvido(conCadena, answerer(row.chain), 'NO_QUIERO');
 
-      expect(events).toEqual([
+      expect(events).toMatchObject([
         { type: 'ENVIDO_ANSWERED', playerId: answerer(row.chain), answer: 'NO_QUIERO' },
         { type: 'ENVIDO_RESOLVED', winnerTeam: team, points: row.noQuerido, revealed: [] },
         { type: 'POINTS', team, points: row.noQuerido, reason: 'ENVIDO' },
       ]);
       expect(state.scores).toEqual(marcador(team, row.noQuerido));
-      expect(state.hand.envido.result).toEqual({
+      expect(state.hand.envido.result).toMatchObject({
         winnerTeam: team,
         points: row.noQuerido,
         accepted: false,
@@ -192,7 +192,7 @@ describe('empate de envido en 4 jugadores (AC 11) [ENG-12]', () => {
     const { state: fin, events } = answerEnvido(conCadena, 'p1', 'QUIERO');
 
     // p1 (equipo 1, 25) dice antes que p2 (equipo 0, 25): gana el equipo 1
-    expect(events[1]).toEqual({
+    expect(events[1]).toMatchObject({
       type: 'ENVIDO_RESOLVED',
       winnerTeam: 1,
       points: 2,

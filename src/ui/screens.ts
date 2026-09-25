@@ -20,7 +20,7 @@ const PLAYER_TEXT: Record<2 | 4 | 6, string> = { 2: 'Mano a mano', 4: 'Dos contr
 
 // ---------- menú ----------
 
-export function renderMenu(settings: MatchSettings, mode: LayoutMode): string {
+export function renderMenu(settings: MatchSettings, mode: LayoutMode, sound = true): string {
   const players = ([2, 4, 6] as const)
     .map(
       (n) =>
@@ -44,7 +44,8 @@ export function renderMenu(settings: MatchSettings, mode: LayoutMode): string {
     `<p class="menu-hint">${escapeHtml(DIFFICULTY_TEXT[settings.difficulty].desc)}${settings.playerCount > 2 ? ' Tus compañeros juegan siempre en normal.' : ''}</p></fieldset>` +
     `<fieldset class="menu-group"><legend>Reglas</legend>` +
     `<label class="toggle"><span>Jugar con flor</span><input type="checkbox" data-ui="flor" data-testid="menu-flor"${settings.flor ? ' checked' : ''}></label>` +
-    `<label class="toggle${picaDisabled ? ' toggle--off' : ''}"><span>Pica-pica <em>· solo con 6</em></span><input type="checkbox" data-ui="picapica" data-testid="menu-picapica"${settings.picaPica ? ' checked' : ''}${picaDisabled ? ' disabled' : ''}></label>` +
+    `<label class="toggle${picaDisabled ? ' toggle--off' : ''}"><span>Pica Pica <em>· solo con 6</em></span><input type="checkbox" data-ui="picapica" data-testid="menu-picapica"${settings.picaPica ? ' checked' : ''}${picaDisabled ? ' disabled' : ''}></label>` +
+    `<label class="toggle"><span>Sonido <em>· voces de los cantos</em></span><input type="checkbox" data-ui="sound" data-testid="menu-sound"${sound ? ' checked' : ''}></label>` +
     `</fieldset>` +
     `<button type="button" class="go-btn" data-ui="start" data-testid="menu-start">Repartir</button>` +
     `</div>`;
@@ -61,7 +62,7 @@ export function renderMenu(settings: MatchSettings, mode: LayoutMode): string {
 // ---------- resumen de mano ----------
 
 function pointsLabel(entry: PointsEntry): string {
-  return entry.submano === null ? entry.label : `Submano ${entry.submano + 1}: ${entry.label}`;
+  return entry.submano === null ? entry.label : `Pica Pica ${entry.submano + 1}: ${entry.label}`;
 }
 
 function teamClass(team: TeamId): string {
@@ -85,7 +86,7 @@ function trickCard(state: MatchState, trick: TrickResult, index: number, size: '
 }
 
 function recordTitle(state: MatchState, record: HandRecord): string {
-  if (record.reason === 'PICA_PICA') return `Pica-pica: ${record.winnerTeam === 0 ? 'sumamos más' : 'sumaron más ellos'}`;
+  if (record.reason === 'PICA_PICA') return `Pica Pica: ${record.winnerTeam === 0 ? 'sumamos más' : 'sumaron más ellos'}`;
   return `La mano es de ${teamName(record.winnerTeam)}`;
 }
 
@@ -112,7 +113,7 @@ export function renderHandSummary(state: MatchState, log: EventLog, autoAck: boo
             .map((team) => `<span class="gain gain--${teamClass(team)}">${teamName(team)} +${gained[team]}</span>`)
             .join('');
           return (
-            `<div class="submano-row"><span>Submano ${i + 1}: ${escapeHtml(playerName(state, result.pair[0]))} contra ${escapeHtml(playerName(state, result.pair[1]))}` +
+            `<div class="submano-row"><span>Pica Pica ${i + 1}: ${escapeHtml(playerName(state, result.pair[0]))} contra ${escapeHtml(playerName(state, result.pair[1]))}` +
             ` · ${result.winnerTeam === 0 ? 'la ganamos' : 'la ganaron ellos'}</span><span class="submano-gains">${chips}</span></div>`
           );
         })
@@ -121,6 +122,14 @@ export function renderHandSummary(state: MatchState, log: EventLog, autoAck: boo
   } else {
     tricksHtml = `<div class="trick-grid">${record.tricks.map((trick, i) => trickCard(state, trick, i, size)).join('')}</div>`;
   }
+  const shown = log.lastEnvidoShow
+    .map((show) => {
+      const who = show.playerId === 'p0' ? 'Vos tenías' : `${escapeHtml(playerName(state, show.playerId))} tenía`;
+      const prefix = show.submano === null ? '' : `Pica Pica ${show.submano + 1} · `;
+      const cards = state.hand.dealt[show.playerId].map((card) => renderCard(card, { size: 'mini' })).join('');
+      return `<div class="sum-show" data-testid="summary-envido-show"><span>${prefix}Envido: ${who} ${show.score}</span><span class="sum-show-cards">${cards}</span></div>`;
+    })
+    .join('');
   const lines = log.lastHandPoints
     .map(
       (entry) =>
@@ -135,9 +144,10 @@ export function renderHandSummary(state: MatchState, log: EventLog, autoAck: boo
         : '';
   return (
     `<div class="scrim" data-testid="hand-summary"><div class="paper-panel paper-panel--summary" data-anim="summary-${record.number}" role="dialog" aria-modal="true" aria-labelledby="sum-title">` +
-    `<div class="sum-head"><div><div class="eyebrow">Mano ${record.number} · dio ${escapeHtml(playerName(state, record.dealerId))}</div>` +
+    `<div class="sum-head"><div><div class="eyebrow">Mano ${record.number} · repartió ${escapeHtml(playerName(state, record.dealerId))}</div>` +
     `<div id="sum-title" class="sum-title">${escapeHtml(recordTitle(state, record))}</div></div><div class="gains">${badges}</div></div>` +
     tricksHtml +
+    shown +
     `<div class="sum-lines">${lines}${reasonLine}<div class="sum-sep"></div>` +
     `<div class="sum-line sum-line--total"><span>Marcador</span><span><span class="pts pts--nos">Nosotros ${state.scores[0]}</span> · <span class="pts pts--ellos">Ellos ${state.scores[1]}</span></span></div></div>` +
     `<div class="sum-foot"><label class="check"><input type="checkbox" data-ui="autoack" data-testid="summary-autoack"${autoAck ? ' checked' : ''}>Pasar solo a la próxima mano</label>` +
@@ -180,7 +190,7 @@ function historyWhat(state: MatchState, record: HandRecord): string {
       break;
     }
     case 'PICA_PICA':
-      how = `Pica-pica: ${record.winnerTeam === 0 ? 'sumamos más' : 'sumaron más ellos'}`;
+      how = `Pica Pica: ${record.winnerTeam === 0 ? 'sumamos más' : 'sumaron más ellos'}`;
       break;
     case 'MATCH_ENDED':
       how = 'La partida terminó en esta mano';
@@ -236,11 +246,12 @@ export function renderGameOver(state: MatchState, settings: MatchSettings, log: 
 
 // ---------- pausa ----------
 
-export function renderPause(autoAck: boolean): string {
+export function renderPause(autoAck: boolean, sound = true): string {
   return (
     `<div class="scrim" data-testid="pause"><div class="paper-panel paper-panel--pause" data-anim="pause" role="dialog" aria-modal="true" aria-labelledby="pause-title">` +
     `<div id="pause-title" class="sum-title">Partida en pausa</div>` +
     `<label class="check"><input type="checkbox" data-ui="autoack"${autoAck ? ' checked' : ''}>Pasar solo a la próxima mano</label>` +
+    `<label class="check"><input type="checkbox" data-ui="sound" data-testid="pause-sound"${sound ? ' checked' : ''}>Sonido (voces de los cantos)</label>` +
     `<div class="pause-actions"><button type="button" class="paper-btn paper-btn--go" data-ui="resume" data-testid="resume" data-autofocus>Seguir jugando</button>` +
     `<button type="button" class="paper-btn paper-btn--outline" data-ui="restart" data-testid="restart">Nueva partida</button>` +
     `<button type="button" class="paper-btn paper-btn--outline" data-ui="menu" data-testid="to-menu">Volver al menú</button></div>` +

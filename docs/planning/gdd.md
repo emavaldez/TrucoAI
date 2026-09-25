@@ -26,7 +26,7 @@ distintas y **nunca hace trampa** (solo ve información pública y sus propias c
 
 ### Fuera de alcance de esta versión
 
-Multijugador online, audio, animaciones complejas, estadísticas entre partidas, modo torneo,
+Multijugador online, animaciones complejas, estadísticas entre partidas, modo torneo,
 IA entrenada (CFR/RL — queda planificada como épica futura, ver §11.4).
 
 ---
@@ -165,13 +165,19 @@ Se resuelve la cadena de envido completa y después **vuelve a quedar pendiente 
   quien gane el envido suma lo que necesite para llegar a 30.
 - En **pica-pica** la falta envido vale **7** fijo [DECISIÓN 2026-09].
 
-### 6.6 Resolución
+### 6.6 Resolución: cantar los tantos [DECISIÓN 2026-09-25]
 
-- Al quererse, cada equipo "dice" su envido empezando por el mano. Gana el mayor.
-- **Empate:** gana el jugador más cercano al mano (el que dice antes en orden desde el mano).
-- **Qué se hace público:** el puntaje del ganador, y el de los jugadores que lo dijeron **antes** que él.
-  Los que venían después y perdían dicen "son buenas" (no se revela). Esa información pública es la única
-  que puede usar la IA.
+- Al quererse, se cantan los tantos **en orden desde el mano**. El mano siempre dice su número.
+- **El equipo que va ganando no habla.** Le toca al siguiente (en ronda) del otro equipo:
+  - si **supera** al que va ganando, dice su número y la delantera pasa a su equipo;
+  - si no, dice **"Me dio"** si todavía le queda un compañero por hablar, o **"Son buenas"** si era el último de su
+    equipo (el equipo se rinde y se termina el envido).
+- Cuando la delantera cambia, hablan los del otro equipo que todavía no hablaron (también los que se habían salteado
+  porque su equipo iba ganando). Cada jugador habla una sola vez.
+- **Empate:** gana el que está antes en el orden desde el mano (el que le toca jugar primero en la ronda).
+- **Qué se hace público:** solo los números dichos. "Me dio" y "Son buenas" no revelan el número (solo que no llegaba).
+  Esa información pública es la única que puede usar la IA.
+- **El que gana el envido muestra sus 3 cartas al terminar la mano**, también las que no jugó.
 - Los puntos del envido se suman **en el momento** (no al final de la mano). Si con eso un equipo llega a 30,
   la partida termina ahí.
 
@@ -193,6 +199,7 @@ Con la opción **"Jugar con flor"** activada en el menú:
 | Contraflor al resto | El primer equipo responde: **Quiero** → el ganador de la comparación suma el valor de la falta (§6.5) · **No quiero** → el segundo equipo suma 6 |
 
 - Empates de flor: gana el más cercano al mano (igual que envido).
+- En una contraflor querida se muestran y comparan todas las flores de la mesa (declaradas o no) — a validar por Emmanuel.
 - Los valores 3 / 4 / 6 son **valores por defecto a validar por Emmanuel**; en el código viven en una única tabla.
 
 ## 8. Irse al mazo
@@ -269,6 +276,8 @@ en la línea de los papers de `Papers/` y del plan para AI and Games Conference.
 - **Avisos:** los eventos (cantos, respuestas, envido dicho, baza ganada) se muestran como avisos no bloqueantes
   que se van solos. Solo bloquean: el resumen de fin de mano ("Siguiente mano") y el fin de partida.
 - **Fin de partida:** ganador, marcador, historial desplegable con scroll, "Nueva partida".
+- **Sonido [DECISIÓN 2026-09-25]:** una voz dice cada canto y respuesta ("¡Truco!", "¡Quiero!", los tantos, "Me dio",
+  "Son buenas"…) con un "tin" corto; golpecito al jugar carta. Se apaga desde el menú o la pausa.
 - **Responsive:** jugable en 390×844 (móvil) y 1280×800, en 2, 4 y 6 jugadores, sin jugadores cortados;
   botones táctiles ≥ 44 px. Jugable con teclado.
 

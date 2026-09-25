@@ -7,7 +7,7 @@ import type { Action, Card, MatchState, PlayerId, TeamId, TrickPlay } from '../e
 import type { MatchSettings } from '../app/GameController.js';
 import { renderCard } from './cardView.js';
 import { escapeHtml } from './escape.js';
-import type { EventLog } from './eventLog.js';
+import { EventLog } from './eventLog.js';
 import { tableGeometry, type LayoutMode, type TableGeometry } from './layout.js';
 import { encodeAction, lockIcon, menuIcon, renderScore, renderSeat } from './pieces.js';
 import { ENVIDO_LABELS, TRUCO_LABELS, cardName, ordinal, playerName, teamName } from './text.js';
@@ -41,7 +41,7 @@ export function displayedTrick(state: MatchState): { plays: TrickPlay[]; done: b
   if (current.length > 0 && current.length < n) return { plays: current, done: over, winnerId: over ? null : runningWinner(state, current) };
   const last = hand.tricks[hand.tricks.length - 1];
   if (last) return { plays: last.plays, done: true, winnerId: last.winnerPlayerId };
-  // Pica-pica: entre submanos se sigue viendo la última baza de la submano anterior.
+  // Pica Pica: entre submanos se sigue viendo la última baza de la submano anterior.
   const results = hand.picaPica?.results ?? [];
   const previous = results[results.length - 1];
   const previousTrick = previous?.tricks[previous.tricks.length - 1];
@@ -109,7 +109,7 @@ function isAwaiting(state: MatchState): boolean {
 function renderTopBar(ctx: GameViewContext): string {
   const { state } = ctx;
   const chip = cantoChip(state);
-  const pica = state.hand.picaPica && ctx.mode === 'portrait' ? `Pica ${state.hand.picaPica.submano + 1}/3` : null;
+  const pica = state.hand.picaPica && ctx.mode === 'portrait' ? `Pica Pica ${state.hand.picaPica.submano + 1}/3` : null;
   const chips =
     `<span class="chip" data-testid="hand-number">Mano ${state.hand.number}</span>` +
     (pica ? `<span class="chip chip--gold">${pica}</span>` : '') +
@@ -197,9 +197,9 @@ function renderCenter(ctx: GameViewContext, geo: TableGeometry): string {
   const submanoPill =
     pica && ctx.mode === 'desktop'
       ? `<div class="submano-pill" style="left:${geo.center.x}px;top:${geo.center.y + 52}px;width:${geo.center.w}px" data-testid="submano">` +
-        `Pica-pica · submano ${pica.submano + 1} de 3: ${escapeHtml(playerName(state, state.hand.participants[0]))} contra ${escapeHtml(playerName(state, state.hand.participants[1]))}</div>`
+        `Pica Pica ${pica.submano + 1} de 3: ${escapeHtml(playerName(state, state.hand.participants[0]))} contra ${escapeHtml(playerName(state, state.hand.participants[1]))}</div>`
       : '';
-  if (log.notice && log.notice.until > ctx.now && ctx.mode === 'desktop') {
+  if (log.notice && EventLog.visible(log.notice, ctx.now) && ctx.mode === 'desktop') {
     return (
       `<div class="center-notice" data-anim="notice-${escapeHtml(log.notice.text)}" style="left:${geo.center.x - 70}px;top:${geo.center.y - 6}px;width:${geo.center.w + 140}px" data-testid="center-notice">` +
       `${escapeHtml(log.notice.text)}</div>` +
@@ -239,7 +239,7 @@ function statusText(ctx: GameViewContext): { text: string; mine: boolean } {
 
 function renderStatus(ctx: GameViewContext, geo: TableGeometry): string {
   // En el celular los avisos (envido, submano) van en el lugar de la píldora de estado: no tapan el paño.
-  const notice = ctx.mode === 'portrait' && ctx.log.notice && ctx.log.notice.until > ctx.now ? ctx.log.notice.text : null;
+  const notice = ctx.mode === 'portrait' && ctx.log.notice && EventLog.visible(ctx.log.notice, ctx.now) ? ctx.log.notice.text : null;
   if (notice) {
     return (
       `<div class="center-notice center-notice--compact" data-anim="notice-${escapeHtml(notice)}" style="left:${geo.status.x - 30}px;top:${geo.status.y - 4}px;width:${geo.status.w + 60}px" data-testid="center-notice">` +
@@ -253,15 +253,46 @@ function renderStatus(ctx: GameViewContext, geo: TableGeometry): string {
   );
 }
 
+/**
+ * Al terminar la mano, el que ganó el envido muestra sus 3 cartas (GDD §6.6), también las que no jugó.
+ * En escritorio van junto a su asiento; en el celular se ven en el resumen de la mano.
+ */
+function renderEnvidoShow(ctx: GameViewContext, geo: TableGeometry): string {
+  const { state, log } = ctx;
+  if (ctx.mode !== 'desktop' || state.phase !== 'HAND_OVER') return '';
+  return log.lastEnvidoShow
+    .map((show) => {
+      const seat = state.seats.find((s) => s.id === show.playerId);
+      if (!seat) return '';
+      // Junto al asiento sin tapar las cartas del paño: el humano arriba de su asiento, el de arriba
+      // a la derecha del suyo, el resto debajo.
+      const slot = geo.slots[seat.seat];
+      const pos =
+        seat.seat === 0
+          ? { x: slot.bubble.x, y: slot.bubble.y, cls: 'bubble--above' }
+          : slot.seat.y < 120
+            ? { x: slot.seat.x + geo.seatSize.w + 12, y: slot.seat.y, cls: '' }
+            : { x: slot.seat.x, y: slot.seat.y + geo.seatSize.h + 8, cls: '' };
+      const cards = state.hand.dealt[show.playerId].map((card) => renderCard(card, { size: 'mini' })).join('');
+      return (
+        `<div class="envido-show ${pos.cls}" style="left:${pos.x}px;top:${pos.y}px" data-testid="envido-show-${seat.id}" data-anim="show-${seat.id}">` +
+        `<div class="envido-show-label">${escapeHtml(show.playerId === HUMAN ? 'Tu envido' : 'Envido')}: ${show.score}</div>` +
+        `<div class="envido-show-cards">${cards}</div></div>`
+      );
+    })
+    .join('');
+}
+
 function renderBubbles(ctx: GameViewContext, geo: TableGeometry): string {
   const { state, log } = ctx;
+  const showing = new Set(ctx.mode === 'desktop' && state.phase === 'HAND_OVER' ? log.lastEnvidoShow.map((show) => show.playerId) : []);
   return log.bubbles
-    .filter((bubble) => bubble.until > ctx.now)
+    .filter((bubble) => EventLog.visible(bubble, ctx.now) && !showing.has(bubble.playerId))
     .map((bubble) => {
       const seat = state.seats.find((s) => s.id === bubble.playerId);
       if (!seat) return '';
       const anchor = geo.slots[seat.seat].bubble;
-      return `<div class="bubble bubble--${anchor.side}${ctx.mode === 'portrait' ? ' bubble--compact' : ''}" style="left:${anchor.x}px;top:${anchor.y}px" data-testid="bubble-${seat.id}" data-anim="bubble-${seat.id}-${bubble.until}">${escapeHtml(bubble.text)}</div>`;
+      return `<div class="bubble bubble--${anchor.side}${ctx.mode === 'portrait' ? ' bubble--compact' : ''}" style="left:${anchor.x}px;top:${anchor.y}px" data-testid="bubble-${seat.id}" data-anim="bubble-${seat.id}-${bubble.from}">${escapeHtml(bubble.text)}</div>`;
     })
     .join('');
 }
@@ -332,7 +363,7 @@ function renderActions(ctx: GameViewContext, geo: TableGeometry): string {
   if (ctx.actor !== HUMAN || state.phase !== 'PLAYING' || onlyFlor(legal)) {
     if (ctx.mode === 'portrait') return '';
     const hint = !humanInPlay(state)
-      ? 'En esta submano no jugás: mirá cómo sale.'
+      ? 'En este Pica Pica no jugás: mirá cómo sale.'
       : ctx.actor === HUMAN && onlyFlor(legal)
         ? 'Tenés flor: se canta sola.'
         : 'Cuando sea tu turno, acá vas a poder cantar.';
@@ -526,6 +557,7 @@ export function renderGame(ctx: GameViewContext): string {
     (panel && ctx.mode === 'portrait' ? '' : renderHand(ctx, geo, panel)) +
     (panel ? renderResponsePanel(ctx) : renderActions(ctx, geo)) +
     renderFeed(ctx) +
+    renderEnvidoShow(ctx, geo) +
     renderBubbles(ctx, geo)
   );
 }

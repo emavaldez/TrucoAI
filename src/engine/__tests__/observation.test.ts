@@ -36,6 +36,7 @@ describe('getObservation (AC 1)', () => {
         'currentTrick',
         'dealerId',
         'envidoChain',
+        'envidoSayings',
         'envidoStatus',
         'florDeclared',
         'isMano',

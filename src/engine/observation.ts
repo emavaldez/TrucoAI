@@ -82,6 +82,7 @@ export function getObservation(state: MatchState, playerId: PlayerId): Observati
     envidoChain: structuredClone(state.hand.envido.chain),
     envidoStatus: state.hand.envido.status,
     publicScores: publicScoresOf(state),
+    envidoSayings: structuredClone(state.hand.envido.result?.sayings ?? []),
     florDeclared: state.hand.flor.declared.map((declaration) => declaration.playerId),
     picaPica: structuredClone(state.hand.picaPica),
     legalActions: getLegalActions(state, playerId),

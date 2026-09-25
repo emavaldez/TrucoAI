@@ -7,6 +7,7 @@ export type {
   CardNumber,
   CantoRecord,
   EnvidoCall,
+  EnvidoSaying,
   EnvidoState,
   FlorState,
   GameEvent,

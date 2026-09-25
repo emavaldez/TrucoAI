@@ -363,7 +363,7 @@ describe('ANSWER_ENVIDO QUIERO (AC 8, AC 9)', () => {
   it('gana el mejor envido desde el mano y se revela hasta el ganador inclusive', () => {
     const querido = answerEnvido(callEnvido(match2p(), 'p1', 'E').state, 'p0', 'QUIERO');
 
-    expect(querido.events).toEqual([
+    expect(querido.events).toMatchObject([
       { type: 'ENVIDO_ANSWERED', playerId: 'p0', answer: 'QUIERO' },
       {
         type: 'ENVIDO_RESOLVED',
@@ -375,7 +375,7 @@ describe('ANSWER_ENVIDO QUIERO (AC 8, AC 9)', () => {
     ]);
     expect(querido.state.hand.envido.status).toBe('resolved');
     expect(querido.state.hand.envido.pending).toBeNull();
-    expect(querido.state.hand.envido.result).toEqual({
+    expect(querido.state.hand.envido.result).toMatchObject({
       winnerTeam: 1,
       points: 2,
       accepted: true,
@@ -396,7 +396,7 @@ describe('ANSWER_ENVIDO QUIERO (AC 8, AC 9)', () => {
     };
     const querido = answerEnvido(callEnvido(match2p(1, manos), 'p1', 'E').state, 'p0', 'QUIERO').state;
 
-    expect(querido.hand.envido.result).toEqual({
+    expect(querido.hand.envido.result).toMatchObject({
       winnerTeam: 0,
       points: 2,
       accepted: true,
@@ -416,7 +416,7 @@ describe('ANSWER_ENVIDO QUIERO (AC 8, AC 9)', () => {
     };
     const querido = answerEnvido(callEnvido(match2p(1, manos), 'p1', 'E').state, 'p0', 'QUIERO').state;
 
-    expect(querido.hand.envido.result).toEqual({
+    expect(querido.hand.envido.result).toMatchObject({
       winnerTeam: 1, // p1 (mano) dice antes que p0
       points: 2,
       accepted: true,
@@ -439,7 +439,7 @@ describe('ANSWER_ENVIDO QUIERO (AC 8, AC 9)', () => {
     // canta el mano p2 (equipo 0) y responde p3 (el primero del equipo 1 en el orden de la mano)
     const querido = answerEnvido(callEnvido(state, 'p2', 'E').state, 'p3', 'QUIERO').state;
 
-    expect(querido.hand.envido.result).toEqual({
+    expect(querido.hand.envido.result).toMatchObject({
       winnerTeam: 1, // p3 dice antes que p0 con el mismo puntaje (y p0 es el humano)
       points: 2,
       accepted: true,
@@ -459,7 +459,7 @@ describe('ANSWER_ENVIDO QUIERO (AC 8, AC 9)', () => {
     // responde p0: es el humano y está en el equipo contrario al que cantó
     const querido = answerEnvido(callEnvido(state, 'p1', 'E').state, 'p0', 'QUIERO').state;
 
-    expect(querido.hand.envido.result).toEqual({
+    expect(querido.hand.envido.result).toMatchObject({
       winnerTeam: 0,
       points: 2,
       accepted: true,
@@ -472,7 +472,7 @@ describe('ANSWER_ENVIDO QUIERO (AC 8, AC 9)', () => {
 
     // con el mano en p2 el orden cambia y el ganador sigue siendo el mismo jugador
     const conManoEnP2 = answerEnvido(callEnvido(match4p(2), 'p2', 'E').state, 'p3', 'QUIERO').state;
-    expect(conManoEnP2.hand.envido.result).toEqual({
+    expect(conManoEnP2.hand.envido.result).toMatchObject({
       winnerTeam: 0,
       points: 2,
       accepted: true,
@@ -501,12 +501,12 @@ describe('ANSWER_ENVIDO NO_QUIERO (AC 7) [ENG-04]', () => {
   it('[ENG-04] paga el valor no querido al equipo del último que cantó', () => {
     const noQuerido = answerEnvido(callEnvido(match2p(), 'p1', 'E').state, 'p0', 'NO_QUIERO');
 
-    expect(noQuerido.events).toEqual([
+    expect(noQuerido.events).toMatchObject([
       { type: 'ENVIDO_ANSWERED', playerId: 'p0', answer: 'NO_QUIERO' },
       { type: 'ENVIDO_RESOLVED', winnerTeam: 1, points: 1, revealed: [] },
       { type: 'POINTS', team: 1, points: 1, reason: 'ENVIDO' },
     ]);
-    expect(noQuerido.state.hand.envido.result).toEqual({
+    expect(noQuerido.state.hand.envido.result).toMatchObject({
       winnerTeam: 1,
       points: 1,
       accepted: false,

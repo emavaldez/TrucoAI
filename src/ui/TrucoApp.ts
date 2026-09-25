@@ -17,6 +17,7 @@ import {
 import { createTimerScheduler } from '../app/scheduler.js';
 import type { UrlConfig } from '../app/urlConfig.js';
 import { EventLog } from './eventLog.js';
+import { SoundBoard } from './sound.js';
 import { CANVAS, canvasScale, chooseLayout, tooShortLandscape, type LayoutMode } from './layout.js';
 import { decodeAction } from './pieces.js';
 import { renderGameOver, renderHandSummary, renderMenu, renderPause, renderRotateHint } from './screens.js';
@@ -71,6 +72,7 @@ export class TrucoApp {
   private controller: GameController | null = null;
   private snapshot: ControllerSnapshot | null = null;
   private readonly log = new EventLog();
+  private readonly sound: SoundBoard;
   private mode: LayoutMode = 'desktop';
   private paused = false;
   private autoAck: boolean;
@@ -91,6 +93,8 @@ export class TrucoApp {
       : config.aiDelay !== null
         ? { ...NORMAL_TIMING, aiDelay: [config.aiDelay, config.aiDelay] }
         : NORMAL_TIMING;
+    // En las pruebas automáticas, sin sonido.
+    this.sound = new SoundBoard(config.test ? false : undefined);
     const stored = loadSettings();
     this.settings = {
       playerCount: config.players ?? stored.playerCount,
@@ -142,6 +146,8 @@ export class TrucoApp {
     saveSettings(this.settings);
     this.paused = false;
     this.log.reset();
+    this.log.sayingGap = this.timing.sayingGap;
+    this.sound.stop();
     this.controller?.stop();
     const seed = this.matchSeed ?? Math.floor(Math.random() * 0x7fffffff);
     this.controller = new GameController({
@@ -160,6 +166,7 @@ export class TrucoApp {
     this.snapshot = snap;
     const now = Date.now();
     this.log.ingest(snap.events, snap.state, now);
+    this.sound.play(snap.events, snap.state, this.timing.sayingGap);
     if (this.log.announcement) this.live.textContent = this.log.announcement;
     this.render();
   }
@@ -169,10 +176,10 @@ export class TrucoApp {
     this.expiryTimer = null;
     const next = this.log.nextExpiry();
     if (next === null) return;
+    // En ese momento aparece o se va algo (globo, aviso): se vuelve a dibujar.
     this.expiryTimer = setTimeout(() => {
       this.expiryTimer = null;
-      if (this.log.prune(Date.now())) this.render();
-      else this.scheduleExpiry();
+      this.render();
     }, Math.max(30, next - Date.now() + 20));
   }
 
@@ -181,7 +188,7 @@ export class TrucoApp {
   private render(): void {
     const focusKey = this.focusKey();
     if (this.screen === 'menu' || !this.controller || !this.snapshot) {
-      this.canvas.innerHTML = renderMenu(this.settings, this.mode);
+      this.canvas.innerHTML = renderMenu(this.settings, this.mode, this.sound.enabled);
       this.canvas.dataset.screen = 'menu';
       this.restoreFocus(focusKey, 'menu');
       return;
@@ -209,7 +216,7 @@ export class TrucoApp {
       html += renderHandSummary(state, this.log, this.autoAck, this.mode);
       dialog = `summary-${state.hand.number}`;
     } else if (this.paused) {
-      html += renderPause(this.autoAck);
+      html += renderPause(this.autoAck, this.sound.enabled);
       dialog = 'pause';
     } else if (responsePanelOpen({ state, actor, legal })) {
       dialog = `resp-${state.version}`;
@@ -270,6 +277,7 @@ export class TrucoApp {
   }
 
   private onClick(event: Event): void {
+    this.sound.unlock();
     const target = (event.target as HTMLElement).closest<HTMLElement>('[data-act], [data-ui]');
     if (!target || !this.root.contains(target)) return;
     if (target instanceof HTMLInputElement) return; // los checkbox van por `change`
@@ -325,6 +333,7 @@ export class TrucoApp {
       case 'menu':
         this.paused = false;
         this.controller?.stop();
+        this.sound.stop();
         this.controller = null;
         this.snapshot = null;
         this.screen = 'menu';
@@ -341,7 +350,11 @@ export class TrucoApp {
     if (!ui) return;
     if (ui === 'flor') this.settings = { ...this.settings, flor: input.checked };
     else if (ui === 'picapica') this.settings = { ...this.settings, picaPica: input.checked };
-    else if (ui === 'autoack') {
+    else if (ui === 'sound') {
+      this.sound.setEnabled(input.checked);
+      this.render();
+      return;
+    } else if (ui === 'autoack') {
       this.autoAck = input.checked;
       this.controller?.setAutoAck(input.checked);
     }

@@ -586,6 +586,15 @@ button.card--playable:hover, button.card--playable:focus-visible { transform: tr
 .trick-cards--xs { gap: 4px; }
 .trick-cards--xs .card-winner-tag { display: none; }
 .trick-note { font-size: 12px; color: var(--paper-ink-mid); text-align: center; }
+.sum-show { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; border-radius: 12px; background: var(--paper-2); font-size: 15px; }
+.sum-show-cards { display: flex; gap: 5px; flex-shrink: 0; }
+.envido-show {
+  padding: 8px 10px 10px; border-radius: 14px; background: var(--paper); color: var(--ink);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45); z-index: 6; display: flex; flex-direction: column; gap: 6px;
+}
+.envido-show-label { font-family: var(--font-display); font-weight: 700; font-size: 16px; }
+.envido-show-cards { display: flex; gap: 5px; }
+.envido-show.anim-in { animation: pop-in 0.16s ease-out; }
 .submano-list { display: flex; flex-direction: column; gap: 8px; }
 .submano-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--paper-2); font-size: 15px; }
 .submano-row .gain { font-size: 15px; padding: 4px 10px; }
