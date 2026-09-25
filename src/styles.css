@@ -41,6 +41,7 @@
   --gold-tint: rgba(233, 196, 106, 0.12);
   --gold-line: rgba(233, 196, 106, 0.45);
   --gold-glow: rgba(233, 196, 106, 0.55);
+  --envido: #7A4BC2;   /* violeta: cartas que forman el envido (resumen de mano) */
   --nos: #8CCBF2;      /* celeste: Nosotros */
   --nos-soft: rgba(140, 203, 242, 0.16);
   --nos-tint: rgba(140, 203, 242, 0.08);
@@ -560,7 +561,7 @@ button.card--playable:hover, button.card--playable:focus-visible { transform: tr
   padding: 28px 32px;
   max-height: calc(100% - 40px);
 }
-.paper-panel--summary { width: 660px; }
+.paper-panel--summary { width: 660px; overflow-y: auto; }
 [data-layout='portrait'] .paper-panel--summary { width: 370px; padding: 20px 18px; gap: 14px; overflow-y: auto; }
 .paper-panel--gameover { width: 760px; height: 780px; padding: 32px 40px; }
 .paper-panel--portrait { width: 370px; height: 800px; padding: 22px 18px; gap: 14px; }
@@ -574,18 +575,33 @@ button.card--playable:hover, button.card--playable:focus-visible { transform: tr
 .gain { padding: 6px 12px; border-radius: 12px; font-family: var(--font-display); font-size: 18px; font-weight: 700; white-space: nowrap; }
 .gain--nos { background: var(--go); color: var(--paper); }
 .gain--ellos { background: var(--ellos-ink); color: var(--paper); }
-.trick-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-[data-layout='portrait'] .trick-grid { gap: 6px; }
-.trick-box { padding: 10px; border-radius: 14px; background: var(--paper-2); border: 1px solid var(--paper-line); display: flex; flex-direction: column; align-items: center; gap: 10px; min-width: 0; }
-[data-layout='portrait'] .trick-box { padding: 8px 4px; gap: 8px; }
-.trick-head { align-self: stretch; display: flex; justify-content: space-between; gap: 4px; font-size: 12px; font-weight: 700; }
-.trick-head > span:first-child { letter-spacing: 0.08em; text-transform: uppercase; color: var(--paper-ink-soft); }
 .trick-result--nos { color: var(--go); }
 .trick-result--ellos { color: var(--ellos-ink); }
-.trick-cards { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; padding-top: 12px; }
-.trick-cards--xs { gap: 4px; }
-.trick-cards--xs .card-winner-tag { display: none; }
-.trick-note { font-size: 12px; color: var(--paper-ink-mid); text-align: center; }
+/* Cartas de la mano como en la mesa: columna por jugador, fila por baza */
+.play-table {
+  display: grid; grid-template-columns: auto repeat(var(--pt-cols), minmax(0, 1fr)); align-items: center; gap: 6px 6px;
+  padding: 10px 12px; border-radius: 14px; background: var(--paper-2); border: 1px solid var(--paper-line);
+}
+[data-layout='portrait'] .play-table { gap: 4px 3px; padding: 8px 6px; }
+.pt-player { display: flex; flex-direction: column; align-items: center; text-align: center; font-size: 12px; font-weight: 700; line-height: 1.15; min-width: 0; overflow-wrap: anywhere; }
+.pt-player--nos { color: var(--go); }
+.pt-player--ellos { color: var(--ellos-ink); }
+.pt-mano { font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--paper-ink-soft); }
+.pt-trick { display: flex; flex-direction: column; gap: 2px; padding-right: 6px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.pt-trick > span:first-child { letter-spacing: 0.08em; text-transform: uppercase; color: var(--paper-ink-soft); }
+[data-layout='portrait'] .pt-trick { font-size: 11px; padding-right: 2px; }
+.pt-cell { display: flex; justify-content: center; padding: 6px 0; }
+.pt-cell--empty { color: var(--paper-ink-soft); font-size: 18px; }
+.play-table .card-winner-tag { display: none; }
+.card--envido::after {
+  content: ''; position: absolute; inset: -2px; border-radius: calc(var(--cr) + 2px);
+  border: 3px solid var(--envido); pointer-events: none;
+}
+.pt-legend { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px 18px; margin-top: -8px; font-size: 12px; color: var(--paper-ink-mid); }
+.pt-key { display: inline-flex; align-items: center; gap: 6px; }
+.pt-key::before { content: ''; width: 10px; height: 14px; border-radius: 3px; border: 3px solid; }
+.pt-key--win::before { border-color: var(--gold); box-shadow: 0 0 6px var(--gold-glow); }
+.pt-key--envido::before { border-color: var(--envido); }
 .sum-show { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; border-radius: 12px; background: var(--paper-2); font-size: 15px; }
 .sum-show-cards { display: flex; gap: 5px; flex-shrink: 0; }
 .envido-show {
