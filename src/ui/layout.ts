@@ -1,99 +1,157 @@
-/**
- * Layout de la mesa "v2" — fórmula de posiciones de asiento (historia 0-4, AC 3).
- *
- * Los asientos van sobre el borde de una elipse derivada proporcionalmente del
- * viewport (las posiciones absolutas de `docs/design/mesa-v2/*.dc.html` son para
- * 1440×900; acá se escala). Reglas duras: ningún asiento puede quedar fuera del
- * viewport — se clampa el radio y la posición final (UI-13/UI-14).
- *
- * Ángulos (sistema: 0° = derecha, 90° = abajo, sentido horario en pantalla):
- * - 2 jugadores: humano abajo (90°), rival arriba (270°).
- * - 4: humano abajo (90°), compañero arriba (270°, posición 2), rivales a los
- *   lados (180° y 0°, posiciones 1 y 3) — equipos alternados, AC 3.
- * - 6: humano abajo + asientos a 8, 10, 12, 2 y 4 horas; equipos alternados alrededor.
- */
+// Layout de la mesa (ux-design.md §5): un lienzo lógico fijo por modo que se escala para
+// entrar entero en la ventana. Así nada queda cortado en ningún tamaño (UI-13, UI-14) y las
+// posiciones son las del diseño (docs/design/mesa-v2): 1440×900 en escritorio, 390×844 en celular.
+// Orden de juego antihorario (GDD §2): mirando la mesa, el siguiente al humano está a su derecha.
 
-export interface Viewport {
-  width: number;
-  height: number;
+export type LayoutMode = 'desktop' | 'portrait';
+
+export interface Size {
+  w: number;
+  h: number;
 }
 
-export interface SeatPoint {
-  x: number;
-  y: number;
-  /** Ángulo efectivo sobre la elipse, en grados (0 = derecha, 90 = abajo). */
-  angle: number;
-}
-
-export interface SeatOptions {
-  seatWidth?: number;
-  seatHeight?: number;
-  /** Altura extra debajo del asiento (la mano del humano); se descuenta del clamp inferior. */
-  extraBelow?: number;
-}
-
-/** Ángulo por slot de asiento según la cantidad de jugadores (slot = posición del jugador). */
-export const SLOT_ANGLES: Record<number, number[]> = {
-  2: [90, 270],
-  // App.ts asigna team = posición % 2: en 4p el compañero es la posición 2 y va
-  // arriba (270°); los rivales (pos 1 y 3) quedan a los lados — AC 3.
-  4: [90, 180, 270, 0],
-  6: [90, 150, 210, 270, 330, 30],
+export const CANVAS: Record<LayoutMode, Size> = {
+  desktop: { w: 1440, h: 900 },
+  portrait: { w: 390, h: 844 },
 };
 
-/** Elipse de la mesa derivada del viewport (ratio del diseño 1440×900: rx 600 → 0.4167w, ry 270 → 0.3h). */
-export function tableEllipse(viewport: Viewport, options: SeatOptions = {}) {
-  const seatW = options.seatWidth ?? 200;
-  const seatH = options.seatHeight ?? 72;
-  const extra = options.extraBelow ?? 0;
-  const cx = viewport.width / 2;
-  const cy = viewport.height * 0.42;
-  // Radios máximos que mantienen el asiento (con su caja + mano debajo) dentro del viewport con 8 px de margen.
-  const maxRx = Math.max(0, (viewport.width - seatW) / 2 - 8);
-  const maxRyTop = Math.max(0, cy - seatH / 2 - 8);
-  const maxRyBottom = Math.max(0, viewport.height - cy - seatH / 2 - 8 - extra);
+/** Celular vertical (o ventana más alta que ancha) → lienzo de celular. */
+export function chooseLayout(viewportW: number, viewportH: number): LayoutMode {
+  return viewportW / Math.max(1, viewportH) < 0.9 ? 'portrait' : 'desktop';
+}
+
+/** Escala para que el lienzo entre entero (con letterbox). */
+export function canvasScale(mode: LayoutMode, viewportW: number, viewportH: number): number {
+  const canvas = CANVAS[mode];
+  return Math.min(viewportW / canvas.w, viewportH / canvas.h);
+}
+
+/** ¿La ventana es un celular acostado demasiado bajo para jugar? (se pide girarlo) */
+export function tooShortLandscape(viewportW: number, viewportH: number): boolean {
+  return viewportH < 460 && viewportW > viewportH;
+}
+
+export interface Point {
+  x: number;
+  y: number;
+}
+
+export interface SeatSlot {
+  /** caja del asiento (esquina superior izquierda) */
+  seat: Point;
+  /** carta jugada por ese asiento en el paño (esquina superior izquierda) */
+  card: Point;
+  /** ancla del globo de canto */
+  bubble: Point & { side: 'left' | 'right' | 'below' | 'above' };
+}
+
+export interface TableGeometry {
+  mode: LayoutMode;
+  seatSize: Size;
+  cardSize: 'md' | 'sm';
+  handSize: 'xl' | 'lg';
+  /** baranda (elipse en escritorio, rectángulo redondeado en celular) */
+  rail: { x: number; y: number; w: number; h: number; radius: string };
+  felt: { x: number; y: number; w: number; h: number; radius: string };
+  /** índice = asiento (0 = humano) */
+  slots: SeatSlot[];
+  /** píldora central (bazas / submano) */
+  center: Point & { w: number };
+  /** píldora de estado sobre la mano */
+  status: Point & { w: number };
+  /** fila de la mano */
+  hand: Point & { w: number };
+  /** barra de acciones / panel de respuesta */
+  actions: Point & { w: number };
+}
+
+const DESKTOP_SEAT: Size = { w: 200, h: 72 };
+const PORTRAIT_SEAT: Size = { w: 118, h: 54 };
+
+/** Asiento lateral en escritorio: el globo sale hacia el centro. */
+function desktopSlot(seatX: number, seatY: number, cardX: number, cardY: number): SeatSlot {
+  const rightSide = seatX > 720;
   return {
-    cx,
-    cy,
-    rx: Math.min(viewport.width * (600 / 1440), maxRx),
-    ry: Math.min(viewport.height * (270 / 900), maxRyTop, maxRyBottom),
+    seat: { x: seatX, y: seatY },
+    card: { x: cardX, y: cardY },
+    bubble: rightSide
+      ? { x: seatX - 12, y: seatY + 6, side: 'left' }
+      : { x: seatX + DESKTOP_SEAT.w + 12, y: seatY + 6, side: 'right' },
   };
 }
 
-/**
- * Posición (borde superior izquierdo) del asiento `index` para `playerCount` jugadores
- * en el viewport dado. `index` es la posición del jugador (0 = humano abajo).
- */
-export function seatPosition(
-  index: number,
-  playerCount: number,
-  viewport: Viewport,
-  options: SeatOptions = {},
-): SeatPoint {
-  const seatW = options.seatWidth ?? 200;
-  const seatH = options.seatHeight ?? 72;
-  const angles = SLOT_ANGLES[playerCount];
-  if (!angles) throw new Error(`seatPosition: cantidad de jugadores no soportada: ${playerCount}`);
-  if (index < 0 || index >= playerCount) throw new Error(`seatPosition: índice fuera de rango: ${index}`);
-
-  const angle = angles[index];
-  const ellipse = tableEllipse(viewport, { seatWidth: seatW, seatHeight: seatH, extraBelow: options.extraBelow });
-  const rad = (angle * Math.PI) / 180;
-  const x = ellipse.cx + ellipse.rx * Math.cos(rad) - seatW / 2;
-  const y = ellipse.cy + ellipse.ry * Math.sin(rad) - seatH / 2;
-
-  // Redoble de seguridad: clamp explícito dentro del viewport (con la mano debajo).
-  const extra = options.extraBelow ?? 0;
-  const clampedX = Math.min(Math.max(x, 8), viewport.width - seatW - 8);
-  const clampedY = Math.min(Math.max(y, 8), viewport.height - seatH - extra - 8);
-  return { x: Math.round(clampedX), y: Math.round(clampedY), angle };
+function portraitSlot(seatX: number, seatY: number, cardX: number, cardY: number): SeatSlot {
+  return {
+    seat: { x: seatX, y: seatY },
+    card: { x: cardX, y: cardY },
+    bubble: { x: seatX + PORTRAIT_SEAT.w / 2, y: seatY + PORTRAIT_SEAT.h + 4, side: 'below' },
+  };
 }
 
-/** Slot geométrico (12/2/4/8/10 hs etc.) del asiento `index`, como etiqueta legible. */
-export function slotClockLabel(index: number, playerCount: number): string {
-  const angles = SLOT_ANGLES[playerCount];
-  if (!angles) return '?';
-  const a = angles[index];
-  const clock = Math.round(((a + 90) % 360) / 30) % 12 || 12;
-  return `${clock}h`;
+/** Geometría de la mesa para el modo y la cantidad de jugadores. */
+export function tableGeometry(mode: LayoutMode, playerCount: 2 | 4 | 6): TableGeometry {
+  if (mode === 'desktop') {
+    const human: SeatSlot = {
+      seat: { x: 40, y: 704 },
+      card: { x: 678, y: playerCount === 6 ? 462 : 452 },
+      bubble: { x: 40, y: 690, side: 'above' },
+    };
+    const others: Record<2 | 4 | 6, SeatSlot[]> = {
+      2: [desktopSlot(620, 80, 678, 190)],
+      4: [desktopSlot(1216, 346, 1010, 319), desktopSlot(620, 80, 678, 190), desktopSlot(24, 346, 346, 319)],
+      6: [
+        desktopSlot(1120, 466, 904, 430),
+        desktopSlot(1090, 150, 904, 206),
+        desktopSlot(620, 80, 678, 168),
+        desktopSlot(150, 150, 452, 206),
+        desktopSlot(120, 466, 452, 430),
+      ],
+    };
+    return {
+      mode,
+      seatSize: DESKTOP_SEAT,
+      cardSize: 'md',
+      handSize: 'xl',
+      rail: { x: 120, y: 112, w: 1200, h: 540, radius: '50%' },
+      felt: { x: 138, y: 130, w: 1164, h: 504, radius: '50%' },
+      slots: [human, ...others[playerCount]],
+      center: { x: 540, y: 346, w: 360 },
+      status: { x: 540, y: 598, w: 360 },
+      hand: { x: 440, y: 684, w: 560 },
+      actions: { x: 1010, y: 690, w: 400 },
+    };
+  }
+
+  const railTop = playerCount === 6 ? 240 : 180;
+  const railH = playerCount === 6 ? 290 : 330;
+  const human: SeatSlot = {
+    seat: { x: 0, y: 0 },
+    card: { x: 163, y: playerCount === 6 ? 418 : 396 },
+    bubble: { x: 195, y: railTop + railH - 6, side: 'above' },
+  };
+  const others: Record<2 | 4 | 6, SeatSlot[]> = {
+    2: [portraitSlot(136, 114, 163, 200)],
+    4: [portraitSlot(264, 114, 290, 300), portraitSlot(136, 114, 163, 200), portraitSlot(8, 114, 36, 300)],
+    6: [
+      portraitSlot(264, 174, 288, 398),
+      portraitSlot(264, 114, 288, 282),
+      portraitSlot(136, 114, 163, 256),
+      portraitSlot(8, 114, 38, 282),
+      portraitSlot(8, 174, 38, 398),
+    ],
+  };
+  const statusY = railTop + railH + 8;
+  return {
+    mode,
+    seatSize: PORTRAIT_SEAT,
+    cardSize: 'sm',
+    handSize: 'lg',
+    rail: { x: 12, y: railTop, w: 366, h: railH, radius: '44px' },
+    felt: { x: 20, y: railTop + 8, w: 350, h: railH - 16, radius: '36px' },
+    slots: [human, ...others[playerCount]],
+    center: { x: 110, y: playerCount === 6 ? 362 : 314, w: 170 },
+    status: { x: 55, y: statusY, w: 280 },
+    hand: { x: 0, y: statusY + 42, w: 390 },
+    actions: { x: 16, y: 740, w: 358 },
+  };
 }

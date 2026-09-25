@@ -6,10 +6,10 @@
  * winner · back. Las no jugables se apagan con `filter` — **nunca con `opacity < 1`** (AC 2).
  */
 
-import type { Suit } from '../types.js';
+import type { Suit } from '../engine/index.js';
 import { escapeHtml } from './escape.js';
 
-export type CardSize = 'xl' | 'lg' | 'md' | 'sm' | 'xs';
+export type CardSize = 'xl' | 'lg' | 'md' | 'sm' | 'mini' | 'xs';
 export type CardState = 'normal' | 'playable' | 'disabled' | 'winner' | 'back';
 
 /** Lo mínimo que necesita el render (compatible con CardDef y Card del core). */
@@ -25,6 +25,10 @@ export interface CardRenderOptions {
   tag?: string;
   /** `aria-label` para el botón jugable (ej: "Jugar el 7 de espada"). */
   label?: string;
+  /** atributos extra (ya escapados) para el elemento raíz, ej. `data-act="play:1-espada"` */
+  attrs?: string;
+  /** clase extra para el elemento raíz */
+  className?: string;
 }
 
 /** Medidas por tamaño (ancho/alto de carta, número, pip, figura, padding, radio) — Card.dc.html. */
@@ -33,6 +37,7 @@ export const CARD_SIZES: Record<CardSize, { w: number; h: number; num: number; p
   lg: { w: 104, h: 156, num: 29, pip: 70, fig: 9, pad: 9, r: 11 },
   md: { w: 84, h: 126, num: 24, pip: 56, fig: 8, pad: 7, r: 10 },
   sm: { w: 64, h: 96, num: 19, pip: 42, fig: 7, pad: 6, r: 8 },
+  mini: { w: 46, h: 69, num: 16, pip: 28, fig: 0, pad: 4, r: 7 },
   xs: { w: 30, h: 44, num: 11, pip: 18, fig: 0, pad: 3, r: 5 },
 };
 
@@ -105,7 +110,7 @@ export function renderCard(card: CardViewData, options: CardRenderOptions = {}):
   const boxStyle = `--cw:${s.w}px;--ch:${s.h}px;--cr:${s.r}px;`;
 
   if (state === 'back') {
-    return `<div class="card card--back" style="${boxStyle}"></div>`;
+    return `<div class="card card--back" style="${boxStyle}" aria-hidden="true"></div>`;
   }
 
   const face =
@@ -125,14 +130,16 @@ export function renderCard(card: CardViewData, options: CardRenderOptions = {}):
 
   const inner = face + winnerRing + winnerTag;
 
+  const extra = options.attrs ? ` ${options.attrs}` : '';
+  const cls = `card card--${state}${options.className ? ` ${options.className}` : ''}`;
   if (options.label) {
-    return `<button type="button" class="card card--${state}" data-size="${size}" style="${boxStyle}" aria-label="${escapeHtml(options.label)}">${inner}</button>`;
+    return `<button type="button" class="${cls}" data-size="${size}" style="${boxStyle}" aria-label="${escapeHtml(options.label)}"${extra}>${inner}</button>`;
   }
-  return `<div class="card card--${state}" data-size="${size}" style="${boxStyle}">${inner}</div>`;
+  return `<div class="${cls}" data-size="${size}" style="${boxStyle}"${extra} role="img" aria-label="${escapeHtml(cardNameEs(card))}">${inner}</div>`;
 }
 
 /** Dorso xs apilado del asiento (Seat.dc.html: cartas que le quedan a cada jugador). */
 export function renderSeatBack(compact: boolean, index: number, rotation: number): string {
-  const ml = index === 0 ? 0 : compact ? -4 : -6;
+  const ml = index === 0 ? 0 : compact ? -4 : -8;
   return `<span class="seat-back" style="transform:rotate(${rotation}deg);margin-left:${ml}px"></span>`;
 }

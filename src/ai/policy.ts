@@ -102,9 +102,13 @@ function florScoreOf(obs: Observation): number {
   return 20 + obs.myDealt.reduce((total, card) => total + envidoValue(card), 0);
 }
 
-/** Acción legal al azar, sin mazo si hay otra opción (el "fácil" no se va al mazo sin motivo). */
+/**
+ * Acción legal al azar para el "ruido" de la dificultad, pero nunca una locura: sin mazo ni
+ * falta envido (que a 0-0 define la partida entera) si hay otra opción.
+ */
 function randomAction(legal: readonly Action[], rng: Rng): Action {
-  const options = legal.length > 1 ? legal.filter((a) => a.type !== 'MAZO') : legal;
+  const sane = legal.filter((a) => a.type !== 'MAZO' && !(a.type === 'CALL_ENVIDO' && a.call === 'F'));
+  const options = sane.length > 0 ? sane : legal;
   return options[Math.floor(rng.next() * options.length)];
 }
 

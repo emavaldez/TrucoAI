@@ -1,6 +1,6 @@
 {
   "name": "trucoai",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,8 +11,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:partidas": "playwright test e2e/partidas.spec.ts e2e/layout.spec.ts --grep-invert @conocido",
-    "test:partidas:todo": "playwright test e2e/partidas.spec.ts",
+    "test:partidas": "playwright test",
     "e2e": "playwright test",
     "sim": "tsx scripts/sim.ts",
     "arena": "tsx scripts/arena.ts"
@@ -33,5 +32,9 @@
     "vite": "^5.0.0",
     "vite-tsconfig-paths": "^6.1.1",
     "vitest": "^4.1.9"
+  },
+  "dependencies": {
+    "@fontsource/figtree": "^5.3.0",
+    "@fontsource/fraunces": "^5.3.0"
   }
 }
