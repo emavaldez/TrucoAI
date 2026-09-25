@@ -16,13 +16,16 @@ Truco argentino web (Vite + TypeScript, sin frameworks ni dependencias de runtim
 
 ## Reglas duras
 - El motor nuevo vive en `src/engine/` y es **puro**: sin DOM, sin timers, sin `Math.random` (usar `Rng`), sin mutar el estado recibido.
-- **No importes nada del código legacy** (`src/core/`, `src/App.ts`, `src/ui/UIManager.ts` viejo, `src/ai/AIPlayer.ts`, `src/ai/DecisionEngine.ts`, `src/ai/CardEvaluator.ts`) desde código nuevo, y no modifiques el legacy salvo que tu historia lo diga (hoy solo la 0-3).
+- El código legacy (`src/core/`, `src/App.ts`, `UIManager`) **ya no existe** (historia 3-5, 2026-09-25). La app es:
+  `src/engine` (reglas) → `src/ai` (políticas sobre `Observation`) → `src/app` (GameController) → `src/ui` (render desde el estado).
 - Toda acción pasa por `getLegalActions` / `applyAction`. Nada de acceder a funciones privadas con `obj['x']`.
 - La IA solo recibe `Observation`. Nunca manos ajenas.
 - TypeScript `strict`, sin `any` en `src/engine` ni `src/ai`. Imports con extensión `.js`.
 - Tests con vitest. Cada regla que implementes tiene un test que la nombra; cada bug de la auditoría que tu historia cubre tiene un test con su ID en el título: `it('[ENG-04] …')`.
 - Nombres de código en inglés; textos visibles y docs en español rioplatense.
-- No agregues dependencias de runtime. DevDependencies solo si tu historia lo pide.
+- No agregues dependencias de runtime. DevDependencies solo si tu historia lo pide (las fuentes `@fontsource/*` son
+  devDependencies: Vite las empaqueta en el build).
+- URL de prueba: `?seed=N&fast=1&test=1&autostart=1&players=4` (ver `src/app/urlConfig.ts`).
 - Tocá **solo** los archivos del alcance de tu historia (el gate `alcance` de `wf` lo verifica).
 
 ## Comandos
@@ -34,9 +37,8 @@ npm run lint           # desde la historia 0-1
 npm test               # vitest run
 npm run test:coverage
 npm run build
-npm run test:partidas  # desde 0-2: partidas completas 2/4/6 por un bot (gate `partidas`)
-npm run test:partidas:todo   # las mismas + las que hoy fallan por bugs auditados (@conocido-<ID>)
-npm run e2e            # desde 4-1: toda la suite E2E
+npm run test:partidas  # toda la suite E2E: partidas completas 2/4/6 (y con flor), layout + axe, flujos (gate `partidas`)
+npm run e2e            # lo mismo
 npm run sim            # desde 1-6: 1.000 partidas con invariantes
 npm run arena          # desde 2-1: enfrentamientos de IA
 wf verify -i <id>      # gates del flujo supervisado

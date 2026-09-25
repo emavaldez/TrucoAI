@@ -36,7 +36,9 @@ export function displayedTrick(state: MatchState): { plays: TrickPlay[]; done: b
   const hand = state.hand;
   const n = hand.participants.length;
   const current = hand.currentTrick.plays;
-  if (current.length > 0 && current.length < n) return { plays: current, done: false, winnerId: runningWinner(state, current) };
+  const over = state.phase === 'HAND_OVER' || state.phase === 'MATCH_OVER';
+  // Con la mano terminada en medio de una baza (no quiero, mazo) nadie "va ganando".
+  if (current.length > 0 && current.length < n) return { plays: current, done: over, winnerId: over ? null : runningWinner(state, current) };
   const last = hand.tricks[hand.tricks.length - 1];
   if (last) return { plays: last.plays, done: true, winnerId: last.winnerPlayerId };
   // Pica-pica: entre submanos se sigue viendo la última baza de la submano anterior.

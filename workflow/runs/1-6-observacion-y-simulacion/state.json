@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "1-6-observacion-y-simulacion",
   "title": "Motor v2: observación pública y simulación",
-  "status": "implemented",
+  "status": "merged",
   "branch": "task/1-6-observacion-y-simulacion",
   "worktree": "/Users/emmanuelvaldez/GameDev/.worktrees/1-6-observacion-y-simulacion",
   "correctionCycle": 0,
@@ -16,19 +16,19 @@
     "commit": "62dbdaa921ba48ab272d1cda3856d52fdd38e3c1"
   },
   "audit": {
-    "decision": "pending",
-    "auditedBy": null,
-    "auditedAt": null
+    "decision": "approved",
+    "auditedBy": "Claude (QA)",
+    "auditedAt": "2026-09-25T17:00:00+00:00"
   },
   "merge": {
-    "approved": false,
-    "approvedBy": null,
-    "approvedAt": null,
+    "approved": true,
+    "approvedBy": "Emmanuel (pedido 2026-09-25: auditar y corregir todo)",
+    "approvedAt": "2026-09-25T17:00:00+00:00",
     "commit": null
   },
   "timestamps": {
     "createdAt": "2026-09-23T14:40:08.279746+00:00",
-    "updatedAt": "2026-09-24T20:26:34.147522+00:00"
+    "updatedAt": "2026-09-25T17:00:00+00:00"
   },
   "scope": {
     "allow": [
@@ -44,5 +44,6 @@
     "ok": true,
     "at": "2026-09-24T20:26:34.070448+00:00",
     "skipped": false
-  }
+  },
+  "note": "Integrado por Claude en la rama claude/qa-integral (auditoría integral 2026-09-25, docs/planning/qa-2026-09-25.md)."
 }

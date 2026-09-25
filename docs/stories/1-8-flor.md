@@ -1,6 +1,6 @@
 # Historia 1-8: Flor configurable (motor v2)
 
-Status: ready-for-dev
+Status: done
 wf-id: `1-8-flor` · kind: `refactor`
 Depende de: 1-7
 
@@ -72,4 +72,5 @@ para jugar con las reglas de mi mesa.
 ### File List
 
 ## Change Log
+- 2026-09-25 · Claude · Implementada directamente (pedido de Emmanuel: auditar y corregir todo). Ver docs/planning/qa-2026-09-25.md.
 - 2026-09-23 · Claude (SM) · Historia creada.

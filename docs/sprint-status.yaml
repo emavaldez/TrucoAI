@@ -11,41 +11,43 @@ worker: hermes --profile trucoai
 approver: Emmanuel
 
 development_status:
-  epic-0: in-progress
-  0-1-ci-lint-cobertura: in-progress
-  0-2-partidas-completas: ready-for-dev
-  0-3-hotfix-trabas-legacy: ready-for-dev
-  0-4-ui-mesa-v2-legacy: ready-for-dev
+  # 2026-09-25: auditoría integral y cierre de la v2 hechos por Claude a pedido de Emmanuel
+  # (docs/planning/qa-2026-09-25.md). Todo integrado en la rama claude/qa-integral.
+  epic-0: done
+  0-1-ci-lint-cobertura: done
+  0-2-partidas-completas: done  # reemplazado por la suite E2E v2 (4-1)
+  0-3-hotfix-trabas-legacy: done  # el legacy se retiró (3-5)
+  0-4-ui-mesa-v2-legacy: done  # su diseño y piezas (cardView) viven en la UI v2
   epic-0-retrospective: optional
 
-  epic-1: in-progress
-  1-1-dominio-rng-reparto: in-progress
-  1-2-bazas-y-resolucion: ready-for-dev
-  1-3-truco: ready-for-dev
-  1-4-envido: ready-for-dev
-  1-5-mazo-puntaje-fin: ready-for-dev
-  1-6-observacion-y-simulacion: ready-for-dev
-  1-7-pica-pica: ready-for-dev
-  1-8-flor: ready-for-dev
+  epic-1: done
+  1-1-dominio-rng-reparto: done
+  1-2-bazas-y-resolucion: done
+  1-3-truco: done
+  1-4-envido: done
+  1-5-mazo-puntaje-fin: done
+  1-6-observacion-y-simulacion: done
+  1-7-pica-pica: done
+  1-8-flor: done
   epic-1-retrospective: optional
 
-  epic-2: backlog
-  2-1-politica-y-arena: backlog
-  2-2-juego-de-cartas: backlog
-  2-3-decisiones-truco: backlog
-  2-4-decisiones-envido-flor: backlog
-  2-5-perfiles-dificultad: backlog
+  epic-2: done
+  2-1-politica-y-arena: done
+  2-2-juego-de-cartas: done
+  2-3-decisiones-truco: done
+  2-4-decisiones-envido-flor: done
+  2-5-perfiles-dificultad: done
   epic-2-retrospective: optional
 
-  epic-3: backlog
-  3-1-game-controller: backlog
-  3-2-mesa-y-acciones: backlog
-  3-3-menu-y-fin-de-partida: backlog
-  3-4-responsive-accesibilidad: backlog
-  3-5-retiro-legacy: backlog
+  epic-3: done
+  3-1-game-controller: done
+  3-2-mesa-y-acciones: done
+  3-3-menu-y-fin-de-partida: done
+  3-4-responsive-accesibilidad: done
+  3-5-retiro-legacy: done
   epic-3-retrospective: optional
 
-  epic-4: backlog
-  4-1-e2e-playwright: backlog
-  4-2-release-2-0: backlog
+  epic-4: in-progress
+  4-1-e2e-playwright: done
+  4-2-release-2-0: in-progress  # falta el smoke manual de Emmanuel en la URL de Vercel
   epic-4-retrospective: optional

@@ -1,6 +1,6 @@
 # Historia 1-7: Pica-pica en 6 jugadores (motor v2)
 
-Status: ready-for-dev
+Status: done
 wf-id: `1-7-pica-pica` · kind: `refactor`
 Depende de: 1-6
 
@@ -73,4 +73,5 @@ para jugar la variante como en la mesa y sin que el juego se cuelgue.
 ### File List
 
 ## Change Log
+- 2026-09-25 · Claude · Implementada directamente (pedido de Emmanuel: auditar y corregir todo). Ver docs/planning/qa-2026-09-25.md.
 - 2026-09-23 · Claude (SM) · Historia creada.
