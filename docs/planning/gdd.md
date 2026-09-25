@@ -41,6 +41,36 @@ IA entrenada (CFR/RL — queda planificada como épica futura, ver §11.4).
 - **Pie:** el último en jugar de cada equipo en la primera baza (en 2 jugadores, el repartidor).
 - **Reparto:** 3 cartas a cada uno, empezando por el mano. Las 3 cartas repartidas quedan registradas
   (el envido y la flor se calculan siempre sobre esas 3, aunque ya se hayan jugado).
+- En la mesa, el repartidor lleva la marca **"Pie"** (es el último en jugar) y el mano la marca **"Mano"** [DECISIÓN 2026-09-25].
+
+### 2.1 Señas entre compañeros [DECISIÓN 2026-09-25]
+
+Con 4 y 6 jugadores los compañeros se hacen señas para decirse qué cartas tienen. **En pica-pica no hay señas**,
+y con 2 jugadores tampoco. Las señas no son acciones del reglamento: no cambian el turno ni el estado de la mano.
+
+| Seña (gesto) | Qué dice |
+|---|---|
+| Levantar las cejas | Ancho de espada |
+| Guiñar un ojo | Ancho de basto |
+| Torcer la boca a la derecha | 7 de espada |
+| Torcer la boca a la izquierda | 7 de oro |
+| Morderse el labio de abajo | Un 3 |
+| Fruncir los labios (un beso) | Un 2 |
+| Sacar la punta de la lengua | Ancho falso (1 de oro o de copa; se usa poco) |
+| Inflar los cachetes | Flor (solo con la regla de flor) |
+| Subir la nariz (como oliendo algo) | Envido de 27 o más |
+| Cerrar los ojos | Nada que valga (ninguna carta con seña) |
+
+- **Quién las ve:** solo los del mismo equipo. Por ahora los rivales **no pescan** señas.
+- **Cuándo:** al empezar la mano. La IA hace las suyas al repartir: sus dos cartas más fuertes con seña,
+  más flor o envido si tiene; si no tiene ninguna carta con seña, "nada". El humano puede hacer señas
+  (botón "Señas") **hasta jugar su primera carta**; solo las verdaderas (lo que tiene), cada una una vez.
+- **En la mesa:** las señas de cada compañero se ven junto a su asiento: la carta señada (el ancho, el 7) o lo que
+  dice la seña (un 3, 27+, flor, nada) y el gesto. Una seña de carta se ve hasta que el compañero juega esa carta;
+  las demás, durante la primera baza.
+- **La IA las usa** (sin romper §11.1: es información que un compañero humano también tendría): al estimar la mano
+  y el envido reparte las cartas no vistas respetando las señas de sus compañeros, y si un compañero que juega
+  después le señó una carta grande (7 de oro o más) que gana la baza, se guarda las suyas.
 
 ## 3. Cartas
 
@@ -199,7 +229,7 @@ Con la opción **"Jugar con flor"** activada en el menú:
 | Contraflor al resto | El primer equipo responde: **Quiero** → el ganador de la comparación suma el valor de la falta (§6.5) · **No quiero** → el segundo equipo suma 6 |
 
 - Empates de flor: gana el más cercano al mano (igual que envido).
-- En una contraflor querida se muestran y comparan todas las flores de la mesa (declaradas o no) — a validar por Emmanuel.
+- En una contraflor querida se muestran y comparan todas las flores de la mesa (declaradas o no) [confirmado por Emmanuel 2026-09-25].
 - Los valores 3 / 4 / 6 son **valores por defecto a validar por Emmanuel**; en el código viven en una única tabla.
 
 ## 8. Irse al mazo
@@ -241,6 +271,7 @@ Con la opción **"Jugar con flor"** activada en el menú:
 La IA decide **únicamente** con una `Observation` construida por el motor: sus cartas, cartas jugadas en la mesa,
 cantos y respuestas, envidos/flores **dichos públicamente**, puntajes, turno y sus acciones legales.
 Nunca recibe manos ajenas (ni del compañero), ni el orden del mazo, ni envidos no revelados.
+Lo único que recibe aparte son las **señas de sus compañeros** (§2.1), igual que un jugador humano en su lugar.
 
 ### 11.2 Dificultades
 
@@ -278,6 +309,7 @@ en la línea de los papers de `Papers/` y del plan para AI and Games Conference.
 - **Fin de partida:** ganador, marcador, historial desplegable con scroll, "Nueva partida".
 - **Sonido [DECISIÓN 2026-09-25]:** una voz dice cada canto y respuesta ("¡Truco!", "¡Quiero!", los tantos, "Me dio",
   "Son buenas"…) con un "tin" corto; golpecito al jugar carta. Se apaga desde el menú o la pausa.
+- **Señas (4 y 6 jugadores, §2.1):** las de tus compañeros al lado de su asiento; botón "Señas" para hacer las tuyas.
 - **Responsive:** jugable en 390×844 (móvil) y 1280×800, en 2, 4 y 6 jugadores, sin jugadores cortados;
   botones táctiles ≥ 44 px. Jugable con teclado.
 

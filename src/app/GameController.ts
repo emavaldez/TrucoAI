@@ -9,6 +9,7 @@
 import { applyAction, createMatch, createRng, getActor, getLegalActions, getObservation, startNextHand } from '../engine/index.js';
 import type { Action, GameEvent, MatchState, PlayerId, Rng, RuleSet } from '../engine/index.js';
 import { createPolicy, type Difficulty, type Policy } from '../ai/policy.js';
+import { aiSigns, availableSigns, type Signal, type SignKind } from '../ai/signs.js';
 import type { Scheduler } from './scheduler.js';
 
 export const HUMAN_ID: PlayerId = 'p0';
@@ -75,6 +76,8 @@ export interface ControllerSnapshot {
   /** IA que está "pensando" (programada) */
   thinking: PlayerId | null;
   autoAck: boolean;
+  /** señas de la mano entre los del equipo del humano (las propias incluidas); nunca las de los rivales */
+  signals: Signal[];
 }
 
 export type Listener = (snapshot: ControllerSnapshot) => void;
@@ -98,6 +101,8 @@ export class GameController {
   private autoAck: boolean;
   private readonly humanPolicy?: Policy;
   private matchCount = 0;
+  /** señas hechas en la mano en curso (de los dos equipos: cada IA solo ve las de su equipo) */
+  private signals: Signal[] = [];
 
   constructor(opts: ControllerOptions) {
     this.scheduler = opts.scheduler;
@@ -125,12 +130,34 @@ export class GameController {
       summaryVisible: this.summaryVisible,
       thinking: this.thinking,
       autoAck: this.autoAck,
+      signals: this.signals.filter((signal) => this.teamOf(signal.from) === this.teamOf(HUMAN_ID)),
     };
   }
 
   /** Acciones legales del humano ahora (vacío si no le toca). */
   humanLegalActions(): Action[] {
     return getLegalActions(this.state, HUMAN_ID);
+  }
+
+  /** ¿Se pueden hacer señas en esta mano? (4 o 6 jugadores y nunca en pica-pica) */
+  signalsAllowed(): boolean {
+    const phase = this.state.phase;
+    return this.settings.playerCount >= 4 && this.state.hand.picaPica === null && phase !== 'HAND_OVER' && phase !== 'MATCH_OVER';
+  }
+
+  /**
+   * Señas que el humano todavía puede hacer: solo antes de jugar su primera carta, y solo las
+   * verdaderas (lo que tiene), sin repetir.
+   */
+  humanSignalOptions(): SignKind[] {
+    if (!this.signalsAllowed()) return [];
+    const hand = this.state.hand.hands[HUMAN_ID];
+    const dealt = this.state.hand.dealt[HUMAN_ID];
+    if (!hand || !dealt || hand.length < dealt.length) return [];
+    const sent = new Set(this.signals.filter((signal) => signal.from === HUMAN_ID).map((signal) => signal.kind));
+    return availableSigns(hand, dealt, this.state.rules.flor)
+      .map((sign) => sign.kind)
+      .filter((kind) => !sent.has(kind));
   }
 
   subscribe(listener: Listener): () => void {
@@ -151,6 +178,7 @@ export class GameController {
         picaPica: this.state.hand.picaPica !== null,
       },
     ];
+    this.dealSignals();
     this.afterChange();
   }
 
@@ -160,6 +188,18 @@ export class GameController {
     return this.apply(HUMAN_ID, action);
   }
 
+  /** Seña del humano a sus compañeros. No es una acción del motor: no cambia el turno. */
+  sendHumanSignal(kind: SignKind): boolean {
+    if (!this.humanSignalOptions().includes(kind)) return false;
+    const hand = this.state.hand.hands[HUMAN_ID];
+    const option = availableSigns(hand, this.state.hand.dealt[HUMAN_ID], this.state.rules.flor).find((sign) => sign.kind === kind);
+    this.signals = [...this.signals, { from: HUMAN_ID, kind, cardId: option?.cardId ?? null }];
+    // Sin eventos del motor: la interfaz solo vuelve a dibujar.
+    this.lastEvents = [];
+    this.notify();
+    return true;
+  }
+
   /** "Siguiente mano": solo en `HAND_OVER`. */
   continueAfterHand(): boolean {
     if (this.state.phase !== 'HAND_OVER') return false;
@@ -167,6 +207,7 @@ export class GameController {
     const next = startNextHand(this.state);
     this.state = next.state;
     this.lastEvents = next.events;
+    this.dealSignals();
     this.afterChange();
     return true;
   }
@@ -211,6 +252,27 @@ export class GameController {
       const difficulty: Difficulty = seat.team === 0 ? 'normal' : this.settings.difficulty;
       this.policies.set(seat.id, createPolicy(difficulty));
     }
+  }
+
+  private teamOf(playerId: PlayerId): number {
+    return this.state.seats.find((seat) => seat.id === playerId)?.team ?? -1;
+  }
+
+  /** Al empezar la mano cada IA les hace sus señas a los compañeros (GDD §2.1). */
+  private dealSignals(): void {
+    this.signals = [];
+    if (!this.signalsAllowed()) return;
+    const hand = this.state.hand;
+    for (const seat of this.state.seats) {
+      if (seat.isHuman) continue;
+      this.signals.push(...aiSigns(seat.id, hand.hands[seat.id], hand.dealt[seat.id], this.state.rules.flor));
+    }
+  }
+
+  /** Las señas que ve `playerId`: las de sus compañeros. */
+  private signalsFor(playerId: PlayerId): Signal[] {
+    const team = this.teamOf(playerId);
+    return this.signals.filter((signal) => signal.from !== playerId && this.teamOf(signal.from) === team);
   }
 
   private apply(playerId: PlayerId, action: Action): { ok: boolean; error?: string } {
@@ -295,7 +357,7 @@ export class GameController {
     let action = legal[0];
     if (policy) {
       try {
-        action = policy.decide(getObservation(this.state, actor), this.rng);
+        action = policy.decide(getObservation(this.state, actor), this.rng, this.signalsFor(actor));
       } catch (error) {
         console.warn('[truco] la IA falló al decidir; juega la primera acción legal', error);
       }

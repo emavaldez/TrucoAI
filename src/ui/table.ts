@@ -5,11 +5,13 @@
 import { cardRank, envidoScore } from '../engine/index.js';
 import type { Action, Card, MatchState, PlayerId, TeamId, TrickPlay } from '../engine/index.js';
 import type { MatchSettings } from '../app/GameController.js';
+import type { Signal, SignKind } from '../ai/signs.js';
 import { renderCard } from './cardView.js';
 import { escapeHtml } from './escape.js';
 import { EventLog } from './eventLog.js';
 import { tableGeometry, type LayoutMode, type TableGeometry } from './layout.js';
 import { encodeAction, lockIcon, menuIcon, renderScore, renderSeat } from './pieces.js';
+import { renderPartnerSigns, renderSignControl, renderSignPicker } from './signsView.js';
 import { ENVIDO_LABELS, TRUCO_LABELS, cardName, ordinal, playerName, teamName } from './text.js';
 
 export const HUMAN: PlayerId = 'p0';
@@ -23,6 +25,12 @@ export interface GameViewContext {
   actor: PlayerId | null;
   log: EventLog;
   now: number;
+  /** señas del equipo del humano en esta mano */
+  signals?: Signal[];
+  /** señas que el humano todavía puede hacer */
+  signOptions?: SignKind[];
+  /** la lista de señas está abierta */
+  signsOpen?: boolean;
 }
 
 // ---------- utilidades de estado (solo información pública) ----------
@@ -116,9 +124,10 @@ function renderTopBar(ctx: GameViewContext): string {
     (chip ? `<span class="chip chip--gold" data-testid="canto-chip">${escapeHtml(chip)}</span>` : '');
   const menu = `<button type="button" class="icon-btn" data-ui="pause" data-testid="menu-button" aria-label="Menú de la partida">${menuIcon()}</button>`;
   if (ctx.mode === 'portrait') {
+    const signs = renderSignControl(state, ctx.signals ?? [], ctx.signOptions ?? [], ctx.signsOpen === true, 'portrait');
     return (
       `<div class="p-score">${renderScore(state.scores, true)}</div>` +
-      `<div class="p-status-row"><div class="chips">${chips}</div>${menu}</div>`
+      `<div class="p-status-row"><div class="chips">${chips}</div><div class="p-status-btns">${signs}${menu}</div></div>`
     );
   }
   return (
@@ -557,7 +566,10 @@ export function renderGame(ctx: GameViewContext): string {
     (panel && ctx.mode === 'portrait' ? '' : renderHand(ctx, geo, panel)) +
     (panel ? renderResponsePanel(ctx) : renderActions(ctx, geo)) +
     renderFeed(ctx) +
+    renderPartnerSigns(ctx.state, ctx.signals ?? [], ctx.mode, geo) +
+    (ctx.mode === 'desktop' ? renderSignControl(ctx.state, ctx.signals ?? [], ctx.signOptions ?? [], ctx.signsOpen === true, 'desktop') : '') +
     renderEnvidoShow(ctx, geo) +
-    renderBubbles(ctx, geo)
+    renderBubbles(ctx, geo) +
+    (ctx.signsOpen && !panel ? renderSignPicker(ctx.signOptions ?? [], ctx.mode) : '')
   );
 }

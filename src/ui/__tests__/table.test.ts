@@ -163,3 +163,58 @@ describe('layout', () => {
     }
   });
 });
+
+describe('señas en la mesa', () => {
+  const state = createMatch({ rules: { playerCount: 4 }, seed: 4 });
+  const base = {
+    state,
+    settings: SETTINGS,
+    legal: [],
+    actor: null,
+    log: new EventLog(),
+    now: 0,
+  };
+  const partnerCard = state.hand.dealt.p2[0];
+
+  for (const mode of ['desktop', 'portrait'] as const) {
+    it(`${mode}: se ven las señas del compañero y el botón para hacer las tuyas`, () => {
+      const html = renderGame({
+        ...base,
+        mode,
+        signals: [
+          { from: 'p2', kind: 'ANCHO_ESPADA', cardId: '1-espada' },
+          { from: 'p2', kind: 'ENVIDO', cardId: null },
+          { from: 'p0', kind: 'NADA', cardId: null },
+        ],
+        signOptions: ['TRES'],
+        signsOpen: true,
+      });
+      expect(html).toContain('data-testid="signs-p2"');
+      expect(html).toContain('data-sign="ANCHO_ESPADA"');
+      expect(html).toContain('data-sign="ENVIDO"');
+      expect(html).toContain('data-testid="signs-button"');
+      expect(html).toContain('data-testid="sign-picker"');
+      expect(html).toContain('data-ui="sign:TRES"');
+      // Tus propias señas nunca aparecen como "señas de" alguien.
+      expect(html).not.toContain('data-testid="signs-p0"');
+    });
+  }
+
+  it('una seña de carta se deja de ver cuando esa carta se juega', () => {
+    const signal = { from: 'p2', kind: 'TRES' as const, cardId: partnerCard.id };
+    const played: MatchState = {
+      ...state,
+      hand: { ...state.hand, currentTrick: { ...state.hand.currentTrick, plays: [{ playerId: 'p2', card: partnerCard }] } },
+    };
+    const before = renderGame({ ...base, mode: 'desktop', signals: [signal] });
+    const after = renderGame({ ...base, state: played, mode: 'desktop', signals: [signal] });
+    expect(before).toContain('data-testid="signs-p2"');
+    expect(after).not.toContain('data-testid="signs-p2"');
+  });
+
+  it('el pie de la mano se marca como "Pie"', () => {
+    const html = renderGame({ ...base, mode: 'desktop' });
+    expect(html).toContain('>Pie<');
+    expect(html).not.toContain('>Da<');
+  });
+});

@@ -90,3 +90,30 @@ test('celular acostado muy bajo: pide girar el teléfono', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.getByRole('alert')).toHaveCount(0);
 });
+
+test('señas con 4 jugadores: se ven las del compañero y podés hacer las tuyas hasta jugar tu carta', async ({ page }) => {
+  const errors = collectErrors(page);
+  // IA lenta: nadie juega durante la prueba.
+  await page.goto(gameUrl({ players: 4, seed: 3, fast: false, aiDelay: 60000 }));
+  await expect(page.getByTestId('signs-p2')).toBeVisible();
+  // Nunca se ven las de los rivales.
+  await expect(page.getByTestId('signs-p1')).toHaveCount(0);
+  await expect(page.getByTestId('signs-p3')).toHaveCount(0);
+  await page.getByTestId('signs-button').click();
+  await expect(page.getByTestId('sign-picker')).toBeVisible();
+  const option = page.locator('.sign-option').first();
+  const kind = ((await option.getAttribute('data-ui')) ?? '').replace('sign:', '');
+  await option.click();
+  await expect(page.getByTestId('sign-picker')).toHaveCount(0);
+  await expect(page.locator(`.sign-chip[data-sign="${kind}"]`)).toBeVisible();
+  const signals = await page.evaluate(() => (window as unknown as { __truco: { signals: () => { from: string; kind: string }[] } }).__truco.signals());
+  expect(signals.some((signal) => signal.from === 'p0' && signal.kind === kind)).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('con 2 jugadores no hay señas', async ({ page }) => {
+  await page.goto(gameUrl({ players: 2, seed: 3, fast: false, aiDelay: 60000 }));
+  await expect(page.getByTestId('seat-p1')).toBeVisible();
+  await expect(page.getByTestId('signs-button')).toHaveCount(0);
+  await expect(page.locator('[data-testid^="signs-p"]')).toHaveCount(0);
+});

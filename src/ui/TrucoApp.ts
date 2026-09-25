@@ -5,6 +5,7 @@
 import { getActor } from '../engine/index.js';
 import type { Action } from '../engine/index.js';
 import type { Difficulty } from '../ai/policy.js';
+import type { SignKind } from '../ai/signs.js';
 import {
   FAST_TIMING,
   GameController,
@@ -82,6 +83,8 @@ export class TrucoApp {
   private expiryTimer: ReturnType<typeof setTimeout> | null = null;
   private lastDialogKey = '';
   private matchSeed: number | null;
+  /** la lista de señas está abierta */
+  private signsOpen = false;
 
   constructor(root: HTMLElement, config: UrlConfig) {
     this.root = root;
@@ -145,6 +148,7 @@ export class TrucoApp {
   private startMatch(): void {
     saveSettings(this.settings);
     this.paused = false;
+    this.signsOpen = false;
     this.log.reset();
     this.log.sayingGap = this.timing.sayingGap;
     this.sound.stop();
@@ -199,6 +203,8 @@ export class TrucoApp {
     this.log.prune(now);
     const actor = getActor(state);
     const legal = this.controller.humanLegalActions();
+    const signOptions = this.paused ? [] : this.controller.humanSignalOptions();
+    if (signOptions.length === 0 || responsePanelOpen({ state, actor, legal })) this.signsOpen = false;
     let html = renderGame({
       state,
       settings: snap.settings,
@@ -207,6 +213,9 @@ export class TrucoApp {
       actor,
       log: this.log,
       now,
+      signals: snap.signals,
+      signOptions,
+      signsOpen: this.signsOpen,
     });
     let dialog = '';
     if (state.phase === 'MATCH_OVER') {
@@ -220,6 +229,8 @@ export class TrucoApp {
       dialog = 'pause';
     } else if (responsePanelOpen({ state, actor, legal })) {
       dialog = `resp-${state.version}`;
+    } else if (this.signsOpen) {
+      dialog = 'signs';
     }
     this.canvas.innerHTML = html;
     this.canvas.dataset.screen = 'game';
@@ -330,6 +341,16 @@ export class TrucoApp {
         this.matchSeed = this.config.seed === null ? null : (this.matchSeed ?? 0) + 1;
         this.startMatch();
         break;
+      case 'signs':
+        this.signsOpen = !this.signsOpen;
+        this.render();
+        break;
+      case 'sign':
+        if (this.paused || !this.controller) return;
+        this.signsOpen = false;
+        // Si ya no se puede (jugaste tu carta), no pasa nada: se vuelve a dibujar sin la lista.
+        if (!this.controller.sendHumanSignal(value as SignKind)) this.render();
+        break;
       case 'menu':
         this.paused = false;
         this.controller?.stop();
@@ -370,6 +391,11 @@ export class TrucoApp {
     }
     if (event.key === 'Escape') {
       if (isBlockingModal(snap)) return;
+      if (this.signsOpen) {
+        this.signsOpen = false;
+        this.render();
+        return;
+      }
       this.onUi(this.paused ? 'resume' : 'pause');
       return;
     }
@@ -406,6 +432,7 @@ export class TrucoApp {
       legal: () => this.controller?.humanLegalActions() ?? [],
       settings: () => ({ ...this.settings }),
       summaryVisible: () => this.snapshot?.summaryVisible ?? false,
+      signals: () => this.snapshot?.signals ?? [],
     };
   }
 }

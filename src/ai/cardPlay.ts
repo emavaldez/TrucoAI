@@ -18,7 +18,12 @@ export interface CardContext {
   results: readonly TrickWinner[];
   /** cuántos rivales juegan después de mí en esta baza */
   rivalsAfter: number;
+  /** carta más alta que seguro tiene un compañero que juega después en esta baza (por sus señas), o -1 */
+  teammateAfterTop?: number;
 }
+
+/** A partir del 7 de oro, la carta del compañero alcanza para que yo me guarde las mías. */
+const STRONG_SIGNALED = 10;
 
 export function lowest(cards: readonly Card[]): Card {
   return cards.reduce((low, card) => (cardRank(card) < cardRank(low) ? card : low));
@@ -56,6 +61,10 @@ export function chooseCard(ctx: CardContext): Card {
 
   // Mi equipo va ganando: no le gano al compañero.
   if (lead.winner === ctx.myTeam) return lowest(hand);
+
+  // Un compañero que juega después me señó una carta grande que gana: me guardo las mías.
+  const partner = ctx.teammateAfterTop ?? -1;
+  if (partner >= STRONG_SIGNALED && partner > lead.rank) return lowest(hand);
 
   const beating = byRank.filter((card) => cardRank(card) > lead.rank);
   const tying = byRank.filter((card) => cardRank(card) === lead.rank);

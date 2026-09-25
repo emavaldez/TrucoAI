@@ -7,12 +7,14 @@ import { envidoScore, envidoValue } from '../engine/index.js';
 import type { Action, EnvidoCall, Observation, Rng } from '../engine/index.js';
 import { chooseCard } from './cardPlay.js';
 import { envidoWinProbability, handWinProbability, publicConstraints } from './estimate.js';
-import { nextToPlay, participantsOf, teamMap } from './table.js';
+import { signalKnowledge, signaledTopRank, type Signal, type SignalKnowledge } from './signs.js';
+import { nextToPlay, participantsOf, playsThisHand, teamMap } from './table.js';
 
 export type Difficulty = 'easy' | 'normal' | 'hard';
 
 export interface Policy {
-  decide(obs: Observation, rng: Rng): Action;
+  /** `signals` = señas que me hicieron mis compañeros en esta mano (nunca las de los rivales). */
+  decide(obs: Observation, rng: Rng, signals?: readonly Signal[]): Action;
 }
 
 export interface DifficultyProfile {
@@ -122,9 +124,18 @@ function rivalTeam(obs: Observation): 0 | 1 {
 }
 
 export class HeuristicPolicy implements Policy {
+  /** señas de los compañeros para la decisión en curso */
+  private signals: readonly Signal[] = [];
+  private knowledge: SignalKnowledge | undefined;
+
   constructor(private readonly profile: DifficultyProfile) {}
 
-  decide(obs: Observation, rng: Rng): Action {
+  decide(obs: Observation, rng: Rng, signals: readonly Signal[] = []): Action {
+    // En pica-pica no hay señas; y solo cuentan las de compañeros (de mi equipo, no mías).
+    const team = new Map(obs.seats.map((seat) => [seat.id, seat.team]));
+    this.signals =
+      obs.picaPica === null ? signals.filter((signal) => signal.from !== obs.selfId && team.get(signal.from) === obs.selfTeam) : [];
+    this.knowledge = this.signals.length > 0 ? signalKnowledge(obs.selfId, this.signals, obs.unseenCards) : undefined;
     const legal = obs.legalActions;
     if (legal.length === 0) throw new Error('NO_LEGAL_ACTIONS');
     if (legal.length === 1) return legal[0];
@@ -166,7 +177,7 @@ export class HeuristicPolicy implements Policy {
 
   private envidoWin(obs: Observation, rng: Rng): number {
     const constraints = this.profile.readPublic ? publicConstraints(obs) : undefined;
-    return envidoWinProbability(obs, rng, this.profile.samples, constraints);
+    return envidoWinProbability(obs, rng, this.profile.samples, constraints, this.knowledge);
   }
 
   /** Canto de apertura según la probabilidad de ganar el envido. */
@@ -223,7 +234,7 @@ export class HeuristicPolicy implements Policy {
 
   private handWin(obs: Observation, rng: Rng): number {
     const constraints = this.profile.readPublic ? publicConstraints(obs) : undefined;
-    return handWinProbability(obs, rng, this.profile.samples, constraints);
+    return handWinProbability(obs, rng, this.profile.samples, constraints, this.knowledge);
   }
 
   private answerTruco(obs: Observation, legal: readonly Action[], rng: Rng): Action {
@@ -270,8 +281,15 @@ export class HeuristicPolicy implements Policy {
     const leaderIndex = participants.indexOf(obs.currentTrick.leaderId);
     const n = participants.length;
     let rivalsAfter = 0;
+    let teammateAfterTop = -1;
+    const played = playsThisHand(obs);
     for (let k = obs.currentTrick.plays.length + 1; k < n; k++) {
-      if (teams.get(participants[(leaderIndex + k) % n]) !== obs.selfTeam) rivalsAfter += 1;
+      const playerId = participants[(leaderIndex + k) % n];
+      if (teams.get(playerId) !== obs.selfTeam) rivalsAfter += 1;
+      else {
+        const theirs = played.filter((play) => play.playerId === playerId).map((play) => play.card);
+        teammateAfterTop = Math.max(teammateAfterTop, signaledTopRank(playerId, this.signals, theirs));
+      }
     }
     // Defensa: si por algún motivo no soy el que juega según la mesa, juego la más baja.
     if (nextToPlay(obs, participants) !== obs.selfId) return cards[0];
@@ -282,6 +300,7 @@ export class HeuristicPolicy implements Policy {
       teams,
       results: obs.tricks.map((trick) => trick.winnerTeam),
       rivalsAfter,
+      teammateAfterTop,
     });
     return cards.find((a) => a.cardId === card.id) ?? cards[0];
   }

@@ -699,3 +699,59 @@ button.card--playable:hover, button.card--playable:focus-visible { transform: tr
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ─── Señas entre compañeros ───────────────────────────── */
+.signs-panel {
+  padding: 8px 10px 10px; border-radius: 14px; background: var(--paper); color: var(--ink);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45); z-index: 5; display: flex; flex-direction: column; gap: 6px;
+}
+.signs-panel.anim-in, .sign-tokens.anim-in, .sign-picker.anim-in { animation: pop-in 0.16s ease-out; }
+.signs-title { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--paper-ink-mid); white-space: nowrap; }
+.signs-row { display: flex; gap: 8px; }
+.sign-item { width: 74px; display: flex; flex-direction: column; align-items: center; gap: 3px; text-align: center; }
+.sign-meaning { font-size: 11px; font-weight: 700; line-height: 1.1; }
+.sign-gesture { font-size: 9.5px; line-height: 1.1; color: var(--paper-ink-soft); font-style: italic; }
+.sign-card {
+  width: 30px; height: 44px; flex-shrink: 0; border-radius: 5px; border: 1px solid var(--paper-border);
+  background: #FFFDF6; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; color: var(--ink);
+}
+.sign-card-big { font-family: var(--font-display); font-weight: 700; font-size: 18px; line-height: 1; }
+.sign-card--word .sign-card-big { font-size: 10px; letter-spacing: -0.02em; }
+.sign-card-small { font-size: 7.5px; font-weight: 700; text-transform: uppercase; color: var(--paper-ink-soft); }
+.sign-tokens { transform: translateX(-100%); display: flex; gap: 3px; z-index: 4; pointer-events: auto; }
+.sign-token {
+  height: 16px; padding: 0 4px; border-radius: 5px; background: var(--paper); color: var(--ink);
+  border: 1px solid var(--paper-border); font-size: 10px; font-weight: 700; line-height: 14px; white-space: nowrap;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+}
+.signs-control { left: 40px; top: 788px; width: 380px; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; z-index: 4; }
+.signs-btn {
+  height: 36px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--gold-line); background: var(--gold-tint);
+  color: var(--gold); font-size: 14px; font-weight: 700; cursor: pointer;
+}
+.signs-btn:hover, .signs-btn--open { background: var(--gold-soft); }
+.signs-btn:focus-visible, .sign-option:focus-visible, .sign-picker-close:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+.p-status-btns { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.p-status-btns .signs-btn { height: 44px; padding: 0 12px; font-size: 13px; }
+.signs-sent-label { font-size: 12px; color: var(--text-3); }
+.sign-chip { padding: 3px 9px; border-radius: 999px; background: var(--nos-soft); color: var(--nos); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.sign-picker {
+  padding: 14px; border-radius: 18px; background: var(--paper); color: var(--ink);
+  box-shadow: var(--shadow-panel); display: flex; flex-direction: column; gap: 8px; z-index: 8;
+}
+.sign-picker--desktop { left: 40px; top: 780px; width: 340px; transform: translateY(-100%); }
+.sign-picker--portrait { left: 16px; top: 112px; width: 358px; max-height: 600px; overflow-y: auto; }
+.sign-picker-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.sign-picker-title { font-family: var(--font-display); font-size: 19px; font-weight: 700; }
+.sign-picker-close { width: 32px; height: 32px; border-radius: 10px; border: 1px solid var(--paper-line); background: var(--paper-2); font-size: 20px; line-height: 1; cursor: pointer; color: var(--ink); }
+.sign-picker-note { font-size: 12.5px; color: var(--paper-ink-mid); }
+.sign-picker-list { display: flex; flex-direction: column; gap: 6px; }
+.sign-option {
+  display: flex; align-items: center; gap: 12px; padding: 6px 10px; min-height: 56px; border-radius: 12px;
+  border: 1px solid var(--paper-line); background: var(--paper-2); color: var(--ink); text-align: left; cursor: pointer;
+}
+.sign-option:hover { border-color: var(--paper-ink-soft); }
+.sign-option-text { display: flex; flex-direction: column; gap: 2px; }
+.sign-option-gesture { font-size: 15px; font-weight: 700; }
+.sign-option-meaning { font-size: 13px; color: var(--paper-ink-mid); }

@@ -65,12 +65,12 @@ export function renderSeat(props: SeatProps, x: number, y: number): string {
   if (props.active) classes.push('seat--active');
   if (props.dim) classes.push('seat--dim');
   const badges =
-    (props.mano ? '<span class="seat-badge">Mano</span>' : '') + (props.dealer ? '<span class="seat-badge">Da</span>' : '');
+    (props.mano ? '<span class="seat-badge">Mano</span>' : '') + (props.dealer ? '<span class="seat-badge">Pie</span>' : '');
   const teamLabel = props.team === 0 ? 'Nosotros' : 'Ellos';
   const status = props.active ? `, ${props.activeLabel.toLowerCase()}` : '';
   return (
     `<div class="${classes.join(' ')}" style="left:${x}px;top:${y}px" data-testid="seat-${props.id}" data-seat="${props.id}"` +
-    ` aria-label="${escapeHtml(`${props.name}, ${teamLabel}${props.mano ? ', mano' : ''}${props.dealer ? ', da' : ''}${status}`)}" role="group">` +
+    ` aria-label="${escapeHtml(`${props.name}, ${teamLabel}${props.mano ? ', mano' : ''}${props.dealer ? ', pie' : ''}${status}`)}" role="group">` +
     `<div class="seat-avatar" aria-hidden="true">${escapeHtml(initials(props.name, props.isHuman))}</div>` +
     `<div class="seat-info"><div class="seat-name">${escapeHtml(props.compact ? shortName(props.name) : props.name)}</div>` +
     `<div class="seat-tags"><span class="seat-team">${teamLabel}</span>${badges}</div></div>` +
