@@ -21,7 +21,21 @@ python training/learner/run.py status --run r1
 tail -f training/runs/r1/stdout.log
 ```
 
-La mejor red queda en `training/runs/r1/policies/best.{json,bin}`.
+La mejor red queda en `training/runs/r1/policies/best.{json,bin}`. PPO corta solo a las 1500 iteraciones
+(`ppo.iterations` en `config/default.json`); para seguir, se sube ese número y se relanza.
+
+Cada iteración muestra además la **entropía por tipo de decisión** (cartas, turno con posibilidad de cantar,
+respuesta al truco, respuesta al envido) y el **estilo**: cuánto canta truco pudiendo, qué parte de esos
+cantos son farol (sin un 3 o algo mejor), cuánto canta envido y cuánto quiere/sube.
+
+**Prueba de explotabilidad** (se puede correr en paralelo, con menos actores):
+
+```bash
+python training/learner/run.py exploit --run r1 --target best --iters 150 --workers 6
+```
+
+Entrena una red nueva cuyo único rival es la red objetivo (congelada). Si le gana cerca de 50–55%, la
+objetivo es sólida; arriba de ~65%, tiene un agujero que se puede explotar.
 
 ## Reglas de la carpeta
 

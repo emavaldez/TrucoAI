@@ -284,12 +284,19 @@ class Run:
 
     # ---------- evaluación ----------
 
+    @staticmethod
+    def opponent_spec(opponent: str) -> dict:
+        """'hard' / 'normal' / 'easy' (heurísticas) o 'mlp:<ruta sin extensión>' (una red)."""
+        if opponent.startswith("mlp:"):
+            return {"kind": "mlp", "path": opponent[4:]}
+        return {"kind": "heur", "difficulty": opponent}
+
     def evaluate(self, policy_base: Path, pairs: int, opponent: str, tag: str) -> dict:
         tmp = self.dir / f"tmp-eval-{tag}"
         remove_tree(tmp)
         jobs = [
             {"mode": "eval", "seed": 777_000 + i, "matches": m, "players": self.cfg["players"], "out": str(tmp / f"e{i}.json"),
-             "a": {"kind": "mlp", "path": str(policy_base)}, "b": {"kind": "heur", "difficulty": opponent}}
+             "a": {"kind": "mlp", "path": str(policy_base)}, "b": self.opponent_spec(opponent)}
             for i, m in enumerate(split_matches(pairs, self.workers))
         ]
         started = time.time()
@@ -306,7 +313,8 @@ class Run:
         result = {"tag": tag, "opponent": opponent, "games": games, "winrate": wins / games, "ci90": [low, high],
                   "pointsPerGame": [pa / games, pb / games], "seconds": time.time() - started}
         self.event("eval", **result)
-        log(f"evaluación {tag} contra '{opponent}': {100 * wins / games:.1f}% (IC90 {100 * low:.1f}–{100 * high:.1f}) en {games} partidas")
+        shown = "la red objetivo" if opponent.startswith("mlp:") else f"'{opponent}'"
+        log(f"evaluación {tag} contra {shown}: {100 * wins / games:.1f}% (IC90 {100 * low:.1f}–{100 * high:.1f}) en {games} partidas")
         return result
 
     # ---------- fase 4: PPO ----------
@@ -381,6 +389,7 @@ class Run:
             log(f"iter {it}: {len(data.act)} decisiones en {dt:.1f}s ({record['steps_per_s']}/s) · "
                 f"pérdida pol {metrics['loss_pi']:.3f} val {metrics['loss_v']:.4f} ent {metrics['entropy']:.3f} "
                 f"kl_bc {metrics['kl_bc']:.3f} · vs {record['vs']}")
+            log(f"   entropía por decisión {metrics['ent_by']} · estilo {metrics['style']}")
 
             if it % c["snapshotEvery"] == 0:
                 snap = pol_dir / f"iter_{it:06d}"
@@ -394,6 +403,8 @@ class Run:
             self.save_ckpt(policy, critic, opt, state, it)
 
     def league_opponents(self, state: dict, c: dict) -> list[dict]:
+        if c.get("fixedOpponents"):
+            return c["fixedOpponents"]
         w = c["opponents"]
         out: list[dict] = [{"kind": "self", "weight": w["self"], "name": "self"}]
         for diff in ("hard", "normal", "easy"):
@@ -455,6 +466,8 @@ class Run:
         adv_t = torch.tensor(adv, dtype=torch.float32, device=dev)
         adv_t = (adv_t - adv_t.mean()) / (adv_t.std() + 1e-8)
 
+        ent_by, style = self.style_metrics(policy, obs, mask, data)
+
         sums = {"loss_pi": 0.0, "loss_v": 0.0, "entropy": 0.0, "kl_bc": 0.0, "clip_frac": 0.0, "approx_kl": 0.0}
         count = 0
         for _ in range(c["epochs"]):
@@ -489,7 +502,57 @@ class Run:
                 count += 1
         out = {k: v / max(1, count) for k, v in sums.items()}
         out["mean_hand_reward"] = float(rew[done].mean()) if done.any() else 0.0
+        out["ent_by"] = ent_by
+        out["style"] = style
         return out
+
+    @torch.no_grad()
+    def style_metrics(self, policy, obs: torch.Tensor, mask: torch.Tensor, data) -> tuple[dict, dict]:
+        """
+        Entropía por tipo de decisión (con la red de esta iteración) y cómo juega:
+        - cartas: solo puede jugar carta (o irse); turno: puede cantar truco o envido en su turno;
+          resp_truco / resp_envido: le cantaron y tiene que responder.
+        - truco: de las veces que pudo cantar truco en su turno, cuántas cantó; farol: de esos cantos,
+          cuántos sin un 3 o algo mejor en la mano; envido: cuántas veces lo cantó pudiendo;
+          quiere_truco / sube_truco / quiere_envido: respuestas.
+        """
+        n = len(data.act)
+        ent = torch.empty(n, device=obs.device)
+        for s in range(0, n, 32768):
+            logits = masked_logits(policy(obs[s: s + 32768]), mask[s: s + 32768])
+            logp = torch.log_softmax(logits, -1)
+            ent[s: s + 32768] = -(logp.exp() * logp.masked_fill(mask[s: s + 32768] == 0, 0)).sum(-1)
+        m = data.mask.astype(bool)
+        act = data.act
+        resp_truco = m[:, 4]
+        resp_envido = m[:, 9]
+        turno = ~resp_truco & ~resp_envido & (m[:, 3] | m[:, 6])
+        cartas = ~resp_truco & ~resp_envido & ~turno
+        ent_np = ent.cpu().numpy()
+        ent_by = {name: round(float(ent_np[sel].mean()), 3) for name, sel in
+                  (("cartas", cartas), ("turno", turno), ("resp_truco", resp_truco), ("resp_envido", resp_envido)) if sel.any()}
+
+        def rate(sel: np.ndarray, hit: np.ndarray) -> float | None:
+            return round(float(hit[sel].mean()), 3) if sel.any() else None
+
+        # La carta más fuerte que le queda: tramo "slot0" (rango en one-hot de 14) de la observación.
+        offset = 0
+        for part in self.layout["layout"]:
+            if part["name"] == "slot0":
+                break
+            offset += part["size"]
+        best_rank = data.obs[:, offset + 1: offset + 15].argmax(1)
+        can_truco = ~resp_truco & ~resp_envido & m[:, 3]
+        called = can_truco & (act == 3)
+        style = {
+            "truco": rate(can_truco, act == 3),
+            "farol": rate(called, best_rank < 9),
+            "envido": rate(~resp_truco & ~resp_envido & m[:, 6], (act >= 6) & (act <= 8)),
+            "quiere_truco": rate(resp_truco, act == 4),
+            "sube_truco": rate(resp_truco, act == 3),
+            "quiere_envido": rate(resp_envido, act == 9),
+        }
+        return ent_by, style
 
     def update_best(self, state: dict, it: int, result: dict, policy: PolicyNet) -> None:
         keep = self.cfg["checkpoint"]["keepBest"]
@@ -559,6 +622,53 @@ def cmd_status(args) -> None:
         print(f"mejor red: {json.loads((d / 'policies' / 'best.json').read_text()).get('tag')}")
 
 
+def cmd_exploit(args) -> None:
+    """
+    Prueba de explotabilidad (training/PLAN.md, fase 3): se entrena una red nueva cuyo ÚNICO rival es
+    la red objetivo congelada. Si aprende a ganarle por mucho, la objetivo es predecible/explotable.
+    Corre aparte (otra carpeta en runs/) y no toca la corrida original.
+    """
+    parent = TRAINING / "runs" / args.run
+    if not (parent / "bc.pt").exists():
+        raise SystemExit(f"la corrida {args.run} todavía no terminó la imitación")
+    source = parent / "policies" / args.target
+    if not source.with_suffix(".json").exists():
+        raise SystemExit(f"no existe la red {source}.json")
+    tag = json.loads(source.with_suffix(".json").read_text()).get("tag", args.target).replace("/", "-")
+    name = f"{args.run}-br-{tag}"
+    d = TRAINING / "runs" / name
+    d.mkdir(parents=True, exist_ok=True)
+    target = d / "target"
+    if not target.with_suffix(".json").exists():
+        # Copia congelada: aunque "best" cambie en la corrida original, se ataca siempre a la misma.
+        for ext in (".json", ".bin"):
+            shutil.copy2(source.with_suffix(ext), target.with_suffix(ext))
+        for f in ("wtable.json", "bc.pt"):
+            shutil.copy2(parent / f, d / f)
+        for phase in ("wtable", "bcdata", "bc"):
+            atomic_write_bytes(d / f"{phase}.done", json.dumps({"from": args.run}).encode())
+    base = json.loads((parent / "config.json").read_text())
+    config = merge(base, {
+        "ppo": {
+            "iterations": args.iters,
+            "klBc": 0.0,
+            "klBcFinal": 0.0,
+            "snapshotEvery": 10**9,
+            "fixedOpponents": [{"kind": "mlp", "path": str(target), "weight": 1, "name": "objetivo"}],
+        },
+        "eval": {"every": 10, "pairs": args.pairs, "opponent": f"mlp:{target}"},
+    })
+    run = Run(name, config, args.workers)
+    log(f"explotabilidad: entreno una red solo para ganarle a {tag} ({args.iters} iteraciones, {run.workers} actores)")
+    run.phase_ppo()
+    evals = [json.loads(line) for line in (d / "log.jsonl").read_text().splitlines() if '"kind": "eval"' in line]
+    if evals:
+        best = max(evals, key=lambda r: r["winrate"])
+        log(f"resultado: la mejor respuesta le gana a {tag} el {100 * best['winrate']:.1f}% "
+            f"(IC90 {100 * best['ci90'][0]:.1f}–{100 * best['ci90'][1]:.1f}). "
+            "Cerca de 50–55%: sólida. Arriba de ~65%: tiene un agujero explotable.")
+
+
 def cmd_eval(args) -> None:
     d = TRAINING / "runs" / args.run
     config = json.loads((d / "config.json").read_text())
@@ -577,6 +687,12 @@ def main() -> None:
     t.add_argument("--smoke", action="store_true", help="corrida mínima para probar que todo anda")
     s = sub.add_parser("status")
     s.add_argument("--run", required=True)
+    x = sub.add_parser("exploit", help="prueba de explotabilidad contra una red guardada")
+    x.add_argument("--run", required=True)
+    x.add_argument("--target", default="best", help="red de runs/<run>/policies (best, iter_000040, ...)")
+    x.add_argument("--iters", type=int, default=150)
+    x.add_argument("--pairs", type=int, default=500)
+    x.add_argument("--workers", type=int, default=6)
     e = sub.add_parser("eval")
     e.add_argument("--run", required=True)
     e.add_argument("--policy")
@@ -585,7 +701,7 @@ def main() -> None:
     e.add_argument("--workers", type=int)
     args = parser.parse_args()
     torch.set_num_threads(max(1, (os.cpu_count() or 4) // 4))
-    {"train": cmd_train, "status": cmd_status, "eval": cmd_eval}[args.cmd](args)
+    {"train": cmd_train, "status": cmd_status, "eval": cmd_eval, "exploit": cmd_exploit}[args.cmd](args)
 
 
 if __name__ == "__main__":

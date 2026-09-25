@@ -1,11 +1,30 @@
 {
-  "_comment": "Corrida principal en la MacBook Pro M5 Max (18 núcleos, GPU de 40, 128 GB). Siempre sin flor. Lo que no está acá sale de DEFAULTS en learner/run.py.",
+  "_comment": "Corrida principal en la MacBook Pro M5 Max (18 núcleos, GPU de 40, 128 GB). Siempre sin flor. Lo que no está acá sale de DEFAULTS en learner/run.py. PPO corta a las 1500 iteraciones (~9 h); para seguir, subir 'iterations' y relanzar.",
   "players": 2,
   "seed": 1,
   "workers": 16,
-  "wtable": { "matches": 8000 },
-  "bc": { "matches": 100000, "epochs": 8, "batch": 8192, "evalPairs": 2000 },
-  "ppo": { "matchesPerIter": 4096, "minibatch": 16384 },
-  "eval": { "every": 10, "pairs": 1000, "opponent": "hard" },
-  "checkpoint": { "keepLast": 5, "keepBest": 3, "backupDir": null }
+  "wtable": {
+    "matches": 8000
+  },
+  "bc": {
+    "matches": 100000,
+    "epochs": 8,
+    "batch": 8192,
+    "evalPairs": 2000
+  },
+  "ppo": {
+    "matchesPerIter": 4096,
+    "minibatch": 16384,
+    "iterations": 1500
+  },
+  "eval": {
+    "every": 10,
+    "pairs": 1000,
+    "opponent": "hard"
+  },
+  "checkpoint": {
+    "keepLast": 5,
+    "keepBest": 3,
+    "backupDir": null
+  }
 }
