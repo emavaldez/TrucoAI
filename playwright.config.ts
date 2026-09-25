@@ -10,6 +10,8 @@ export default defineConfig({
   testDir: 'e2e',
   retries: 0,
   workers: 3,
+  // Cada partida es independiente: se reparten entre los workers aunque estén en el mismo archivo.
+  fullyParallel: true,
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
     baseURL: 'http://127.0.0.1:4173',

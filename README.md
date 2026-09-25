@@ -3,8 +3,18 @@
 Truco argentino para jugar en el navegador contra la máquina (1v1, 2v2 y 3v3 con pica-pica).
 Vite + TypeScript, sin frameworks ni dependencias de runtime. Deploy automático de `main` en Vercel.
 
-> Estado: en migración. El motor viejo vive en `src/core/` y se reemplaza por el motor puro de `src/engine/`
-> (ver `docs/planning/architecture.md`, ADR-1). Las historias en curso están en `docs/stories/`.
+> Estado: **v2.0** (2026-09-25). Motor puro `src/engine/` con reglas del GDD (truco, envido, flor configurable,
+> pica-pica), IA en tres dificultades y la mesa "v2". El motor viejo se retiró. Auditoría y cierre:
+> `docs/planning/qa-2026-09-25.md`.
+
+## Cómo se juega
+
+Elegí 2, 4 o 6 jugadores, la dificultad de los rivales (tus compañeros juegan siempre en normal) y si querés flor o
+pica-pica (solo con 6). En tu turno tocás una carta para jugarla o un botón para cantar; cuando te cantan, respondés en
+el panel de papel. Atajos: `1`/`2`/`3` juegan tus cartas, `Q` quiero, `N` no quiero, `R` sube el truco, `Enter` pasa
+a la mano siguiente y `Escape` pausa. En el celular se juega en vertical.
+
+URL para probar o reproducir: `?seed=7&players=4&difficulty=hard&flor=1&autostart=1` (y `&fast=1` sin esperas).
 
 ## Requisitos
 
@@ -36,8 +46,9 @@ npm run preview  # sirve dist/
 | `npm test` | Vitest en modo run (unit + escenarios). |
 | `npm run test:watch` | Vitest en modo watch. |
 | `npm run test:coverage` | Vitest con cobertura v8 (reportes en `coverage/`). |
-| `npm run sim` | Simulación masiva con invariantes (historia 1-6). |
-| `npm run arena` | Enfrentamiento de políticas de IA (historia 2-1). |
+| `npm run sim` | Simulación masiva con invariantes (`-- --games 1000 --players 4 --flor`). |
+| `npm run arena` | Enfrentamiento de IA con IC de Wilson (`-- --a hard --b normal --players 4 --games 300`). |
+| `npm run test:partidas` / `npm run e2e` | Playwright: partidas completas 2/4/6 en el navegador, layout + axe, flujos. |
 
 Verificación completa antes de commitear (lo mismo que corre el CI):
 
@@ -51,13 +62,13 @@ npm run typecheck && npm run lint && npm run test:coverage && npm run build
 index.html            entrada de Vite
 public/               estáticos servidos tal cual (favicon)
 src/
-  engine/             motor puro: estado, acciones legales, reglas (código nuevo)
-  ai/                 políticas de IA: reciben sólo Observation
-  app/                controller: orquesta engine + UI, sin DOM
-  ui/                 render y eventos (vistas, testids)
-  core/               LEGACY: motor viejo (se borra en la historia 3-5)
-  __tests__/          tests del código legacy
+  engine/             motor puro: estado, acciones legales, reglas
+  ai/                 políticas de IA: reciben sólo Observation (fácil / normal / difícil) + arena
+  app/                GameController (driver de IA, pausas, nueva partida) y scheduler, sin DOM
+  ui/                 mesa, menú, resumen y fin de partida: render desde el estado y las acciones legales
+  sim/                simulador con invariantes
   main.ts             bootstrap del navegador
+e2e/                  Playwright
 docs/
   project-context.md  reglas duras para agentes (leer antes de tocar código)
   planning/           GDD, arquitectura y estrategia de testing
@@ -70,13 +81,13 @@ estado recibido, y toda acción pasa por `getLegalActions` / `applyAction`. Deta
 
 ## Testing y CI
 
-Vitest para unit, escenarios y simulación; Playwright para E2E (desde la historia 4-1). Cobertura con
+Vitest para unit, escenarios y simulación; Playwright para E2E. Cobertura con
 `@vitest/coverage-v8` y umbrales por carpeta (`vitest.config.ts`). Qué testear, invariantes y testids:
 `docs/planning/test-strategy.md`.
 
 Cada push y cada PR corren en GitHub Actions (`.github/workflows/ci.yml`, Node 20):
 `npm ci` → `npm run typecheck` → `npm run lint` → `npm run test:coverage` → `npm run build`,
-y `coverage/` queda como artifact. El CI no deploya: Vercel está conectado a `main` por su integración de GitHub,
+y `coverage/` queda como artifact; después, el job `partidas` corre toda la suite de Playwright. El CI no deploya: Vercel está conectado a `main` por su integración de GitHub,
 y `main` sólo recibe merges con CI en verde y auditoría aprobada.
 
 ## Flujo de trabajo (BMAD + `wf`)
