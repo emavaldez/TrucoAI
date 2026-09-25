@@ -8,7 +8,7 @@ import { renderCard } from './cardView.js';
 import { escapeHtml } from './escape.js';
 import type { EventLog, PointsEntry } from './eventLog.js';
 import type { LayoutMode } from './layout.js';
-import { TRUCO_LABELS, cardName, ordinal, playerName, teamName } from './text.js';
+import { cardName, ordinal, playerName, teamName } from './text.js';
 
 const DIFFICULTY_TEXT: Record<Difficulty, { name: string; desc: string }> = {
   easy: { name: 'Fácil', desc: 'Juega las cartas obvias, pero muchas veces decide al azar. Nunca farolea.' },
@@ -41,7 +41,7 @@ export function renderMenu(settings: MatchSettings, mode: LayoutMode): string {
     `<p class="menu-tagline">Truco argentino contra la computadora. A 30 puntos, en malas y buenas.</p></div>` +
     `<fieldset class="menu-group"><legend>Jugadores</legend><div class="opt-grid">${players}</div></fieldset>` +
     `<fieldset class="menu-group"><legend>Dificultad</legend><div class="opt-grid">${levels}</div>` +
-    `<p class="menu-hint">${escapeHtml(DIFFICULTY_TEXT[settings.difficulty].desc)} Tus compañeros juegan siempre en normal.</p></fieldset>` +
+    `<p class="menu-hint">${escapeHtml(DIFFICULTY_TEXT[settings.difficulty].desc)}${settings.playerCount > 2 ? ' Tus compañeros juegan siempre en normal.' : ''}</p></fieldset>` +
     `<fieldset class="menu-group"><legend>Reglas</legend>` +
     `<label class="toggle"><span>Jugar con flor</span><input type="checkbox" data-ui="flor" data-testid="menu-flor"${settings.flor ? ' checked' : ''}></label>` +
     `<label class="toggle${picaDisabled ? ' toggle--off' : ''}"><span>Pica-pica <em>· solo con 6</em></span><input type="checkbox" data-ui="picapica" data-testid="menu-picapica"${settings.picaPica ? ' checked' : ''}${picaDisabled ? ' disabled' : ''}></label>` +
@@ -60,19 +60,8 @@ export function renderMenu(settings: MatchSettings, mode: LayoutMode): string {
 
 // ---------- resumen de mano ----------
 
-const POINTS_LABEL: Record<PointsEntry['reason'], string> = {
-  ENVIDO: 'Envido',
-  FLOR: 'Flor',
-  TRUCO: 'Truco',
-  MANO: 'Mano',
-  NO_QUIERO: 'Truco no querido',
-  MAZO: 'Irse al mazo',
-};
-
 function pointsLabel(entry: PointsEntry): string {
-  let label = POINTS_LABEL[entry.reason];
-  if (entry.reason === 'MANO') label = entry.points > 1 ? `${TRUCO_LABELS[(entry.points - 1) as 1 | 2 | 3]} querido` : 'Mano ganada';
-  return entry.submano === null ? label : `Submano ${entry.submano + 1} · ${label.toLowerCase()}`;
+  return entry.submano === null ? entry.label : `Submano ${entry.submano + 1}: ${entry.label}`;
 }
 
 function teamClass(team: TeamId): string {
@@ -115,11 +104,18 @@ export function renderHandSummary(state: MatchState, log: EventLog, autoAck: boo
     tricksHtml =
       `<div class="submano-list">` +
       state.hand.picaPica.results
-        .map(
-          (result, i) =>
-            `<div class="submano-row"><span>Submano ${i + 1}: ${escapeHtml(playerName(state, result.pair[0]))} contra ${escapeHtml(playerName(state, result.pair[1]))}</span>` +
-            `<span class="gain gain--${teamClass(result.winnerTeam)}">${teamName(result.winnerTeam)} +${result.points}</span></div>`,
-        )
+        .map((result, i) => {
+          const gained: [number, number] = [0, 0];
+          for (const entry of log.lastHandPoints) if (entry.submano === i) gained[entry.team] += entry.points;
+          const chips = ([0, 1] as const)
+            .filter((team) => gained[team] > 0)
+            .map((team) => `<span class="gain gain--${teamClass(team)}">${teamName(team)} +${gained[team]}</span>`)
+            .join('');
+          return (
+            `<div class="submano-row"><span>Submano ${i + 1}: ${escapeHtml(playerName(state, result.pair[0]))} contra ${escapeHtml(playerName(state, result.pair[1]))}` +
+            ` · ganó ${teamName(result.winnerTeam)}</span><span class="submano-gains">${chips}</span></div>`
+          );
+        })
         .join('') +
       `</div>`;
   } else {
@@ -145,7 +141,7 @@ export function renderHandSummary(state: MatchState, log: EventLog, autoAck: boo
     `<div class="sum-lines">${lines}${reasonLine}<div class="sum-sep"></div>` +
     `<div class="sum-line sum-line--total"><span>Marcador</span><span><span class="pts pts--nos">Nosotros ${state.scores[0]}</span> · <span class="pts pts--ellos">Ellos ${state.scores[1]}</span></span></div></div>` +
     `<div class="sum-foot"><label class="check"><input type="checkbox" data-ui="autoack" data-testid="summary-autoack"${autoAck ? ' checked' : ''}>Pasar solo a la próxima mano</label>` +
-    `<button type="button" class="paper-btn paper-btn--go" data-ui="next" data-testid="next-hand">Siguiente mano <span class="kbd">Enter</span></button></div>` +
+    `<button type="button" class="paper-btn paper-btn--go" data-ui="next" data-testid="next-hand" data-autofocus>Siguiente mano <span class="kbd">Enter</span></button></div>` +
     `</div></div>`
   );
 }
@@ -158,29 +154,30 @@ function mazoText(state: MatchState, record: HandRecord): string {
 
 // ---------- fin de partida ----------
 
+const ENVIDO_NAMES: Record<string, string> = { ENVIDO: 'envido', REAL_ENVIDO: 'real envido', FALTA_ENVIDO: 'falta envido' };
+const TRUCO_NAMES: Record<string, string> = { TRUCO: 'truco', RETRUCO: 'retruco', VALE4: 'vale cuatro' };
+
 function historyWhat(state: MatchState, record: HandRecord): string {
   const parts: string[] = [];
-  const envido = record.cantos.filter((c) => c.kind === 'ENVIDO' || c.kind === 'REAL_ENVIDO' || c.kind === 'FALTA_ENVIDO');
+  const envido = record.cantos.filter((c) => c.kind in ENVIDO_NAMES);
   if (envido.length > 0) {
     const last = envido[envido.length - 1];
-    parts.push(last.answer === 'NO_QUIERO' ? 'envido no querido' : last.answer === 'QUIERO' ? 'envido querido' : 'envido');
+    const chain = envido.map((c) => ENVIDO_NAMES[c.kind]).join(' + ');
+    parts.push(last.answer === 'NO_QUIERO' ? `${chain} no querido` : last.answer === 'QUIERO' ? `${chain} querido` : chain);
   }
   if (record.cantos.some((c) => c.kind === 'FLOR')) parts.push('flor');
-  const trucos = record.cantos.filter((c) => c.kind === 'TRUCO' || c.kind === 'RETRUCO' || c.kind === 'VALE4');
-  if (trucos.length > 0) {
-    const last = trucos[trucos.length - 1];
-    const name = last.kind === 'TRUCO' ? 'truco' : last.kind === 'RETRUCO' ? 'retruco' : 'vale cuatro';
-    parts.push(last.answer === 'NO_QUIERO' ? `${name} no querido` : last.answer === 'QUIERO' ? `${name} querido` : name);
-  }
-  const winners = record.winnerTeam === 0 ? 'Ganamos' : 'Ganaron ellos';
+  const trucos = record.cantos.filter((c) => c.kind in TRUCO_NAMES);
+  const lastTruco = trucos[trucos.length - 1];
   let how: string;
   switch (record.reason) {
     case 'MAZO':
       how = mazoText(state, record).replace(/\.$/, '');
       break;
-    case 'NO_QUIERO':
-      how = `${winners} (no quisieron)`;
+    case 'NO_QUIERO': {
+      const name = lastTruco ? TRUCO_NAMES[lastTruco.kind] : 'truco';
+      how = record.winnerTeam === 0 ? `Ganamos: no quisieron el ${name}` : `Ganaron ellos: no quisimos el ${name}`;
       break;
+    }
     case 'PICA_PICA':
       how = `Pica-pica: ${record.winnerTeam === 0 ? 'sumamos más' : 'sumaron más ellos'}`;
       break;
@@ -188,10 +185,13 @@ function historyWhat(state: MatchState, record: HandRecord): string {
       how = 'La partida terminó en esta mano';
       break;
     default:
-      how = winners;
+      how = record.winnerTeam === 0 ? 'Ganamos' : 'Ganaron ellos';
   }
-  const text = [how, ...parts].join(' · ');
-  return text.charAt(0).toUpperCase() + text.slice(1);
+  if (lastTruco && record.reason !== 'NO_QUIERO' && record.reason !== 'PICA_PICA') {
+    const name = TRUCO_NAMES[lastTruco.kind];
+    parts.push(lastTruco.answer === 'QUIERO' ? `${name} querido` : lastTruco.answer === 'NO_QUIERO' ? `${name} no querido` : name);
+  }
+  return [how, ...parts].join(' · ');
 }
 
 export function renderGameOver(state: MatchState, settings: MatchSettings, log: EventLog, mode: LayoutMode): string {
@@ -227,7 +227,7 @@ export function renderGameOver(state: MatchState, settings: MatchSettings, log: 
     `<div class="metric"><div class="metric-label">Trucos queridos</div><div class="metric-value">${log.stats.trucosQueridos}</div></div></div>` +
     `<div class="history" data-testid="history"><div class="hist-row hist-row--head"><span><span class="hist-long">Mano</span><span class="hist-short">#</span></span><span>Qué pasó</span><span>Puntos</span><span><span class="hist-long">Marcador</span><span class="hist-short">Total</span></span></div>` +
     `<div class="hist-body">${rows}</div></div>` +
-    `<div class="go-actions"><button type="button" class="paper-btn paper-btn--go" data-ui="again" data-testid="play-again">Jugar otra</button>` +
+    `<div class="go-actions"><button type="button" class="paper-btn paper-btn--go" data-ui="again" data-testid="play-again" data-autofocus>Jugar otra</button>` +
     `<button type="button" class="paper-btn paper-btn--outline" data-ui="menu" data-testid="change-rules">Cambiar reglas</button></div>` +
     `</div></div>`
   );
@@ -240,7 +240,7 @@ export function renderPause(autoAck: boolean): string {
     `<div class="scrim" data-testid="pause"><div class="paper-panel paper-panel--pause" data-anim="pause" role="dialog" aria-modal="true" aria-labelledby="pause-title">` +
     `<div id="pause-title" class="sum-title">Partida en pausa</div>` +
     `<label class="check"><input type="checkbox" data-ui="autoack"${autoAck ? ' checked' : ''}>Pasar solo a la próxima mano</label>` +
-    `<div class="pause-actions"><button type="button" class="paper-btn paper-btn--go" data-ui="resume" data-testid="resume">Seguir jugando</button>` +
+    `<div class="pause-actions"><button type="button" class="paper-btn paper-btn--go" data-ui="resume" data-testid="resume" data-autofocus>Seguir jugando</button>` +
     `<button type="button" class="paper-btn paper-btn--outline" data-ui="restart" data-testid="restart">Nueva partida</button>` +
     `<button type="button" class="paper-btn paper-btn--outline" data-ui="menu" data-testid="to-menu">Volver al menú</button></div>` +
     `</div></div>`

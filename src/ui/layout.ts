@@ -42,7 +42,7 @@ export interface SeatSlot {
   /** carta jugada por ese asiento en el paño (esquina superior izquierda) */
   card: Point;
   /** ancla del globo de canto */
-  bubble: Point & { side: 'left' | 'right' | 'below' | 'above' };
+  bubble: Point & { side: 'left' | 'right' | 'below' | 'above' | 'over' };
 }
 
 export interface TableGeometry {
@@ -65,12 +65,16 @@ export interface TableGeometry {
   actions: Point & { w: number };
 }
 
-const DESKTOP_SEAT: Size = { w: 200, h: 72 };
+const DESKTOP_SEAT: Size = { w: 220, h: 72 };
 const PORTRAIT_SEAT: Size = { w: 118, h: 54 };
 
-/** Asiento lateral en escritorio: el globo sale hacia el centro. */
-function desktopSlot(seatX: number, seatY: number, cardX: number, cardY: number): SeatSlot {
-  const rightSide = seatX > 720;
+/**
+ * Asiento en escritorio (las coordenadas del diseño son para asientos de 200 px de ancho;
+ * el asiento mide 220, así que se corre 10 px para mantener el centro). El globo sale hacia el centro.
+ */
+function desktopSlot(designX: number, seatY: number, cardX: number, cardY: number): SeatSlot {
+  const rightSide = designX > 720;
+  const seatX = Math.min(Math.max(designX - 10, 8), 1440 - DESKTOP_SEAT.w - 8);
   return {
     seat: { x: seatX, y: seatY },
     card: { x: cardX, y: cardY },
@@ -80,11 +84,12 @@ function desktopSlot(seatX: number, seatY: number, cardX: number, cardY: number)
   };
 }
 
+/** En el celular el globo se dibuja encima del propio asiento (así nunca tapa a otro ni se sale). */
 function portraitSlot(seatX: number, seatY: number, cardX: number, cardY: number): SeatSlot {
   return {
     seat: { x: seatX, y: seatY },
     card: { x: cardX, y: cardY },
-    bubble: { x: seatX + PORTRAIT_SEAT.w / 2, y: seatY + PORTRAIT_SEAT.h + 4, side: 'below' },
+    bubble: { x: seatX + PORTRAIT_SEAT.w / 2, y: seatY + PORTRAIT_SEAT.h / 2, side: 'over' },
   };
 }
 

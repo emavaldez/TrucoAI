@@ -191,6 +191,21 @@ describe('pica-pica — submanos (AC 3, 4)', () => {
   });
 });
 
+describe('pica-pica — ganador de la mano', () => {
+  it('cuenta también el envido: gana la mano el equipo que más sumó en total', () => {
+    let { state } = picaPicaHand([10, 10]);
+    // Submano 0: falta envido querido (vale 7) que gana el equipo 1 (p3 tiene 29), y la submano la gana p0.
+    state = callEnvido(state, 'p0', 'F').state;
+    state = answerEnvido(state, 'p3', 'QUIERO').state;
+    state = playTricks(state, { p0: '1-espada', p3: '4-copa' }, { p0: '1-basto', p3: '5-copa' }).state;
+    state = playTricks(state, { p1: '3-espada', p4: '2-espada' }, { p1: '3-basto', p4: '2-basto' }).state;
+    const last = playTricks(state, { p2: '7-oro', p5: '1-copa' }, { p2: '12-copa', p5: '6-oro' });
+    // Submanos: equipo 0 ganó 2 (1+1), equipo 1 ganó 1 (1) + 7 de envido = 8 → la mano es del equipo 1.
+    expect(last.state.scores).toEqual([12, 18]);
+    expect(last.events).toContainEqual({ type: 'HAND_OVER', winnerTeam: 1, points: 10, reason: 'PICA_PICA' });
+  });
+});
+
 describe('pica-pica — fin de partida y alternancia (AC 1, 5)', () => {
   it('si un equipo llega a 30 en una submano, la partida termina en el acto', () => {
     let { state } = picaPicaHand();

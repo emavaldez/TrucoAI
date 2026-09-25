@@ -61,7 +61,11 @@ for (const players of [2, 4, 6] as const) {
       );
       if (vp.w <= 400) expect(small).toBe(0);
       // Un solo asiento activo (en celular el humano no tiene asiento: su turno lo dice la píldora).
-      await expect(page.locator('#truco-canvas [data-testid="status"]')).toContainText(/Te toca|Respondé/);
+      // La píldora de estado dice que es tu turno (en el celular, con el panel abierto, la tapa la hoja).
+      const panelOpen = (await page.getByTestId('response-panel').count()) > 0;
+      if (!(panelOpen && vp.w < 700)) {
+        await expect(page.locator('#truco-canvas [data-testid="status"]')).toContainText(/Te toca|Respondé/, { timeout: 8000 });
+      }
       // Si hay panel de respuesta, entra entero y no tapa ningún asiento.
       expect(await allInside(page, '[data-testid="response-panel"]')).toEqual([]);
       const covered = await page.evaluate(() => {

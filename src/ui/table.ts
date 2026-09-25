@@ -67,7 +67,7 @@ export function cantoChip(state: MatchState): string | null {
   if (envido.status === 'calling' && envido.chain.length > 0) {
     return `${ENVIDO_LABELS[envido.chain[envido.chain.length - 1].call]} cantado`;
   }
-  if (truco.level > 0) return `${TRUCO_LABELS[truco.level as 1 | 2 | 3]} querido · vale ${truco.level + 1}`;
+  if (truco.level > 0) return `${TRUCO_LABELS[truco.level as 1 | 2 | 3]} · vale ${truco.level + 1}`;
   return null;
 }
 
@@ -79,6 +79,13 @@ export function faltaValue(state: MatchState, winnerTeam: TeamId): number {
   return state.rules.targetScore - leader;
 }
 
+/** Cómo se muestra la falta envido: el partido (en las malas), N puntos, o 7 en pica-pica. */
+export function faltaText(state: MatchState): string {
+  if (state.hand.picaPica !== null) return '7';
+  const leader = Math.max(state.scores[0], state.scores[1]);
+  return leader < 15 ? 'el partido' : String(state.rules.targetScore - leader);
+}
+
 function chainPoints(calls: readonly string[], falta: number): number {
   if (calls.includes('F')) return falta;
   return calls.reduce((total, call) => total + (call === 'R' ? 3 : 2), 0);
@@ -86,6 +93,11 @@ function chainPoints(calls: readonly string[], falta: number): number {
 
 function humanInPlay(state: MatchState): boolean {
   return state.hand.participants.includes(HUMAN);
+}
+
+/** El humano solo puede cantar su flor (la interfaz la canta sola). */
+function onlyFlor(legal: readonly Action[]): boolean {
+  return legal.length === 1 && legal[0].type === 'DECLARE_FLOR';
 }
 
 function isAwaiting(state: MatchState): boolean {
@@ -97,7 +109,7 @@ function isAwaiting(state: MatchState): boolean {
 function renderTopBar(ctx: GameViewContext): string {
   const { state } = ctx;
   const chip = cantoChip(state);
-  const pica = state.hand.picaPica ? `Pica-pica ${state.hand.picaPica.submano + 1}/3` : null;
+  const pica = state.hand.picaPica && ctx.mode === 'portrait' ? `Pica ${state.hand.picaPica.submano + 1}/3` : null;
   const chips =
     `<span class="chip" data-testid="hand-number">Mano ${state.hand.number}</span>` +
     (pica ? `<span class="chip chip--gold">${pica}</span>` : '') +
@@ -139,7 +151,8 @@ function renderSeats(ctx: GameViewContext, geo: TableGeometry): string {
           team: seat.team,
           isHuman: seat.isHuman,
           cards: seat.isHuman ? 0 : state.hand.hands[seat.id].length,
-          mano: state.hand.manoId === seat.id,
+          // En pica-pica, "Mano" es el mano de la submano en juego (decide los empates de envido).
+          mano: (state.hand.picaPica ? state.hand.participants[0] : state.hand.manoId) === seat.id,
           dealer: state.hand.dealerId === seat.id,
           active,
           activeLabel: seatLabel(state, seat.id),
@@ -180,10 +193,17 @@ function renderPlayedCards(ctx: GameViewContext, geo: TableGeometry): string {
 
 function renderCenter(ctx: GameViewContext, geo: TableGeometry): string {
   const { state, log } = ctx;
-  if (log.notice && log.notice.until > ctx.now) {
+  const pica = state.hand.picaPica;
+  const submanoPill =
+    pica && ctx.mode === 'desktop'
+      ? `<div class="submano-pill" style="left:${geo.center.x}px;top:${geo.center.y + 52}px;width:${geo.center.w}px" data-testid="submano">` +
+        `Pica-pica · submano ${pica.submano + 1} de 3: ${escapeHtml(playerName(state, state.hand.participants[0]))} contra ${escapeHtml(playerName(state, state.hand.participants[1]))}</div>`
+      : '';
+  if (log.notice && log.notice.until > ctx.now && ctx.mode === 'desktop') {
     return (
-      `<div class="center-notice${ctx.mode === 'portrait' ? ' center-notice--compact' : ''}" data-anim="notice-${escapeHtml(log.notice.text)}" style="left:${geo.center.x - (ctx.mode === 'portrait' ? 50 : 70)}px;top:${geo.center.y - 6}px;width:${geo.center.w + (ctx.mode === 'portrait' ? 100 : 140)}px" data-testid="center-notice">` +
-      `${escapeHtml(log.notice.text)}</div>`
+      `<div class="center-notice" data-anim="notice-${escapeHtml(log.notice.text)}" style="left:${geo.center.x - 70}px;top:${geo.center.y - 6}px;width:${geo.center.w + 140}px" data-testid="center-notice">` +
+      `${escapeHtml(log.notice.text)}</div>` +
+      submanoPill
     );
   }
   const results = state.hand.tricks.map((trick) => trick.winnerTeam);
@@ -198,29 +218,34 @@ function renderCenter(ctx: GameViewContext, geo: TableGeometry): string {
     })
     .join('<span class="sep"></span>');
   const text = ctx.mode === 'portrait' ? `<span class="trick-label">${Math.min(current + 1, 3)}ª baza</span>` : '';
-  return `<div class="center-pill" style="left:${geo.center.x}px;top:${geo.center.y}px;width:${geo.center.w}px" data-testid="tricks">${dots}${text}</div>`;
+  return `<div class="center-pill" style="left:${geo.center.x}px;top:${geo.center.y}px;width:${geo.center.w}px" data-testid="tricks">${dots}${text}</div>${submanoPill}`;
 }
 
 function statusText(ctx: GameViewContext): { text: string; mine: boolean } {
   const { state, actor } = ctx;
   if (state.phase === 'MATCH_OVER') return { text: 'Partida terminada', mine: false };
   if (state.phase === 'HAND_OVER') return { text: 'Mano terminada', mine: false };
-  const watching = state.hand.picaPica !== null && !humanInPlay(state);
-  const prefix = watching
-    ? `Submano ${(state.hand.picaPica?.submano ?? 0) + 1}: ${playerName(state, state.hand.participants[0])} contra ${playerName(state, state.hand.participants[1])} · `
-    : '';
   if (actor === HUMAN) {
+    if (onlyFlor(ctx.legal)) return { text: 'Tenés flor: se canta sola', mine: true };
     if (isAwaiting(state)) return { text: 'Respondé para seguir jugando', mine: true };
     const canSing = ctx.legal.some((action) => action.type !== 'PLAY_CARD');
-    if (ctx.legal.length === 1 && ctx.legal[0].type === 'DECLARE_FLOR') return { text: 'Tenés flor: se canta sola', mine: true };
     return { text: canSing ? 'Te toca · cantá o jugá una carta' : 'Te toca · jugá una carta', mine: true };
   }
-  if (actor === null) return { text: prefix || 'Esperando', mine: false };
+  if (actor === null) return { text: 'Esperando', mine: false };
   const verb = isAwaiting(state) ? 'va a responder' : 'está pensando';
-  return { text: `${prefix}${playerName(state, actor)} ${verb}…`, mine: false };
+  const watching = state.hand.picaPica !== null && !humanInPlay(state) ? 'Mirás: ' : '';
+  return { text: `${watching}${playerName(state, actor)} ${verb}…`, mine: false };
 }
 
 function renderStatus(ctx: GameViewContext, geo: TableGeometry): string {
+  // En el celular los avisos (envido, submano) van en el lugar de la píldora de estado: no tapan el paño.
+  const notice = ctx.mode === 'portrait' && ctx.log.notice && ctx.log.notice.until > ctx.now ? ctx.log.notice.text : null;
+  if (notice) {
+    return (
+      `<div class="center-notice center-notice--compact" data-anim="notice-${escapeHtml(notice)}" style="left:${geo.status.x - 30}px;top:${geo.status.y - 4}px;width:${geo.status.w + 60}px" data-testid="center-notice">` +
+      `${escapeHtml(notice)}</div>`
+    );
+  }
   const status = statusText(ctx);
   return (
     `<div class="status-pill${status.mine ? ' status-pill--mine' : ''}" style="left:${geo.status.x}px;top:${geo.status.y}px;width:${geo.status.w}px" data-testid="status">` +
@@ -253,7 +278,9 @@ function renderFeed(ctx: GameViewContext): string {
 // ---------- mano propia ----------
 
 function envidoHint(state: MatchState): string {
-  return `tenés ${envidoScore(state.hand.dealt[HUMAN])} de envido`;
+  const dealt = state.hand.dealt[HUMAN];
+  if (state.rules.flor && dealt.every((card) => card.suit === dealt[0].suit)) return 'tenés flor';
+  return `tenés ${envidoScore(dealt)} de envido`;
 }
 
 function renderHand(ctx: GameViewContext, geo: TableGeometry, panelOpen: boolean): string {
@@ -320,7 +347,7 @@ function renderActions(ctx: GameViewContext, geo: TableGeometry): string {
   const envidoLabels: Record<string, [string, string]> = {
     'envido:E': ['Envido', '2 pts'],
     'envido:R': ['Real envido', '3 pts'],
-    'envido:F': ['Falta envido', `vale ${faltaValue(state, 0)}`],
+    'envido:F': ['Falta envido', `vale ${faltaText(state)}`],
   };
   const envidoButtons = envidos
     .map((action) => {
@@ -356,12 +383,14 @@ function renderActions(ctx: GameViewContext, geo: TableGeometry): string {
 
 // ---------- panel de respuesta ----------
 
-function responseContent(ctx: GameViewContext): { title: string; subtitle: string; main: string; extra: string } | null {
+function responseContent(
+  ctx: GameViewContext,
+): { title: string; subtitle: string; main: string; extra: string; keys: string } | null {
   const { state, legal } = ctx;
   const find = (predicate: (a: Action) => boolean): Action | undefined => legal.find(predicate);
   const btn = (action: Action | undefined, label: string, kind: string): string =>
     action
-      ? `<button type="button" class="resp resp--${kind}" data-act="${encodeAction(action)}" data-testid="resp-${encodeAction(action).replace(':', '-')}">${escapeHtml(label)}</button>`
+      ? `<button type="button" class="resp resp--${kind}" data-act="${encodeAction(action)}" data-testid="resp-${encodeAction(action).replace(':', '-')}"${kind === 'go' ? ' data-autofocus' : ''}>${escapeHtml(label)}</button>`
       : '';
 
   if (state.phase === 'AWAITING_TRUCO' && state.hand.truco.pending) {
@@ -389,6 +418,7 @@ function responseContent(ctx: GameViewContext): { title: string; subtitle: strin
       subtitle: `${playerName(state, pending.callerId)} cantó ${label}. Si querés, la mano vale ${pending.level + 1}. Si no, ${teamName(pending.callerTeam)} suman ${pending.level}.`,
       main,
       extra: envidoBlock + mazoBlock,
+      keys: raise ? 'Q · N · R' : 'Q · N',
     };
   }
 
@@ -396,7 +426,7 @@ function responseContent(ctx: GameViewContext): { title: string; subtitle: strin
     const chain = state.hand.envido.chain;
     const last = chain[chain.length - 1];
     const calls = chain.map((c) => c.call);
-    const falta = faltaValue(state, 0);
+    const falta = faltaValue(state, last.team === 0 ? 1 : 0);
     const querido = chainPoints(calls, falta);
     const noQuerido = calls.length <= 1 ? 1 : chainPoints(calls.slice(0, -1), falta);
     const quiero = find((a) => a.type === 'ANSWER_ENVIDO' && a.answer === 'QUIERO');
@@ -409,11 +439,19 @@ function responseContent(ctx: GameViewContext): { title: string; subtitle: strin
         btn(raises[2], `Falta envido`, 'outline') +
         `</div></div>`
       : '';
+    const who = playerName(state, last.by);
+    const sang = last.by === HUMAN ? 'cantaste' : 'cantó';
+    const history =
+      chain.length > 1
+        ? ` (${chain.map((c) => `${ENVIDO_LABELS[c.call]} de ${c.by === HUMAN ? 'vos' : playerName(state, c.by)}`).join(', ')})`
+        : '';
+    const faltaShown = faltaText(state);
     return {
       title: `¿Querés ${last.call === 'F' ? 'la' : 'el'} ${ENVIDO_LABELS[last.call].toLowerCase()}?`,
-      subtitle: `${playerName(state, last.by)} cantó ${chain.map((c) => ENVIDO_LABELS[c.call]).join(' + ')}. Querido vale ${calls.includes('F') ? `la falta (${falta})` : querido}; si no querés, ${teamName(last.team)} suman ${noQuerido}. Vos ${envidoHint(state)}.`,
+      subtitle: `${who} ${sang} ${ENVIDO_LABELS[last.call]}${history}. Querido vale ${calls.includes('F') ? (faltaShown === 'el partido' ? 'el partido' : faltaShown) : querido}; si no querés, ${teamName(last.team)} suman ${noQuerido}. Vos ${envidoHint(state)}.`,
       main: btn(quiero, 'Quiero', 'go') + btn(noQuiero, 'No quiero', 'no'),
       extra: raiseBlock,
+      keys: 'Q · N',
     };
   }
 
@@ -426,6 +464,7 @@ function responseContent(ctx: GameViewContext): { title: string; subtitle: strin
         subtitle: `${teamName(pending.callerTeam)} cantaron flor y vos también tenés. Achicarte les da 4; con contraflor se comparan (6 al mejor).`,
         main: btn(pick('ACHICO'), 'Con flor me achico', 'no') + btn(pick('CONTRAFLOR'), 'Contraflor', 'go') + btn(pick('CONTRAFLOR_AL_RESTO'), 'Contraflor al resto', 'raise'),
         extra: '',
+        keys: '',
       };
     }
     const alResto = pending.kind === 'CONTRAFLOR_AL_RESTO';
@@ -436,14 +475,15 @@ function responseContent(ctx: GameViewContext): { title: string; subtitle: strin
         : `Querida, la mejor flor suma 6. Si no querés, ${teamName(pending.callerTeam)} suman 4.`,
       main: btn(pick('QUIERO'), 'Quiero', 'go') + btn(pick('CONTRAFLOR_AL_RESTO'), 'Contraflor al resto', 'raise') + btn(pick('NO_QUIERO'), 'No quiero', 'no'),
       extra: '',
+      keys: 'Q · N',
     };
   }
   return null;
 }
 
 /** ¿Hay que mostrar el panel de respuesta? (el humano responde un canto) */
-export function responsePanelOpen(ctx: Pick<GameViewContext, 'state' | 'actor'>): boolean {
-  return ctx.actor === HUMAN && isAwaiting(ctx.state);
+export function responsePanelOpen(ctx: Pick<GameViewContext, 'state' | 'actor' | 'legal'>): boolean {
+  return ctx.actor === HUMAN && isAwaiting(ctx.state) && !onlyFlor(ctx.legal);
 }
 
 /** En el celular la hoja de respuesta tapa la mano: se muestran las cartas en chico adentro. */
@@ -457,11 +497,11 @@ function renderResponsePanel(ctx: GameViewContext): string {
   const content = responseContent(ctx);
   if (!content) return '';
   const cls = ctx.mode === 'portrait' ? 'response response--sheet' : 'response response--dock';
+  const keys = ctx.mode === 'desktop' && content.keys ? `<div class="resp-keys">${content.keys}</div>` : '';
   return (
     `<div class="${cls}" role="dialog" aria-modal="false" aria-labelledby="resp-title" data-testid="response-panel" data-anim="resp-${ctx.state.phase}-${ctx.state.hand.number}-${ctx.state.hand.cantos.length}">` +
-    `<div class="resp-head"><div id="resp-title" class="resp-title">${escapeHtml(content.title)}</div>` +
-    (ctx.mode === 'desktop' ? '<div class="resp-keys">Q · N · R</div>' : '') +
-    `</div>${miniHand(ctx)}<div class="resp-sub">${escapeHtml(content.subtitle)}</div>` +
+    `<div class="resp-head"><div id="resp-title" class="resp-title">${escapeHtml(content.title)}</div>${keys}${miniHand(ctx)}</div>` +
+    `<div class="resp-sub">${escapeHtml(content.subtitle)}</div>` +
     `<div class="resp-main">${content.main}</div>${content.extra}</div>`
   );
 }
@@ -478,7 +518,7 @@ export function renderGame(ctx: GameViewContext): string {
     renderSeats(ctx, geo) +
     renderPlayedCards(ctx, geo) +
     renderCenter(ctx, geo) +
-    renderStatus(ctx, geo) +
+    (panel && ctx.mode === 'portrait' ? '' : renderStatus(ctx, geo)) +
     (panel && ctx.mode === 'portrait' ? '' : renderHand(ctx, geo, panel)) +
     (panel ? renderResponsePanel(ctx) : renderActions(ctx, geo)) +
     renderFeed(ctx) +

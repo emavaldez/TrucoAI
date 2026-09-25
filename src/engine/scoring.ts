@@ -171,9 +171,10 @@ function endSubmano(state: MatchState, events: GameEvent[], opts: Required<EndHa
     return;
   }
 
-  // Fin de la mano: gana el equipo que sumó más en las submanos (empate → equipo del mano).
-  const byTeam: [number, number] = [0, 0];
-  for (const result of pica.results) byTeam[result.winnerTeam] += result.points;
+  // Fin de la mano: gana el equipo que sumó más en toda la mano — submanos, envidos y flores —
+  // (empate → equipo del mano). Lo sumado es la diferencia del marcador desde el comienzo de la mano.
+  const before = pica.startScores;
+  const byTeam: [number, number] = [state.scores[0] - before[0], state.scores[1] - before[1]];
   const manoTeam = teamOf(state, hand.manoId);
   const winnerTeam: TeamId = byTeam[0] === byTeam[1] ? manoTeam : byTeam[0] > byTeam[1] ? 0 : 1;
   const total = byTeam[0] + byTeam[1];

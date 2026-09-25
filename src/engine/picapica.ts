@@ -84,7 +84,12 @@ export function startSubmano(state: MatchState, events: GameEvent[], k: 0 | 1 | 
 
 /** Convierte la mano recién repartida en una mano de pica-pica y arranca la submano 0. */
 export function setupPicaPicaHand(state: MatchState, events: GameEvent[]): void {
-  state.hand.picaPica = { submano: 0, pairs: picaPicaPairs(state, state.hand.manoId), results: [] };
+  state.hand.picaPica = {
+    submano: 0,
+    pairs: picaPicaPairs(state, state.hand.manoId),
+    results: [],
+    startScores: [state.scores[0], state.scores[1]],
+  };
   startSubmano(state, events, 0);
 }
 

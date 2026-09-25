@@ -276,10 +276,10 @@ button.card--playable:hover, button.card--playable:focus-visible { transform: tr
   border-bottom: 1px solid var(--surface-border);
   z-index: 5;
 }
-.brand { display: flex; align-items: baseline; gap: 6px; width: 300px; }
+.brand { display: flex; align-items: baseline; gap: 6px; width: 330px; }
 .brand-truco { font-family: var(--font-display); font-style: italic; font-weight: 600; font-size: 30px; color: var(--paper); }
 .brand-ai { font-size: 12px; font-weight: 700; letter-spacing: 0.18em; color: var(--gold); }
-.topbar-right { display: flex; align-items: center; justify-content: flex-end; gap: 10px; width: 300px; }
+.topbar-right { display: flex; align-items: center; justify-content: flex-end; gap: 8px; width: 330px; }
 .chips { display: flex; gap: 6px; flex-wrap: nowrap; min-width: 0; }
 .chip {
   padding: 7px 12px; border-radius: 999px; white-space: nowrap;
@@ -330,7 +330,7 @@ button.card--playable:hover, button.card--playable:focus-visible { transform: tr
 
 /* Asiento (Seat.dc.html) */
 .seat {
-  width: 200px; height: 72px; padding: 10px 10px 10px 12px;
+  width: 220px; height: 72px; padding: 10px 10px 10px 12px;
   display: flex; align-items: center; gap: 8px;
   background: var(--surface-2); border: 1.5px solid var(--line-soft); border-radius: 16px;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
@@ -422,6 +422,11 @@ button.card--playable:hover, button.card--playable:focus-visible { transform: tr
   z-index: 4;
 }
 .center-notice--compact { font-size: 14px; min-height: 40px; padding: 8px 12px; border-radius: 14px; }
+.submano-pill {
+  height: 30px; padding: 0 12px; display: flex; align-items: center; justify-content: center;
+  border-radius: 999px; background: var(--gold-tint); border: 1px solid var(--gold-line);
+  font-size: 12.5px; font-weight: 700; color: var(--gold); white-space: nowrap; overflow: hidden; z-index: 1;
+}
 
 .status-pill {
   height: 34px; display: flex; align-items: center; justify-content: center; gap: 8px;
@@ -446,6 +451,7 @@ button.card--playable:hover, button.card--playable:focus-visible { transform: tr
 .bubble--above { transform: translateY(-100%); border-radius: 14px 14px 14px 4px; }
 .bubble--below { transform: translateX(-50%); border-radius: 4px 14px 14px 14px; }
 .bubble--compact { font-size: 13px; padding: 5px 9px; }
+.bubble--over { transform: translate(-50%, -50%); border-radius: 12px; max-width: 124px; white-space: normal; text-align: center; line-height: 1.1; }
 .bubble--compact.bubble--above { transform: translate(-50%, -100%); }
 .bubble.anim-in, .center-notice.anim-in, .response.anim-in, .paper-panel.anim-in { animation: pop-in 0.16s ease-out; }
 @keyframes pop-in {
@@ -511,14 +517,20 @@ button.card--playable:hover, button.card--playable:focus-visible { transform: tr
   z-index: 7;
 }
 .response--dock { left: 860px; top: auto !important; bottom: 18px; width: 548px; }
-.response--sheet { left: 0; top: auto !important; bottom: 0; width: 390px; max-height: 330px; border-radius: 22px 22px 0 0; padding: 16px 14px 18px; gap: 10px; overflow-y: auto; }
+.response--sheet { left: 0; top: auto !important; bottom: 0; width: 390px; max-height: 336px; border-radius: 22px 22px 0 0; padding: 14px 14px 12px; gap: 8px; overflow-y: auto; }
 .resp-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .resp-title { font-family: var(--font-display); font-size: 22px; font-weight: 700; }
 .resp-keys { font-size: 12px; color: var(--paper-ink-mid); white-space: nowrap; }
-.resp-hand { display: flex; gap: 6px; }
+.resp-hand { display: flex; gap: 5px; flex-shrink: 0; }
 .response--sheet .resp-head { align-items: center; }
+.response--sheet .resp-title { font-size: 19px; line-height: 1.15; }
+.response--sheet .resp-main .resp { min-height: 48px; font-size: 15px; }
+.response--sheet .resp-section { padding-top: 8px; gap: 6px; }
+.response--sheet .resp--outline { min-height: 44px; font-size: 14px; }
+.response--sheet .resp--link { min-height: 36px; }
+.response--sheet .resp-foot { margin-top: -6px; }
 .resp-sub { font-size: 14px; line-height: 1.35; color: var(--paper-ink-mid); }
-.response--sheet .resp-sub { font-size: 13px; }
+.response--sheet .resp-sub { font-size: 12.5px; line-height: 1.3; }
 .resp-main { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 10px; }
 .resp {
   min-height: 52px; border-radius: 12px; padding: 0 10px;

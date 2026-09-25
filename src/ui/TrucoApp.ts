@@ -24,6 +24,7 @@ import { renderGame, responsePanelOpen } from './table.js';
 
 const SETTINGS_KEY = 'trucoai.settings.v2';
 const INPUT_LOCK_MS = 350;
+const NEXT_HAND_LOCK_MS = 250;
 
 const DEFAULT_SETTINGS: MatchSettings = { playerCount: 2, difficulty: 'normal', flor: false, picaPica: true };
 
@@ -52,6 +53,11 @@ function saveSettings(settings: MatchSettings): void {
 }
 
 type Screen = 'menu' | 'game';
+
+/** ¿Hay un resumen o fin de partida en pantalla? (ahí Escape no pausa) */
+function isBlockingModal(snap: ControllerSnapshot): boolean {
+  return snap.state.phase === 'HAND_OVER' || snap.state.phase === 'MATCH_OVER';
+}
 
 export class TrucoApp {
   private readonly root: HTMLElement;
@@ -205,7 +211,7 @@ export class TrucoApp {
     } else if (this.paused) {
       html += renderPause(this.autoAck);
       dialog = 'pause';
-    } else if (responsePanelOpen({ state, actor })) {
+    } else if (responsePanelOpen({ state, actor, legal })) {
       dialog = `resp-${state.version}`;
     }
     this.canvas.innerHTML = html;
@@ -239,9 +245,9 @@ export class TrucoApp {
     // Al abrirse un panel nuevo, el foco va a su primer botón (AC 7 de la 0-4, accesibilidad §7).
     if (dialog && dialog !== this.lastDialogKey) {
       this.lastDialogKey = dialog;
-      const target = this.canvas.querySelector<HTMLElement>(
-        '[role="dialog"] button, [role="dialog"] input',
-      );
+      const dialogs = this.canvas.querySelectorAll<HTMLElement>('[role="dialog"]');
+      const top = dialogs[dialogs.length - 1];
+      const target = top?.querySelector<HTMLElement>('[data-autofocus]') ?? top?.querySelector<HTMLElement>('button, input');
       target?.focus({ preventScroll: true });
       return;
     }
@@ -292,16 +298,20 @@ export class TrucoApp {
         this.startMatch();
         break;
       case 'next':
-        if (Date.now() < this.lockedUntil) return;
-        this.lockedUntil = Date.now() + INPUT_LOCK_MS;
+        if (this.paused || Date.now() < this.lockedUntil) return;
+        // Un doble toque en "Siguiente mano" no juega una carta de la mano nueva.
+        this.lockedUntil = Date.now() + NEXT_HAND_LOCK_MS;
         this.controller?.continueAfterHand();
         break;
-      case 'pause':
-        if (this.snapshot?.state.phase === 'MATCH_OVER') return;
+      case 'pause': {
+        // El resumen de mano y el fin de partida ya son pausas: ahí no se abre el menú.
+        const phase = this.snapshot?.state.phase;
+        if (phase === 'MATCH_OVER' || phase === 'HAND_OVER') return;
         this.paused = true;
         this.controller?.stop();
         this.render();
         break;
+      }
       case 'resume':
         this.paused = false;
         this.controller?.resume();
@@ -346,6 +356,7 @@ export class TrucoApp {
       return;
     }
     if (event.key === 'Escape') {
+      if (isBlockingModal(snap)) return;
       this.onUi(this.paused ? 'resume' : 'pause');
       return;
     }

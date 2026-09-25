@@ -178,7 +178,13 @@ export interface HandState {
   truco: TrucoState;
   envido: EnvidoState;
   flor: FlorState;
-  picaPica: null | { submano: 0 | 1 | 2; pairs: [PlayerId, PlayerId][]; results: SubmanoResult[] };
+  picaPica: null | {
+    submano: 0 | 1 | 2;
+    pairs: [PlayerId, PlayerId][];
+    results: SubmanoResult[];
+    /** marcador al empezar la mano (para saber qué equipo sumó más en toda la mano) */
+    startScores: [number, number];
+  };
   /** log de cantos de la mano (va al HandRecord) */
   cantos: CantoRecord[];
   result: null | { winnerTeam: TeamId; points: number; reason: 'BAZAS' | 'NO_QUIERO' | 'MAZO' | 'PICA_PICA' };

@@ -119,7 +119,7 @@ describe('faltaValue (AC 6) [ENG-11]', () => {
 
   it('[ENG-11] en pica-pica la falta vale 7 fijo', () => {
     const conPicaPica = withScores(state, [20, 10]);
-    conPicaPica.hand.picaPica = { submano: 0, pairs: [['p1', 'p0']], results: [] };
+    conPicaPica.hand.picaPica = { submano: 0, pairs: [['p1', 'p0']], results: [], startScores: [0, 0] };
 
     expect(faltaValue(conPicaPica, 0)).toBe(7);
     expect(faltaValue(conPicaPica, 1)).toBe(7);

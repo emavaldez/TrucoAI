@@ -26,6 +26,8 @@ export interface PointsEntry {
   points: number;
   reason: 'ENVIDO' | 'FLOR' | 'TRUCO' | 'MANO' | 'NO_QUIERO' | 'MAZO';
   submano: number | null;
+  /** qué se cobró, en palabras ("Envido + Real envido querido", "Retruco no querido") */
+  label: string;
 }
 
 export interface MatchStats {
@@ -219,6 +221,7 @@ export class EventLog {
             points: event.points,
             reason: event.reason,
             submano: this.currentSubmano,
+            label: pointsLabel(event.reason, event.points, state),
           });
           break;
         case 'HAND_OVER':
@@ -229,5 +232,38 @@ export class EventLog {
           break;
       }
     }
+  }
+}
+
+const TRUCO_KIND_LABEL: Record<string, string> = { TRUCO: 'Truco', RETRUCO: 'Retruco', VALE4: 'Vale cuatro' };
+
+/** Rótulo de unos puntos a partir de lo que dice el estado de la mano (ya público). */
+function pointsLabel(reason: PointsEntry['reason'], points: number, state: MatchState): string {
+  const hand = state.hand;
+  switch (reason) {
+    case 'ENVIDO': {
+      const chain = hand.envido.chain.map((c) => ENVIDO_LABELS[c.call]);
+      const text = chain.length > 0 ? chain.map((label, i) => (i === 0 ? label : label.toLowerCase())).join(' + ') : 'Envido';
+      return hand.envido.result && !hand.envido.result.accepted ? `${text} no querido` : `${text} querido`;
+    }
+    case 'FLOR': {
+      const last = [...hand.cantos].reverse().find((c) => c.kind === 'FLOR' || c.kind === 'CONTRAFLOR' || c.kind === 'CONTRAFLOR_AL_RESTO');
+      if (last?.kind === 'CONTRAFLOR') return last.answer === 'NO_QUIERO' ? 'Contraflor no querida' : 'Contraflor';
+      if (last?.kind === 'CONTRAFLOR_AL_RESTO') return last.answer === 'NO_QUIERO' ? 'Contraflor al resto no querida' : 'Contraflor al resto';
+      if (last?.answer === 'ACHICO') return 'Flor (con flor me achico)';
+      return 'Flor';
+    }
+    case 'MANO':
+      return points > 1 ? `${TRUCO_LABELS[(points - 1) as 1 | 2 | 3]} querido` : 'Mano ganada';
+    case 'NO_QUIERO': {
+      const last = [...hand.cantos].reverse().find((c) => c.kind in TRUCO_KIND_LABEL);
+      return `${last ? TRUCO_KIND_LABEL[last.kind] : 'Truco'} no querido`;
+    }
+    case 'MAZO': {
+      const last = [...hand.cantos].reverse().find((c) => c.kind === 'MAZO');
+      return last ? `${playerName(state, last.by)} ${verb(last.by, 'te fuiste', 'se fue')} al mazo` : 'Irse al mazo';
+    }
+    default:
+      return 'Truco';
   }
 }
