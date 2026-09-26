@@ -389,7 +389,10 @@ class Run:
             log(f"iter {it}: {len(data.act)} decisiones en {dt:.1f}s ({record['steps_per_s']}/s) · "
                 f"pérdida pol {metrics['loss_pi']:.3f} val {metrics['loss_v']:.4f} ent {metrics['entropy']:.3f} "
                 f"kl_bc {metrics['kl_bc']:.3f} · vs {record['vs']}")
-            log(f"   entropía por decisión {metrics['ent_by']} · estilo {metrics['style']}")
+            envido_keys = [k for k in metrics["style"] if k.startswith("acepta_") or k.endswith(("_exito", "_pts", "_dW"))]
+            style_main = {k: v for k, v in metrics["style"].items() if k not in envido_keys}
+            log(f"   entropía por decisión {metrics['ent_by']} · estilo {style_main}")
+            log(f"   envido {({k: metrics['style'][k] for k in envido_keys})}")
 
             if it % c["snapshotEvery"] == 0:
                 snap = pol_dir / f"iter_{it:06d}"
@@ -516,7 +519,12 @@ class Run:
           cuántos sin un 3 o algo mejor en la mano; envido: cuántas veces lo cantó pudiendo;
           farol_envido: de sus cantos de envido (abrir o subir), cuántos con 23 o menos de tantos;
           envido_<24 … envido_31+: cuánto abre el envido pudiendo, según sus tantos;
-          quiere_truco / sube_truco / quiere_envido: respuestas.
+          quiere_truco / sube_truco / quiere_envido: respuestas;
+          acepta_envido_<24 … acepta_envido_31+: cuando le cantan envido, cuánto lo acepta (quiere o
+          sube) según sus tantos (¿caza faroles o solo quiere con mucho?).
+        - farol_envido_exito / _pts / _dW (y tantos_envido_*): de las manos en que cantó envido con
+          23 o menos (farol) o con 24 o más (tantos), en cuántas el rival no quiso, los puntos de envido
+          netos por mano y el cambio medio en la probabilidad de ganar la partida en esa mano (ΔW).
         """
         n = len(data.act)
         ent = torch.empty(n, device=obs.device)
@@ -571,6 +579,19 @@ class Run:
             "sube_truco": rate(resp_truco, act == 3),
             "quiere_envido": rate(resp_envido, act == 9),
         }
+        acepta = (act == 9) | envido_call
+        for label, lo, hi in (("<24", 0, 23), ("24-27", 24, 27), ("28-30", 28, 30), ("31+", 31, 99)):
+            style[f"acepta_envido_{label}"] = rate(resp_envido & (tantos >= lo) & (tantos <= hi), acepta)
+        # Resultado del envido cantado (lo junta el actor, que ve la mano entera).
+        for group, prefix in (("farol", "farol_envido"), ("tantos", "tantos_envido")):
+            g = {"hands": 0, "noQuiso": 0, "points": 0.0, "dW": 0.0}
+            for meta in getattr(data, "metas", None) or []:
+                for k in g:
+                    g[k] += meta.get("envido", {}).get(group, {}).get(k, 0)
+            if g["hands"]:
+                style[f"{prefix}_exito"] = round(g["noQuiso"] / g["hands"], 3)
+                style[f"{prefix}_pts"] = round(g["points"] / g["hands"], 2)
+                style[f"{prefix}_dW"] = round(g["dW"] / g["hands"], 4)
         return ent_by, style
 
     def update_best(self, state: dict, it: int, result: dict, policy: PolicyNet) -> None:

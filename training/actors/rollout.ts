@@ -8,7 +8,7 @@
 //   wtable — la heurística juega contra sí misma y se arma la tabla de probabilidad de ganar.
 
 import { readFile, rename, writeFile } from 'node:fs/promises';
-import { applyAction, createMatch, createRng, getActor, getObservation, startNextHand } from '../../src/engine/index.js';
+import { applyAction, createMatch, createRng, envidoScore, getActor, getObservation, startNextHand } from '../../src/engine/index.js';
 import type { MatchState, PlayerId, Rng, TeamId } from '../../src/engine/index.js';
 import { createPolicy, type Difficulty, type Policy } from '../../src/ai/policy.js';
 import { legalMask, actionIndex, N_ACTIONS } from '../env/actions.js';
@@ -167,6 +167,26 @@ function teamOf(state: MatchState, playerId: PlayerId): TeamId {
   return state.seats.find((seat) => seat.id === playerId)?.team ?? 0;
 }
 
+/**
+ * Cómo le va al envido de la red que aprende, por mano en la que lo cantó (abrir o subir):
+ * `farol` con 23 o menos de tantos, `tantos` con 24 o más. Por grupo: manos, en cuántas el rival
+ * no quiso, puntos de envido netos (ganados − perdidos) y cambio en la probabilidad de ganar la
+ * partida en esa mano (ΔW, lo mismo que la recompensa).
+ */
+interface EnvidoGroup {
+  hands: number;
+  noQuiso: number;
+  points: number;
+  dW: number;
+}
+type EnvidoStats = Record<'farol' | 'tantos', EnvidoGroup>;
+
+function emptyEnvidoStats(): EnvidoStats {
+  return { farol: { hands: 0, noQuiso: 0, points: 0, dW: 0 }, tantos: { hands: 0, noQuiso: 0, points: 0, dW: 0 } };
+}
+
+const ENVIDO_CALLS = new Set([6, 7, 8]); // ENVIDO, REAL_ENVIDO, FALTA_ENVIDO
+
 interface MatchResult {
   winnerTeam: TeamId;
   scores: [number, number];
@@ -186,10 +206,13 @@ function playMatch(
   record: (seat: number) => boolean,
   recorder: Recorder | null,
   wtable: WTable | null,
+  envido: EnvidoStats | null = null,
 ): MatchResult {
   let state = createMatch({ rules: { playerCount: job.players, flor: false, picaPica: false }, seed: matchSeed });
   const seatIndex = new Map(state.seats.map((seat) => [seat.id, seat.seat]));
   const pending = new Map<PlayerId, Step[]>();
+  /** jugadores (de los que se guardan) que cantaron envido en esta mano, y en qué grupo */
+  const sang = new Map<PlayerId, keyof EnvidoStats>();
   const hands: MatchResult['hands'] = [];
   let handStart: [number, number] = [state.scores[0], state.scores[1]];
   let manoTeam = teamOf(state, state.hand.manoId);
@@ -199,23 +222,34 @@ function playMatch(
   const closeHand = (): void => {
     const after: [number, number] = [state.scores[0], state.scores[1]];
     hands.push({ manoTeam, delta: [after[0] - handStart[0], after[1] - handStart[1]] });
+    const rewardFor = (team: TeamId): number => {
+      if (!wtable) return 0;
+      const before = wValue(wtable, handStart[team], handStart[1 - team], manoTeam === team ? 1 : 0);
+      const end =
+        state.phase === 'MATCH_OVER'
+          ? state.winnerTeam === team
+            ? 1
+            : 0
+          : wValue(wtable, after[team], after[1 - team], manoTeam === team ? 0 : 1);
+      return end - before;
+    };
     for (const [playerId, steps] of pending) {
       if (steps.length === 0 || !recorder) continue;
-      const team = teamOf(state, playerId);
-      let reward = 0;
-      if (wtable) {
-        const before = wValue(wtable, handStart[team], handStart[1 - team], manoTeam === team ? 1 : 0);
-        const end =
-          state.phase === 'MATCH_OVER'
-            ? state.winnerTeam === team
-              ? 1
-              : 0
-            : wValue(wtable, after[team], after[1 - team], manoTeam === team ? 0 : 1);
-        reward = end - before;
+      recorder.trajectory(steps, rewardFor(teamOf(state, playerId)));
+    }
+    const result = state.hand.envido.result;
+    if (envido && result) {
+      for (const [playerId, group] of sang) {
+        const team = teamOf(state, playerId);
+        const g = envido[group];
+        g.hands += 1;
+        if (!result.accepted && result.winnerTeam === team) g.noQuiso += 1;
+        g.points += result.winnerTeam === team ? result.points : -result.points;
+        g.dW += rewardFor(team);
       }
-      recorder.trajectory(steps, reward);
     }
     pending.clear();
+    sang.clear();
   };
 
   while (state.phase !== 'MATCH_OVER' && guard++ < 20000) {
@@ -236,6 +270,9 @@ function playMatch(
       const { mask, actions } = legalMask(obs);
       const choice = agent.mlp.act(x, mask, rng, agent.greedy);
       action = actions[choice.action] ?? action;
+      if (record(seat) && ENVIDO_CALLS.has(choice.action) && !sang.has(actor)) {
+        sang.set(actor, envidoScore(state.hand.dealt[actor] ?? []) <= 23 ? 'farol' : 'tantos');
+      }
       if (record(seat) && recorder) {
         const steps = pending.get(actor) ?? [];
         steps.push({ obs: x, priv: encodePriv(state, actor), mask, act: choice.action, logp: choice.logp });
@@ -363,6 +400,7 @@ async function main(): Promise<void> {
   const opponents = job.opponents ?? [{ kind: 'self', weight: 1 } as const];
   const recorder = new Recorder(obsDim, true);
   const stats: Record<string, { matches: number; wins: number }> = {};
+  const envido = emptyEnvidoStats();
   let decisions = 0;
   for (let m = 0; m < job.matches; m++) {
     const spec = pickWeighted(opponents, rng);
@@ -371,13 +409,13 @@ async function main(): Promise<void> {
     const learnerTeam = (m % 2) as TeamId;
     const selfPlay = opponent === learner;
     const agents = Array.from({ length: n }, (_, seat) => ((seat % 2) as TeamId) === learnerTeam ? learner : opponent);
-    const result = playMatch(job, job.seed * 100003 + m, agents, rng, (seat) => selfPlay || seat % 2 === learnerTeam, recorder, wtable);
+    const result = playMatch(job, job.seed * 100003 + m, agents, rng, (seat) => selfPlay || seat % 2 === learnerTeam, recorder, wtable, envido);
     decisions += result.decisions;
     const entry = (stats[name] ??= { matches: 0, wins: 0 });
     entry.matches += 1;
     if (result.winnerTeam === learnerTeam) entry.wins += 1;
   }
-  await recorder.write(job.out, { mode: 'ppo', layoutHash: hash, matches: job.matches, decisions, stats, seconds: (Date.now() - started) / 1000 });
+  await recorder.write(job.out, { mode: 'ppo', layoutHash: hash, matches: job.matches, decisions, stats, envido, seconds: (Date.now() - started) / 1000 });
 }
 
 main().catch((error) => {

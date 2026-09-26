@@ -29,6 +29,13 @@ respuesta al truco, respuesta al envido) y el **estilo**: cuánto canta truco pu
 cantos son farol (sin un 3 o algo mejor), cuánto canta envido, el farol de envido (cantos con 23 o menos
 de tantos), cuánto abre el envido según sus tantos y cuánto quiere/sube.
 
+Una tercera línea muestra **el envido**: cuánto acepta (quiere o sube) cuando le cantan, según sus
+tantos (`acepta_envido_<24` … `_31+`: ¿caza faroles o solo quiere con mucho?), y cómo le va cuando
+canta: de las manos en que cantó envido con 23 o menos (`farol_envido_*`) o con 24 o más
+(`tantos_envido_*`), en cuántas el rival no quiso (`_exito`), los puntos de envido netos por mano
+(`_pts`) y el cambio medio en la probabilidad de ganar la partida en esa mano (`_dW`). Si `farol_envido_dW`
+queda en cero o positivo, mentir en el envido le conviene; si es negativo, es un vicio.
+
 **Prueba de explotabilidad** (se puede correr en paralelo, con menos actores):
 
 ```bash
