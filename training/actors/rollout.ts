@@ -8,11 +8,36 @@
 //   wtable — la heurística juega contra sí misma y se arma la tabla de probabilidad de ganar.
 
 import { readFile, rename, writeFile } from 'node:fs/promises';
-import { applyAction, createMatch, createRng, envidoScore, getActor, getObservation, startNextHand } from '../../src/engine/index.js';
+import { applyAction, createMatch, createRng, envidoScore, getActor, getObservation, pieOf, startNextHand } from '../../src/engine/index.js';
 import type { MatchState, PlayerId, Rng, TeamId } from '../../src/engine/index.js';
 import { createPolicy, type Difficulty, type Policy } from '../../src/ai/policy.js';
-import { legalMask, actionIndex, N_ACTIONS } from '../env/actions.js';
-import { encodeObs, encodePriv, layoutHash, obsLayout, PRIV_DIM } from '../env/encode.js';
+import { aiInstructions } from '../../src/ai/signs.js';
+import {
+  EMPTY_TALK,
+  dealTalk,
+  instructionsFor,
+  playedCards,
+  signalsFor,
+  talkAllowed,
+  withInstruction,
+  type TableTalk,
+} from '../../src/ai/tableTalk.js';
+import {
+  CARD_INSTRUCTIONS,
+  FIRST_CARD_INSTRUCTION,
+  FIRST_TRUCO_INSTRUCTION,
+  N_ACTIONS,
+  N_ENGINE_ACTIONS,
+  TRUCO_INSTRUCTIONS,
+  actionIndex,
+  instructionIndex,
+  instructionMask,
+  instructionOf,
+  legalMask,
+  type InstructionDecision,
+} from '../env/actions.js';
+import { encodeObs, encodePriv, layoutHash, obsLayout, PRIV_DIM, talkExtras } from '../env/encode.js';
+import { compliance } from '../env/obey.js';
 import { Mlp, loadMlp } from '../env/mlp.js';
 import { computeWTable, wValue, type HandDistribution, type WTable } from '../env/wtable.js';
 
@@ -36,6 +61,8 @@ interface Job {
   /** eval */
   a?: AgentSpec;
   b?: AgentSpec;
+  /** ppo: premio por cumplir cada indicación del pie (se suma a la recompensa de esa decisión) */
+  obeyBonus?: number;
 }
 
 // ---------- agentes ----------
@@ -111,6 +138,8 @@ interface Step {
   mask: Uint8Array;
   act: number;
   logp: number;
+  /** premio por obedecer al pie en esta decisión (ya multiplicado) */
+  bonus?: number;
 }
 
 class Recorder {
@@ -134,7 +163,7 @@ class Recorder {
       this.act.push([step.act], 1);
       this.logp.push(step.logp);
       const last = i === steps.length - 1;
-      this.rew.push(last ? reward : 0);
+      this.rew.push((last ? reward : 0) + (step.bonus ?? 0));
       this.done.push([last ? 1 : 0], 1);
     });
   }
@@ -187,6 +216,25 @@ function emptyEnvidoStats(): EnvidoStats {
 
 const ENVIDO_CALLS = new Set([6, 7, 8]); // ENVIDO, REAL_ENVIDO, FALTA_ENVIDO
 
+/**
+ * La charla de la mesa del lado que aprende: qué indican sus pies (cuántas veces cada indicación) y
+ * cuánto obedecen sus compañeros (decisiones en que una indicación decía algo, cumplidas, no cumplidas).
+ */
+interface TalkStats {
+  cartas: number[];
+  truco: number[];
+  obey: { decisions: number; ok: number; bad: number };
+}
+
+function emptyTalkStats(): TalkStats {
+  return { cartas: CARD_INSTRUCTIONS.map(() => 0), truco: TRUCO_INSTRUCTIONS.map(() => 0), obey: { decisions: 0, ok: 0, bad: 0 } };
+}
+
+/** ¿Este agente decide las indicaciones del pie con la red? (las redes de 2 jugadores no saben: heurística) */
+function netInstructs(agent: Agent): boolean {
+  return !!agent.mlp && agent.mlp.meta.nActions > N_ENGINE_ACTIONS;
+}
+
 interface MatchResult {
   winnerTeam: TeamId;
   scores: [number, number];
@@ -207,12 +255,70 @@ function playMatch(
   recorder: Recorder | null,
   wtable: WTable | null,
   envido: EnvidoStats | null = null,
+  talkStats: TalkStats | null = null,
 ): MatchResult {
   let state = createMatch({ rules: { playerCount: job.players, flor: false, picaPica: false }, seed: matchSeed });
   const seatIndex = new Map(state.seats.map((seat) => [seat.id, seat.seat]));
   const pending = new Map<PlayerId, Step[]>();
   /** jugadores (de los que se guardan) que cantaron envido en esta mano, y en qué grupo */
   const sang = new Map<PlayerId, keyof EnvidoStats>();
+  const obeyBonus = job.obeyBonus ?? 0;
+  let talk: TableTalk = EMPTY_TALK;
+
+  const pushStep = (playerId: PlayerId, step: Step): void => {
+    const steps = pending.get(playerId) ?? [];
+    steps.push(step);
+    pending.set(playerId, steps);
+  };
+
+  /**
+   * Los pies indican (4 y 6 jugadores): al empezar la mano cartas y truco; después de cada baza, cartas.
+   * Un pie de la red decide (y se guarda como una decisión más de su trayectoria); uno heurístico usa la
+   * regla de siempre, y si es el que se imita, se guarda lo que indicó.
+   */
+  const pieTalk = (startOfHand: boolean): void => {
+    if (!talkAllowed(state)) return;
+    const played = playedCards(state);
+    for (const team of [0, 1] as const) {
+      const pie = pieOf(state, team);
+      const seat = seatIndex.get(pie) as number;
+      const agent = seatAgents[seat];
+      const kinds: InstructionDecision[] = startOfHand && state.hand.truco.level === 0 ? ['cartas', 'truco'] : ['cartas'];
+      if (netInstructs(agent)) {
+        for (const kind of kinds) {
+          const obs = getObservation(state, pie);
+          const x = encodeObs(obs, talkExtras(state, talk, pie));
+          const mask = instructionMask(kind);
+          const choice = (agent.mlp as Mlp).act(x, mask, rng, agent.greedy);
+          const instruction = instructionOf(choice.action);
+          if (instruction) talk = withInstruction(state, talk, { from: pie, kind: instruction });
+          if (record(seat)) {
+            if (recorder) pushStep(pie, { obs: x, priv: encodePriv(state, pie), mask, act: choice.action, logp: choice.logp });
+            if (talkStats) {
+              if (kind === 'cartas') talkStats.cartas[choice.action - FIRST_CARD_INSTRUCTION] += 1;
+              else talkStats.truco[choice.action - FIRST_TRUCO_INSTRUCTION] += 1;
+            }
+          }
+        }
+      } else {
+        const given = aiInstructions(pie, state.hand.hands[pie], signalsFor(state, talk, pie), played, kinds.includes('truco'));
+        if (record(seat) && recorder && agent.policy) {
+          for (const kind of kinds) {
+            const obs = getObservation(state, pie);
+            const act = instructionIndex(kind, given.map((g) => g.kind));
+            pushStep(pie, { obs: encodeObs(obs, talkExtras(state, talk, pie)), priv: null, mask: instructionMask(kind), act, logp: 0 });
+          }
+        }
+        for (const instruction of given) talk = withInstruction(state, talk, instruction);
+      }
+    }
+  };
+
+  const startHand = (): void => {
+    talk = dealTalk(state, () => true);
+    pieTalk(true);
+  };
+  startHand();
   const hands: MatchResult['hands'] = [];
   let handStart: [number, number] = [state.scores[0], state.scores[1]];
   let manoTeam = teamOf(state, state.hand.manoId);
@@ -250,6 +356,7 @@ function playMatch(
     }
     pending.clear();
     sang.clear();
+    talk = EMPTY_TALK;
   };
 
   while (state.phase !== 'MATCH_OVER' && guard++ < 20000) {
@@ -257,6 +364,7 @@ function playMatch(
       state = startNextHand(state).state;
       handStart = [state.scores[0], state.scores[1]];
       manoTeam = teamOf(state, state.hand.manoId);
+      startHand();
       continue;
     }
     const actor = getActor(state) as PlayerId;
@@ -265,33 +373,39 @@ function playMatch(
     const obs = getObservation(state, actor);
     let action = obs.legalActions[0];
     decisions += 1;
+    const extras = talkExtras(state, talk, actor);
     if (agent.mlp) {
-      const x = encodeObs(obs);
+      const x = encodeObs(obs, extras);
       const { mask, actions } = legalMask(obs);
       const choice = agent.mlp.act(x, mask, rng, agent.greedy);
       action = actions[choice.action] ?? action;
       if (record(seat) && ENVIDO_CALLS.has(choice.action) && !sang.has(actor)) {
         sang.set(actor, envidoScore(state.hand.dealt[actor] ?? []) <= 23 ? 'farol' : 'tantos');
       }
-      if (record(seat) && recorder) {
-        const steps = pending.get(actor) ?? [];
-        steps.push({ obs: x, priv: encodePriv(state, actor), mask, act: choice.action, logp: choice.logp });
-        pending.set(actor, steps);
+      if (record(seat)) {
+        // Premio por obedecer al pie (solo los compañeros: el pie no recibe indicaciones).
+        const told = instructionsFor(state, talk, actor);
+        const obeyed = told.length > 0 ? compliance(obs, told, choice.action, mask) : 0;
+        if (talkStats && told.length > 0 && obeyed !== 0) {
+          talkStats.obey.decisions += 1;
+          if (obeyed > 0) talkStats.obey.ok += 1;
+          else talkStats.obey.bad += 1;
+        }
+        if (recorder) pushStep(actor, { obs: x, priv: encodePriv(state, actor), mask, act: choice.action, logp: choice.logp, bonus: obeyBonus * obeyed });
       }
     } else if (agent.policy) {
-      action = agent.policy.decide(obs, rng);
+      action = agent.policy.decide(obs, rng, signalsFor(state, talk, actor), instructionsFor(state, talk, actor));
       if (record(seat) && recorder && obs.legalActions.length > 1) {
         // Imitación: solo decisiones con opciones (con una sola legal no hay nada que aprender).
         const { mask } = legalMask(obs);
-        const steps = pending.get(actor) ?? [];
-        steps.push({ obs: encodeObs(obs), priv: null, mask, act: actionIndex(action, obs), logp: 0 });
-        pending.set(actor, steps);
+        pushStep(actor, { obs: encodeObs(obs, extras), priv: null, mask, act: actionIndex(action, obs), logp: 0 });
       }
     }
     const result = applyAction(state, actor, action);
     if (!result.ok) throw new Error(`acción ilegal ${JSON.stringify(action)}: ${result.error}`);
     state = result.state;
     if (state.phase === 'HAND_OVER' || state.phase === 'MATCH_OVER') closeHand();
+    else if (result.events.some((event) => event.type === 'TRICK_WON')) pieTalk(false);
   }
   if (state.phase !== 'MATCH_OVER') throw new Error(`la partida ${matchSeed} no terminó`);
   return { winnerTeam: state.winnerTeam as TeamId, scores: [state.scores[0], state.scores[1]], hands, decisions };
@@ -401,6 +515,7 @@ async function main(): Promise<void> {
   const recorder = new Recorder(obsDim, true);
   const stats: Record<string, { matches: number; wins: number }> = {};
   const envido = emptyEnvidoStats();
+  const talkStats = emptyTalkStats();
   let decisions = 0;
   for (let m = 0; m < job.matches; m++) {
     const spec = pickWeighted(opponents, rng);
@@ -409,13 +524,13 @@ async function main(): Promise<void> {
     const learnerTeam = (m % 2) as TeamId;
     const selfPlay = opponent === learner;
     const agents = Array.from({ length: n }, (_, seat) => ((seat % 2) as TeamId) === learnerTeam ? learner : opponent);
-    const result = playMatch(job, job.seed * 100003 + m, agents, rng, (seat) => selfPlay || seat % 2 === learnerTeam, recorder, wtable, envido);
+    const result = playMatch(job, job.seed * 100003 + m, agents, rng, (seat) => selfPlay || seat % 2 === learnerTeam, recorder, wtable, envido, talkStats);
     decisions += result.decisions;
     const entry = (stats[name] ??= { matches: 0, wins: 0 });
     entry.matches += 1;
     if (result.winnerTeam === learnerTeam) entry.wins += 1;
   }
-  await recorder.write(job.out, { mode: 'ppo', layoutHash: hash, matches: job.matches, decisions, stats, envido, seconds: (Date.now() - started) / 1000 });
+  await recorder.write(job.out, { mode: 'ppo', layoutHash: hash, players: job.players, matches: job.matches, decisions, stats, envido, talk: talkStats, seconds: (Date.now() - started) / 1000 });
 }
 
 main().catch((error) => {

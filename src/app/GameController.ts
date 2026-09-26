@@ -6,20 +6,22 @@
 // - La IA ve solo `getObservation`; si su política devolviera algo ilegal, se juega la primera
 //   acción legal (nunca se cuelga).
 
-import { applyAction, createMatch, createRng, getActor, getLegalActions, getObservation, pieOf, startNextHand } from '../engine/index.js';
-import type { Action, Card, GameEvent, MatchState, PlayerId, Rng, RuleSet, TeamId } from '../engine/index.js';
+import { applyAction, createMatch, createRng, getActor, getLegalActions, getObservation, startNextHand } from '../engine/index.js';
+import type { Action, GameEvent, MatchState, PlayerId, Rng, RuleSet } from '../engine/index.js';
 import { createPolicy, type Difficulty, type Policy } from '../ai/policy.js';
+import { availableSigns, INSTRUCTIONS, type GivenInstruction, type Instruction, type Signal, type SignKind } from '../ai/signs.js';
 import {
-  aiInstructions,
-  aiSigns,
-  availableSigns,
-  instructionInfo,
-  INSTRUCTIONS,
-  type GivenInstruction,
-  type Instruction,
-  type Signal,
-  type SignKind,
-} from '../ai/signs.js';
+  EMPTY_TALK,
+  dealTalk,
+  instructionsFor,
+  isPieNow,
+  refreshHeuristicInstructions,
+  signalsFor,
+  talkAllowed,
+  teamOfPlayer,
+  withInstruction,
+  type TableTalk,
+} from '../ai/tableTalk.js';
 import type { Scheduler } from './scheduler.js';
 
 export const HUMAN_ID: PlayerId = 'p0';
@@ -118,10 +120,8 @@ export class GameController {
   private autoAck: boolean;
   private readonly humanPolicy?: Policy;
   private matchCount = 0;
-  /** señas hechas en la mano en curso (de los dos equipos: cada pie solo ve las de sus compañeros) */
-  private signals: Signal[] = [];
-  /** indicaciones vigentes de cada pie (una de cartas y una de truco como mucho) */
-  private instructions: GivenInstruction[] = [];
+  /** señas e indicaciones de la mano en curso (src/ai/tableTalk.ts) */
+  private talk: TableTalk = EMPTY_TALK;
 
   constructor(opts: ControllerOptions) {
     this.scheduler = opts.scheduler;
@@ -151,8 +151,8 @@ export class GameController {
       autoAck: this.autoAck,
       signals: this.humanIsPie()
         ? this.signalsFor(HUMAN_ID)
-        : this.signals.filter((signal) => signal.from === HUMAN_ID),
-      instructions: this.instructions.filter((given) => this.teamOf(given.from) === this.teamOf(HUMAN_ID)),
+        : this.talk.signals.filter((signal) => signal.from === HUMAN_ID),
+      instructions: this.talk.instructions.filter((given) => this.teamOf(given.from) === this.teamOf(HUMAN_ID)),
       humanIsPie: this.humanIsPie(),
     };
   }
@@ -164,8 +164,7 @@ export class GameController {
 
   /** ¿Se pueden hacer señas en esta mano? (4 o 6 jugadores y nunca en pica-pica) */
   signalsAllowed(): boolean {
-    const phase = this.state.phase;
-    return this.settings.playerCount >= 4 && this.state.hand.picaPica === null && phase !== 'HAND_OVER' && phase !== 'MATCH_OVER';
+    return talkAllowed(this.state);
   }
 
   /**
@@ -178,7 +177,7 @@ export class GameController {
     const hand = this.state.hand.hands[HUMAN_ID];
     const dealt = this.state.hand.dealt[HUMAN_ID];
     if (!hand || !dealt || hand.length < dealt.length) return [];
-    const sent = new Set(this.signals.filter((signal) => signal.from === HUMAN_ID).map((signal) => signal.kind));
+    const sent = new Set(this.talk.signals.filter((signal) => signal.from === HUMAN_ID).map((signal) => signal.kind));
     return availableSigns(hand, dealt, this.state.rules.flor)
       .map((sign) => sign.kind)
       .filter((kind) => !sent.has(kind));
@@ -238,7 +237,7 @@ export class GameController {
     if (!this.humanSignalOptions().includes(kind)) return false;
     const hand = this.state.hand.hands[HUMAN_ID];
     const option = availableSigns(hand, this.state.hand.dealt[HUMAN_ID], this.state.rules.flor).find((sign) => sign.kind === kind);
-    this.signals = [...this.signals, { from: HUMAN_ID, kind, cardId: option?.cardId ?? null }];
+    this.talk = { ...this.talk, signals: [...this.talk.signals, { from: HUMAN_ID, kind, cardId: option?.cardId ?? null }] };
     // El pie (IA) vuelve a pensar sus indicaciones con la seña nueva.
     this.refreshAiInstructions(this.state.hand.tricks.length === 0);
     // Sin eventos del motor: la interfaz solo vuelve a dibujar.
@@ -302,12 +301,11 @@ export class GameController {
   }
 
   private teamOf(playerId: PlayerId): number {
-    return this.state.seats.find((seat) => seat.id === playerId)?.team ?? -1;
+    return teamOfPlayer(this.state, playerId);
   }
 
   private isPieNow(playerId: PlayerId): boolean {
-    const team = this.teamOf(playerId);
-    return (team === 0 || team === 1) && pieOf(this.state, team as TeamId) === playerId;
+    return isPieNow(this.state, playerId);
   }
 
   /**
@@ -315,54 +313,27 @@ export class GameController {
    * de la IA da sus primeras indicaciones.
    */
   private dealSignals(): void {
-    this.signals = [];
-    this.instructions = [];
-    if (!this.signalsAllowed()) return;
-    const hand = this.state.hand;
-    for (const seat of this.state.seats) {
-      if (seat.isHuman || this.isPieNow(seat.id)) continue;
-      this.signals.push(...aiSigns(seat.id, hand.hands[seat.id], hand.dealt[seat.id], this.state.rules.flor));
-    }
+    this.talk = dealTalk(this.state, (playerId) => playerId !== HUMAN_ID);
     this.refreshAiInstructions(true);
   }
 
   /** Las señas que ve `playerId`: si es el pie, las de sus compañeros; si no, ninguna. */
   private signalsFor(playerId: PlayerId): Signal[] {
-    if (!this.signalsAllowed() || !this.isPieNow(playerId)) return [];
-    const team = this.teamOf(playerId);
-    return this.signals.filter((signal) => signal.from !== playerId && this.teamOf(signal.from) === team);
+    return signalsFor(this.state, this.talk, playerId);
   }
 
   /** Lo que el pie le indicó a `playerId` (nada si él mismo es el pie). */
   private instructionsFor(playerId: PlayerId): Instruction[] {
-    if (!this.signalsAllowed() || this.isPieNow(playerId)) return [];
-    const team = this.teamOf(playerId);
-    return this.instructions.filter((given) => this.teamOf(given.from) === team).map((given) => given.kind);
+    return instructionsFor(this.state, this.talk, playerId);
   }
 
   private setInstruction(given: GivenInstruction): void {
-    const group = instructionInfo(given.kind).group;
-    const team = this.teamOf(given.from);
-    this.instructions = [
-      ...this.instructions.filter((old) => !(this.teamOf(old.from) === team && instructionInfo(old.kind).group === group)),
-      given,
-    ];
+    this.talk = withInstruction(this.state, this.talk, given);
   }
 
   /** Los pies de la IA indican según su mano y las señas recibidas (al empezar la mano y en cada baza). */
   private refreshAiInstructions(withTruco: boolean): void {
-    if (!this.signalsAllowed()) return;
-    const hand = this.state.hand;
-    const played = new Map<PlayerId, Card[]>();
-    for (const trick of [...hand.tricks, hand.currentTrick]) {
-      for (const play of trick.plays) played.set(play.playerId, [...(played.get(play.playerId) ?? []), play.card]);
-    }
-    for (const team of [0, 1] as const) {
-      const pie = pieOf(this.state, team);
-      if (pie === HUMAN_ID) continue;
-      const given = aiInstructions(pie, hand.hands[pie], this.signalsFor(pie), played, withTruco && hand.truco.level === 0);
-      for (const instruction of given) this.setInstruction(instruction);
-    }
+    this.talk = refreshHeuristicInstructions(this.state, this.talk, withTruco, (pieId) => pieId !== HUMAN_ID);
   }
 
   private apply(playerId: PlayerId, action: Action): { ok: boolean; error?: string } {

@@ -132,3 +132,19 @@ La atacante apenas llega a empatar, y sin una estrategia clara: farol de truco 4
 (la de r1 había llegado a 74% y 68%). **r2 es mucho menos explotable que r1 1500**, al menos con este
 presupuesto de ataque: la curva seguía subiendo despacio (+0,5 puntos cada 10 iteraciones), así que es
 una cota inferior, no una prueba de que no tenga agujeros.
+
+## 2026-09-26 21:00 — Fase 4: equipos (r3 preparada)
+
+Decisiones de Emmanuel: el pie aprende qué indicar; los compañeros aprenden a obedecer con un premio que
+baja a un mínimo; señas fijas y verdaderas; 4 y 6 jugadores sin pica-pica (y 20% de 2). Detalle en
+`PLAN.md` (sección "Fase 4").
+
+- La lógica de señas e indicaciones sale de GameController a `src/ai/tableTalk.ts`: el juego y el
+  entrenamiento usan la misma.
+- 19 acciones (7 de indicaciones del pie); la observación no cambia (huella `78d8b04c`).
+- Premio por obedecer: ±1 por indicación cumplida o no, por 0,02 → 0,005 en 500 iteraciones.
+- `config/r3.json`: desde r2 (2000), tablas W de 4 y 6, imitación de la difícil en 4 y 6 (30.000 partidas),
+  PPO 1000 iteraciones de 2048 partidas (20% de 2, 40% de 4, 40% de 6), evaluación cada 20 contra la
+  difícil en 2, 4 y 6.
+- Probado de punta a punta en la nube con una corrida mínima.
+

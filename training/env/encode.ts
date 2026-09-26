@@ -7,6 +7,7 @@
 import { envidoScore } from '../../src/engine/index.js';
 import type { MatchState, Observation, PlayerId } from '../../src/engine/index.js';
 import type { Signal, SignKind } from '../../src/ai/signs.js';
+import { signalsFor, teamInstructions, type TableTalk } from '../../src/ai/tableTalk.js';
 import { cardIndex, cardRank, envidoValue, sortedHand, suitIndex } from './cards.js';
 
 export const MAX_SEATS = 6;
@@ -68,8 +69,13 @@ function chainPoints(calls: readonly string[], falta: number): number {
 export interface EncodeExtras {
   /** señas recibidas de compañeros en esta mano */
   signals?: readonly Signal[];
-  /** indicación vigente del pie de mi equipo */
+  /** indicación vigente del pie de mi equipo (una sola; ver `instructions`) */
   instruction?: Instruction | null;
+  /**
+   * Indicaciones vigentes del pie de mi equipo (una de cartas y una de truco como mucho). El pie
+   * también ve las suyas: sabe lo que dijo. Salen de `teamInstructions` (src/ai/tableTalk.ts).
+   */
+  instructions?: readonly Instruction[];
 }
 
 function build(obs: Observation, extras: EncodeExtras = {}): Builder {
@@ -198,9 +204,15 @@ function build(obs: Observation, extras: EncodeExtras = {}): Builder {
   }
   const instruction = b.section('instruction', INSTRUCTIONS.length);
   if (extras.instruction) instruction(INSTRUCTIONS.indexOf(extras.instruction), 1);
+  for (const kind of extras.instructions ?? []) instruction(INSTRUCTIONS.indexOf(kind), 1);
 
   b.scalar('picaPica', obs.picaPica !== null ? 1 : 0);
   return b;
+}
+
+/** Lo que la red ve de la charla de la mesa: las señas (si es pie) y las indicaciones de su pie. */
+export function talkExtras(state: MatchState, talk: TableTalk, playerId: PlayerId): EncodeExtras {
+  return { signals: signalsFor(state, talk, playerId), instructions: teamInstructions(state, talk, playerId) };
 }
 
 /** Cada valor se redondea a k/255: así se guarda sin pérdida en un byte y el juego ve exactamente lo mismo. */

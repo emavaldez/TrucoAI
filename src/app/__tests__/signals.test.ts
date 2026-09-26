@@ -148,7 +148,7 @@ describe('señas en el controlador', () => {
   it('las señas se renuevan en cada mano', () => {
     const { controller, scheduler } = make({}, 5);
     controller.start();
-    const internal = (): Signal[] => (controller as unknown as { signals: Signal[] }).signals;
+    const internal = (): Signal[] => (controller as unknown as { talk: { signals: Signal[] } }).talk.signals;
     const first = internal();
     expect(first.length).toBeGreaterThan(0);
     let guard = 0;

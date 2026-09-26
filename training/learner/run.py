@@ -44,6 +44,7 @@ from common import (  # noqa: E402
     export_policy,
     git_commit,
     load_chunks,
+    load_policy_weights,
     log,
     masked_logits,
     obs_layout,
@@ -88,6 +89,8 @@ DEFAULTS: dict = {
         "snapshotEvery": 10,
         "leagueSize": 40,
         "opponents": {"self": 0.5, "league": 0.3, "hard": 0.1, "normal": 0.05, "easy": 0.05},
+        # Premio por cumplir la indicación del pie (4 y 6 jugadores): baja de start a floor en decayIters.
+        "obeyBonus": {"start": 0.02, "floor": 0.005, "decayIters": 500},
     },
     "eval": {"every": 10, "pairs": 1000, "opponent": "hard"},
     "checkpoint": {"keepLast": 5, "keepBest": 3, "backupDir": None},
@@ -162,6 +165,17 @@ class Run:
         init = self.cfg.get("init")
         if not init or self.done("bc"):
             return
+        if "fromCkpt" in init:
+            # Fase nueva que arranca de los pesos de otra corrida (por ejemplo, equipos desde r2): se
+            # reusa su tabla W de 2 jugadores y se imita de nuevo (en 4 y 6) partiendo de esos pesos.
+            ck = training_path(init["fromCkpt"])
+            if not ck.exists():
+                raise SystemExit(f"no existe el checkpoint {ck}")
+            src = TRAINING / "runs" / init["wtableFrom"] / "wtable.json" if init.get("wtableFrom") else None
+            if src and src.exists() and not self.done("wtable"):
+                shutil.copy2(src, self.dir / "wtable.json")
+                self.mark("wtable", {"from": init["wtableFrom"]})
+            return
         parent = TRAINING / "runs" / init["fromRun"]
         ck = parent / "ckpt" / f"iter_{init['iter']:06d}.pt"
         if not ck.exists():
@@ -190,17 +204,50 @@ class Run:
     def new_policy(self) -> PolicyNet:
         return PolicyNet(self.layout["obsDim"], self.layout["nActions"]).to(self.dev)
 
+    # ---------- cantidad de jugadores ----------
+
+    def mix(self, section: str) -> dict[int, float]:
+        """Con qué cantidades de jugadores se juega en una fase: `<fase>.playerMix` ({"4": 0.5, "6": 0.5}) o `players`."""
+        m = self.cfg.get(section, {}).get("playerMix")
+        if not m:
+            return {int(self.cfg["players"]): 1.0}
+        return {int(k): float(v) for k, v in m.items() if float(v) > 0}
+
+    def all_player_counts(self) -> list[int]:
+        counts = set(self.mix("bc")) | set(self.mix("ppo")) | set(self.eval_players())
+        return sorted(counts)
+
+    def eval_players(self) -> list[int]:
+        return [int(n) for n in self.cfg["eval"].get("players", [self.cfg["players"]])]
+
+    def wtable_path(self, n: int) -> Path:
+        return self.dir / ("wtable.json" if n == 2 else f"wtable-{n}.json")
+
+    def jobs_by_players(self, total: int, mix: dict[int, float], parts: int) -> list[tuple[int, int]]:
+        """Reparte `total` partidas entre cantidades de jugadores y en `parts` trabajos por cantidad."""
+        weight = sum(mix.values())
+        out = []
+        for n, w in sorted(mix.items()):
+            share = int(round(total * w / weight))
+            out += [(n, m) for m in split_matches(share, parts)]
+        return out
+
     # ---------- fase 1: tabla W ----------
 
     def phase_wtable(self) -> None:
-        if self.done("wtable"):
+        for n in self.all_player_counts():
+            self.wtable_for(n)
+
+    def wtable_for(self, n: int) -> None:
+        mark = "wtable" if n == 2 else f"wtable-{n}"
+        if self.done(mark):
             return
-        log("fase 1/4: tabla de probabilidad de ganar por marcador")
+        log(f"fase 1/4: tabla de probabilidad de ganar por marcador ({n} jugadores)")
         total = self.cfg["wtable"]["matches"]
-        tmp = self.dir / "tmp-wtable"
+        tmp = self.dir / f"tmp-wtable-{n}"
         remove_tree(tmp)
         jobs = [
-            {"mode": "wtable", "seed": self.seed(1, i), "matches": m, "players": self.cfg["players"], "out": str(tmp / f"w{i}"), "teacher": "hard"}
+            {"mode": "wtable", "seed": self.seed(1, n, i), "matches": m, "players": n, "out": str(tmp / f"w{i}"), "teacher": "hard"}
             for i, m in enumerate(split_matches(total, self.workers))
         ]
         run_actors(jobs, tmp, self.workers)
@@ -213,15 +260,15 @@ class Run:
             for x, y, p in d["dist"]:
                 counts[(x, y)] = counts.get((x, y), 0) + p * d["hands"]
         dist = [[x, y, c / hands] for (x, y), c in counts.items()]
-        dist_path = self.dir / "wtable-dist.json"
+        dist_path = self.dir / ("wtable-dist.json" if n == 2 else f"wtable-{n}-dist.json")
         atomic_write_bytes(dist_path, json.dumps({"hands": hands, "dist": dist}).encode())
         # La tabla la calcula el mismo código TS que usan los actores (una sola implementación).
-        job = {"mode": "wtable-from-dist", "dist": str(dist_path), "out": str(self.dir / "wtable")}
-        run_actors([{**job, "seed": 0, "matches": 0, "players": self.cfg["players"]}], tmp, 1)
+        job = {"mode": "wtable-from-dist", "dist": str(dist_path), "out": str(self.wtable_path(n).with_suffix(""))}
+        run_actors([{**job, "seed": 0, "matches": 0, "players": n}], tmp, 1)
         remove_tree(tmp)
-        self.mark("wtable", {"hands": hands})
-        self.event("wtable", hands=hands)
-        log(f"tabla W lista ({hands} manos)")
+        self.mark(mark, {"hands": hands})
+        self.event("wtable", hands=hands, players=n)
+        log(f"tabla W de {n} jugadores lista ({hands} manos)")
 
     # ---------- fase 2: datos para imitar ----------
 
@@ -234,11 +281,11 @@ class Run:
         remove_tree(out)
         started = time.time()
         # Muchos trabajos chicos: si se corta, se pierde poco y el progreso se ve.
-        chunks = split_matches(c["matches"], max(self.workers * 4, 1))
+        chunks = self.jobs_by_players(c["matches"], self.mix("bc"), max(self.workers * 4, 1))
         jobs = [
-            {"mode": "bc", "seed": self.seed(2, i), "matches": m, "players": self.cfg["players"], "out": str(out / f"bc{i:04d}"),
-             "teacher": c["teacher"], "opponents": c["opponents"], "wtable": str(self.dir / "wtable.json")}
-            for i, m in enumerate(chunks)
+            {"mode": "bc", "seed": self.seed(2, i), "matches": m, "players": n, "out": str(out / f"bc{i:04d}"),
+             "teacher": c["teacher"], "opponents": c["opponents"], "wtable": str(self.wtable_path(n))}
+            for i, (n, m) in enumerate(chunks)
         ]
         run_actors(jobs, out / "jobs", self.workers)
         n = sum(json.loads(Path(p).read_text())["n"] for p in glob.glob(str(out / "bc*.meta.json")))
@@ -268,6 +315,11 @@ class Run:
         weights = torch.tensor((freq.sum() / freq) ** 0.5, dtype=torch.float32)
         weights = (weights / weights[torch.from_numpy(data.act.astype(np.int64))].mean()).to(self.dev)
         policy = self.new_policy()
+        init = self.cfg.get("init") or {}
+        if "fromCkpt" in init:
+            ck = torch.load(training_path(init["fromCkpt"]), map_location="cpu", weights_only=False)
+            added = load_policy_weights(policy, ck["policy"])
+            log(f"la imitación arranca de {init['fromCkpt']} (+{added} salidas nuevas: indicaciones del pie)")
         opt = torch.optim.Adam(policy.parameters(), lr=c["lr"])
         steps_per_epoch = math.ceil(len(train_idx) / c["batch"])
         sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=max(1, steps_per_epoch * c["epochs"]))
@@ -294,8 +346,11 @@ class Run:
             self.event("bc_epoch", epoch=epoch + 1, loss=total / steps_per_epoch, val_acc=acc)
         export_policy(policy, self.dir / "policies" / "bc", self.layout["layoutHash"], f"{self.name}/bc")
         atomic_torch_save({"policy": policy.state_dict()}, self.dir / "bc.pt")
-        result = self.evaluate(self.dir / "policies" / "bc", c["evalPairs"], self.cfg["eval"]["opponent"], tag="bc")
-        self.mark("bc", {"val_acc": acc, "eval": result})
+        results = {}
+        for n in sorted(self.mix("bc")):
+            tag = "bc" if n == 2 and len(self.mix("bc")) == 1 else f"bc-{n}j"
+            results[n] = self.evaluate(self.dir / "policies" / "bc", c["evalPairs"], self.cfg["eval"]["opponent"], tag=tag, players=n)
+        self.mark("bc", {"val_acc": acc, "eval": results})
         del data, obs, mask, act
 
     @torch.no_grad()
@@ -316,11 +371,12 @@ class Run:
             return {"kind": "mlp", "path": opponent[4:]}
         return {"kind": "heur", "difficulty": opponent}
 
-    def evaluate(self, policy_base: Path, pairs: int, opponent: str, tag: str) -> dict:
+    def evaluate(self, policy_base: Path, pairs: int, opponent: str, tag: str, players: int | None = None) -> dict:
         tmp = self.dir / f"tmp-eval-{tag}"
         remove_tree(tmp)
+        n_players = players or self.cfg["players"]
         jobs = [
-            {"mode": "eval", "seed": 777_000 + i, "matches": m, "players": self.cfg["players"], "out": str(tmp / f"e{i}.json"),
+            {"mode": "eval", "seed": 777_000 + i, "matches": m, "players": n_players, "out": str(tmp / f"e{i}.json"),
              "a": {"kind": "mlp", "path": str(policy_base)}, "b": self.opponent_spec(opponent)}
             for i, m in enumerate(split_matches(pairs, self.workers))
         ]
@@ -335,7 +391,7 @@ class Run:
             pb += r["pointsB"]
         remove_tree(tmp)
         low, high = wilson(wins, games)
-        result = {"tag": tag, "opponent": opponent, "games": games, "winrate": wins / games, "ci90": [low, high],
+        result = {"tag": tag, "opponent": opponent, "players": n_players, "games": games, "winrate": wins / games, "ci90": [low, high],
                   "pointsPerGame": [pa / games, pb / games], "seconds": time.time() - started}
         self.event("eval", **result)
         shown = f"la red {'/'.join(Path(opponent[4:]).parts[-3:])}" if opponent.startswith("mlp:") else f"'{opponent}'"
@@ -363,7 +419,7 @@ class Run:
         policy = self.new_policy()
         critic = CriticNet(self.layout["obsDim"], self.layout["privDim"]).to(self.dev)
         anchor = self.new_policy()
-        anchor.load_state_dict(torch.load(self.dir / "bc.pt", map_location="cpu")["policy"])
+        load_policy_weights(anchor, torch.load(self.dir / "bc.pt", map_location="cpu")["policy"])
         anchor.eval()
         opt = torch.optim.Adam([
             {"params": policy.parameters(), "lr": c["lr"]},
@@ -373,24 +429,25 @@ class Run:
         latest = self.latest_ckpt()
         if latest:
             ck = torch.load(latest, map_location="cpu", weights_only=False)
-            policy.load_state_dict(ck["policy"])
-            critic.load_state_dict(ck["critic"])
-            opt.load_state_dict(ck["opt"])
+            self.load_training(ck, policy, critic, opt)
             state = ck["state"]
             random.setstate(ck["py_random"])
             log(f"fase 4/4: PPO — retomo desde la iteración {state['iter']}")
-        elif self.cfg.get("init"):
+        elif self.cfg.get("init") and "fromRun" in self.cfg["init"]:
             init = self.cfg["init"]
             ck = torch.load(TRAINING / "runs" / init["fromRun"] / "ckpt" / f"iter_{init['iter']:06d}.pt", map_location="cpu", weights_only=False)
-            policy.load_state_dict(ck["policy"])
-            critic.load_state_dict(ck["critic"])
-            opt.load_state_dict(ck["opt"])
+            self.load_training(ck, policy, critic, opt)
             # La liga (redes guardadas de la corrida madre) y el contador siguen; la "mejor" se vuelve a elegir.
             state = {**ck["state"], "best": [], "evals": []}
             random.setstate(ck["py_random"])
             log(f"fase 4/4: PPO — arranco desde {init['fromRun']} iteración {state['iter']}")
         else:
             policy.load_state_dict(anchor.state_dict())
+            init = self.cfg.get("init") or {}
+            if "fromCkpt" in init:
+                # El crítico de la corrida de origen es mejor punto de partida que uno al azar.
+                ck = torch.load(training_path(init["fromCkpt"]), map_location="cpu", weights_only=False)
+                critic.load_state_dict(ck["critic"])
             log("fase 4/4: PPO — arranco desde la red de imitación")
         pol_dir = self.dir / "policies"
 
@@ -402,10 +459,12 @@ class Run:
             opponents = self.league_opponents(state, c)
             tmp = self.dir / "tmp-rollouts"
             remove_tree(tmp)
+            ob = c.get("obeyBonus") or {"start": 0.0, "floor": 0.0, "decayIters": 1}
+            obey_bonus = ob["floor"] + (ob["start"] - ob["floor"]) * max(0.0, 1 - it / max(1, ob["decayIters"]))
             jobs = [
-                {"mode": "ppo", "seed": self.seed(4, it, i), "matches": m, "players": self.cfg["players"], "out": str(tmp / f"r{i:03d}"),
-                 "learner": str(current), "opponents": opponents, "wtable": str(self.dir / "wtable.json")}
-                for i, m in enumerate(split_matches(c["matchesPerIter"], self.workers))
+                {"mode": "ppo", "seed": self.seed(4, it, i), "matches": m, "players": n, "out": str(tmp / f"r{i:03d}"),
+                 "learner": str(current), "opponents": opponents, "wtable": str(self.wtable_path(n)), "obeyBonus": obey_bonus}
+                for i, (n, m) in enumerate(self.jobs_by_players(c["matchesPerIter"], self.mix("ppo"), self.workers))
             ]
             run_actors(jobs, tmp / "jobs", self.workers)
             data = load_chunks(sorted(Path(p[: -len(".meta.json")]) for p in glob.glob(str(tmp / "r*.meta.json"))))
@@ -420,6 +479,11 @@ class Run:
             record = {"iter": it, "steps": int(len(data.act)), "rollout_s": round(t_roll, 1), "total_s": round(dt, 1),
                       "steps_per_s": round(len(data.act) / max(dt, 1e-6)), "kl_beta": kl_beta, **metrics,
                       "vs": {k: round(v["wins"] / max(1, v["matches"]), 3) for k, v in stats.items()}}
+            if len(self.mix("ppo")) > 1:
+                record["vs_by_players"] = self.stats_by_players(data.metas)
+            talk = self.talk_metrics(data.metas, obey_bonus)
+            if talk:
+                record["talk"] = talk
             self.event("ppo_iter", **record)
             log(f"iter {it}: {len(data.act)} decisiones en {dt:.1f}s ({record['steps_per_s']}/s) · "
                 f"pérdida pol {metrics['loss_pi']:.3f} val {metrics['loss_v']:.4f} ent {metrics['entropy']:.3f} "
@@ -428,6 +492,11 @@ class Run:
             style_main = {k: v for k, v in metrics["style"].items() if k not in envido_keys}
             log(f"   entropía por decisión {metrics['ent_by']} · estilo {style_main}")
             log(f"   envido {({k: metrics['style'][k] for k in envido_keys})}")
+            if "vs_by_players" in record:
+                shown = {f"{n}j": {k: v for k, v in d.items() if k in ("self", "heur-hard")} for n, d in record["vs_by_players"].items()}
+                log(f"   por jugadores {shown}")
+            if talk:
+                log(f"   pie {talk}")
 
             if it % c["snapshotEvery"] == 0:
                 snap = pol_dir / f"iter_{it:06d}"
@@ -435,7 +504,16 @@ class Run:
                 state["league"].append({"path": str(snap), "iter": it, "wins": 0.0, "matches": 0.0})
                 state["league"] = state["league"][-c["leagueSize"]:]
             if it % e["every"] == 0:
-                result = self.evaluate(current, e["pairs"], e["opponent"], tag=f"iter{it}")
+                players = self.eval_players()
+                if len(players) == 1 and players[0] == self.cfg["players"]:
+                    result = self.evaluate(current, e["pairs"], e["opponent"], tag=f"iter{it}")
+                else:
+                    # Una evaluación por cantidad de jugadores; la mejor red se elige por el promedio de `select`.
+                    by_n = {n: self.evaluate(current, e["pairs"], e["opponent"], tag=f"iter{it}-{n}j", players=n) for n in players}
+                    select = [int(n) for n in e.get("select", players)]
+                    score = sum(by_n[n]["winrate"] for n in select) / len(select)
+                    result = {**by_n[select[0]], "winrate": score, "byPlayers": {n: r["winrate"] for n, r in by_n.items()}}
+                    log(f"evaluación iter{it}: promedio {100 * score:.1f}% en {select} jugadores")
                 state["evals"].append({"iter": it, "winrate": result["winrate"], "ci90": result["ci90"]})
                 gauntlet = e.get("gauntlet")
                 if gauntlet:
@@ -453,6 +531,51 @@ class Run:
                 else:
                     self.update_best(state, it, result, policy)
             self.save_ckpt(policy, critic, opt, state, it)
+
+    def load_training(self, ck: dict, policy, critic, opt) -> None:
+        """Pesos, crítico y optimizador de un checkpoint (si la red creció, el optimizador arranca de nuevo)."""
+        added = load_policy_weights(policy, ck["policy"])
+        critic.load_state_dict(ck["critic"])
+        if added:
+            log(f"la red tenía {added} salidas menos: se agregan y el optimizador arranca de cero")
+        else:
+            opt.load_state_dict(ck["opt"])
+
+    @staticmethod
+    def stats_by_players(metas: list[dict]) -> dict:
+        out: dict[int, dict] = {}
+        for meta in metas:
+            d = out.setdefault(int(meta.get("players", 2)), {})
+            for name, s in meta.get("stats", {}).items():
+                e = d.setdefault(name, [0, 0])
+                e[0] += s["wins"]
+                e[1] += s["matches"]
+        return {n: {k: round(w / max(1, m), 3) for k, (w, m) in d.items()} for n, d in sorted(out.items())}
+
+    @staticmethod
+    def talk_metrics(metas: list[dict], obey_bonus: float) -> dict:
+        """Qué indica el pie de la red (reparto de indicaciones) y cuánto le obedecen sus compañeros."""
+        cartas = np.zeros(4)
+        truco = np.zeros(3)
+        obey = np.zeros(3)
+        for meta in metas:
+            t = meta.get("talk")
+            if not t:
+                continue
+            cartas += t["cartas"]
+            truco += t["truco"]
+            obey += [t["obey"]["decisions"], t["obey"]["ok"], t["obey"]["bad"]]
+        if cartas.sum() == 0 and obey[0] == 0:
+            return {}
+        out: dict = {}
+        if cartas.sum():
+            out["indica"] = {k: round(float(v / cartas.sum()), 3) for k, v in zip(("mata", "pasa", "parda", "tranquilo"), cartas)}
+        if truco.sum():
+            out["indica_truco"] = {k: round(float(v / truco.sum()), 3) for k, v in zip(("canta", "espera", "nada"), truco)}
+        if obey[0]:
+            out["obedece"] = round(float(obey[1] / obey[0]), 3)
+        out["premio_obedecer"] = round(obey_bonus, 4)
+        return out
 
     def league_opponents(self, state: dict, c: dict) -> list[dict]:
         if c.get("fixedOpponents"):
@@ -597,10 +720,13 @@ class Run:
         resp_truco = m[:, 4]
         resp_envido = m[:, 9]
         turno = ~resp_truco & ~resp_envido & (m[:, 3] | m[:, 6])
-        cartas = ~resp_truco & ~resp_envido & ~turno
+        # Decisiones de indicación del pie (acciones 12–18; solo en 4 y 6 jugadores).
+        indica = m[:, 12:].any(1) if m.shape[1] > 12 else np.zeros(len(m), dtype=bool)
+        cartas = ~resp_truco & ~resp_envido & ~turno & ~indica
         ent_np = ent.cpu().numpy()
         ent_by = {name: round(float(ent_np[sel].mean()), 3) for name, sel in
-                  (("cartas", cartas), ("turno", turno), ("resp_truco", resp_truco), ("resp_envido", resp_envido)) if sel.any()}
+                  (("cartas", cartas), ("turno", turno), ("resp_truco", resp_truco), ("resp_envido", resp_envido),
+                   ("indica", indica)) if sel.any()}
 
         def rate(sel: np.ndarray, hit: np.ndarray) -> float | None:
             return round(float(hit[sel].mean()), 3) if sel.any() else None

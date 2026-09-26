@@ -1,0 +1,34 @@
+{
+  "_comment": "r3: equipos (4 y 6 jugadores, sin flor ni pica-pica). Arranca de los pesos de r2 (iteración 2000) con 7 salidas nuevas: las indicaciones del pie. Imita a la difícil en 4 y 6 (jugadas e indicaciones del pie) y después PPO con 20% de partidas de 2, 40% de 4 y 40% de 6. Los compañeros reciben un premio por obedecer al pie que baja de 0,02 a 0,005 en 500 iteraciones. La mejor red se elige por el promedio contra equipos de difíciles en 4 y 6.",
+  "players": 4,
+  "seed": 3,
+  "workers": 16,
+  "init": {"fromCkpt": "runs/r2/ckpt/iter_002000.pt", "wtableFrom": "r2"},
+  "wtable": {"matches": 8000},
+  "bc": {
+    "matches": 30000,
+    "playerMix": {"4": 0.5, "6": 0.5},
+    "epochs": 4,
+    "batch": 8192,
+    "lr": 3e-4,
+    "evalPairs": 500
+  },
+  "ppo": {
+    "matchesPerIter": 2048,
+    "minibatch": 16384,
+    "iterations": 1000,
+    "playerMix": {"2": 0.2, "4": 0.4, "6": 0.4},
+    "klBc": 0.02,
+    "klBcFinal": 0.005,
+    "klBcDecayIters": 1000,
+    "obeyBonus": {"start": 0.02, "floor": 0.005, "decayIters": 500}
+  },
+  "eval": {
+    "every": 20,
+    "pairs": 300,
+    "opponent": "hard",
+    "players": [2, 4, 6],
+    "select": [4, 6]
+  },
+  "checkpoint": {"keepLast": 5, "keepBest": 3, "backupDir": null}
+}

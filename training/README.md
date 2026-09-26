@@ -53,6 +53,11 @@ iteración 1500 y suma a la liga las redes que la explotaron (`ppo.exploiters`).
 bash training/train.sh r2
 ```
 
+**Equipos (4 y 6 jugadores):** `bash training/train.sh r3` (usa `config/r3.json`). Necesita
+`runs/r2/ckpt/iter_002000.pt`. Hace la tabla W de 4 y de 6, imita a la difícil en 4 y 6 (unos 30 min) y
+sigue con PPO. En la terminal, además de lo de siempre: `por jugadores` (contra sí misma y la difícil en
+2, 4 y 6) y `pie` (qué indica el pie de la red, cuánto le obedecen sus compañeros y el premio vigente).
+
 Con `eval.gauntlet`, cada 10 iteraciones además de la difícil juega duelos contra redes fijas (versiones
 anteriores y atacantes), y la "mejor red" se elige por el promedio de esos duelos.
 

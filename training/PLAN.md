@@ -67,7 +67,7 @@ Reemplaza la sección 5 de `Papers/INVESTIGACION.md` en lo que se contradigan.
 | **1. Imitación** | Copiar a la "difícil", con acciones pasivas reponderadas y DAgger (la heurística etiqueta lo que visita la red). | La red empata con la difícil (IC que incluye 50%). |
 | **2. PPO en 2 jugadores** | Liga: checkpoints propios (elegidos donde perdemos) más las heurísticas. KL hacia la red de imitación. γ = 1, λ ≈ 0,95. | ≥ 55% contra la difícil en 2.000 partidas duplicadas, IC por encima de 50%. |
 | **3. ¿Se la puede explotar?** | Entrenar una "mejor respuesta" contra la red congelada, y tabla de pagos entre checkpoints para ver ciclos. Si es explotable: NFSP o un CFR de referencia en 2 jugadores (viable sin muestra ni flor). | La mejor respuesta no le saca una ventaja grande. |
-| **4. Equipos (4 y 6)** | El pie coordina. Los seguidores aprenden a jugar condicionados a la indicación (con un premio por cumplirla que se va apagando). El pie aprende qué indicar con el premio del equipo. Las señas le llegan al pie. | ≥ 55% contra un equipo de difíciles. Probado con vos de compañero. |
+| **4. Equipos (4 y 6)** | El pie coordina. Los seguidores aprenden a jugar condicionados a la indicación (con un premio por cumplirla que baja a un mínimo). El pie aprende qué indicar con el premio del equipo. Las señas le llegan al pie. Ver "Fase 4" abajo. | ≥ 55% contra un equipo de difíciles. Probado con vos de compañero. |
 | **5. Al juego** | Pesos cuantizados (< 1 MB) con inferencia escrita en TS, sin dependencias. `RLPolicy` implementa `Policy`. "Difícil" pasa a ser la red; fácil y normal, checkpoints más débiles o β/temperatura más humanos. | Tests e2e verdes y vos le ganás menos que a la difícil actual. |
 | **6. Opcional** | Búsqueda en el momento de jugar (2 jugadores). Personalidades condicionadas (agresivo, mentiroso, conservador). | Medido contra la fase 5. |
 
@@ -113,6 +113,28 @@ Implementado en esta carpeta y probado de punta a punta:
 - Prueba chica en la nube (2 núcleos, 2.000 partidas de imitación, 16 iteraciones de PPO de 256 partidas):
   la imitación le ganó 31% a la difícil y PPO llegó a **66,5% (IC90 62,5–70,3) en 400 partidas**.
   Es una muestra chica y puede estar aprovechando mañas de la heurística: la corrida grande lo confirma o no.
+
+## Fase 4: equipos (implementada 2026-09-26, corrida r3)
+
+Decisiones de Emmanuel (2026-09-26): el pie **aprende** qué indicar; los compañeros aprenden a obedecer
+con un **premio que baja a un mínimo** (si él es pie en el juego, le hacen caso); las **señas son fijas y
+verdaderas** (las de la IA del juego); se entrena con **4 y 6 jugadores, sin pica-pica** (y un poco de 2
+para que no se olvide).
+
+- **Charla de la mesa compartida** (`src/ai/tableTalk.ts`): señas al pie e indicaciones del pie, la misma
+  lógica en el juego (GameController) y en el entrenamiento.
+- **Observación sin cambios de layout** (sigue `78d8b04c`): el pie ve las señas de sus compañeros; todos
+  los del equipo ven las indicaciones vigentes (una de cartas y una de truco).
+- **7 acciones nuevas** (19 en total): indicaciones de cartas (matá, pasá, pardá, tranquilo) y de truco
+  (cantá, esperá, nada). El pie decide al empezar la mano (cartas y truco) y después de cada baza (cartas).
+  Son decisiones de su trayectoria, con el premio del equipo. Las redes de 2 jugadores (12 salidas) siguen
+  sirviendo: en 4 y 6 su pie indica con la regla de la heurística.
+- **Premio por obedecer** (`env/obey.ts`): +1/−1 por decisión según cumpla o no cada indicación vigente
+  (misma lectura que la heurística), por un factor que baja de 0,02 a 0,005 en 500 iteraciones.
+- **Tabla W por cantidad de jugadores** (la de 2 se reusa de r2).
+- **r3** (`config/r3.json`): arranca de r2 (2000) con las salidas nuevas en cero, imita a la difícil en
+  4 y 6 (jugadas e indicaciones) y sigue con PPO (20% de 2, 40% de 4, 40% de 6). La mejor red se elige por
+  el promedio contra equipos de difíciles en 4 y 6. Meta: ≥ 55% en las dos.
 
 ## Riesgos
 

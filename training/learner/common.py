@@ -67,6 +67,29 @@ class PolicyNet(nn.Module):
         return x
 
 
+def load_policy_weights(policy: PolicyNet, state_dict: dict) -> int:
+    """
+    Carga pesos en `policy` aunque vengan de una red con menos salidas (las de 2 jugadores tienen 12;
+    desde la fase de equipos son 19: se suman las indicaciones del pie). Las salidas nuevas arrancan en
+    cero (todas las indicaciones igual de probables). Devuelve cuántas salidas se agregaron.
+    """
+    own = policy.state_dict()
+    last = f"layers.{len(policy.layers) - 1}"
+    added = 0
+    fixed = dict(state_dict)
+    for key in (f"{last}.weight", f"{last}.bias"):
+        src, dst = state_dict[key], own[key]
+        if src.shape != dst.shape:
+            if src.shape[0] > dst.shape[0] or src.shape[1:] != dst.shape[1:]:
+                raise ValueError(f"{key}: {tuple(src.shape)} no entra en {tuple(dst.shape)}")
+            grown = torch.zeros_like(dst)
+            grown[: src.shape[0]] = src.to(grown.dtype)
+            fixed[key] = grown
+            added = dst.shape[0] - src.shape[0]
+    policy.load_state_dict(fixed)
+    return added
+
+
 class CriticNet(nn.Module):
     """Valor de la mano; ve la observación y además las manos ajenas (solo en entrenamiento)."""
 
