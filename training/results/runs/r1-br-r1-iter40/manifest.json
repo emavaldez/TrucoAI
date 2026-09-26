@@ -1,0 +1,10 @@
+{
+  "run": "r1-br-r1-iter40",
+  "created": "2026-09-25 18:04:23",
+  "commit": "08637f529e87338b6a6c9ecb94ded554feb25f68",
+  "layoutHash": "78d8b04c",
+  "obsDim": 1006,
+  "machine": "macOS-26.6.2-arm64-arm-64bit",
+  "python": "3.12.13",
+  "torch": "2.14.0"
+}

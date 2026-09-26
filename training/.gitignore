@@ -1,7 +1,7 @@
 # Resultados de entrenamiento: viven en la Mac, no en git (pesan y cambian todo el tiempo).
-runs/
-data/
-exports/
+/runs/
+/data/
+/exports/
 *.pt
 *.onnx
 *.npz

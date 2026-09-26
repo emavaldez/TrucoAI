@@ -1,0 +1,189 @@
+{
+ "run": "r1-br-r1-iter1500",
+ "archived": "2026-09-26 15:57",
+ "starts": [],
+ "lastIter": 150,
+ "evals": [
+  {
+   "tag": "iter10",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/target",
+   "games": 1000,
+   "winrate": 0.209,
+   "ci90": [
+    0.18864846949553546,
+    0.23092218681921042
+   ]
+  },
+  {
+   "tag": "iter20",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/target",
+   "games": 1000,
+   "winrate": 0.315,
+   "ci90": [
+    0.29136285863768047,
+    0.33963566857272504
+   ]
+  },
+  {
+   "tag": "iter30",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/target",
+   "games": 1000,
+   "winrate": 0.394,
+   "ci90": [
+    0.3689002508372384,
+    0.4196718782671021
+   ]
+  },
+  {
+   "tag": "iter40",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/target",
+   "games": 1000,
+   "winrate": 0.414,
+   "ci90": [
+    0.388643525004586,
+    0.439820655212143
+   ]
+  },
+  {
+   "tag": "iter50",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/target",
+   "games": 1000,
+   "winrate": 0.441,
+   "ci90": [
+    0.4153655888030234,
+    0.4669528604154302
+   ]
+  },
+  {
+   "tag": "iter60",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/target",
+   "games": 1000,
+   "winrate": 0.514,
+   "ci90": [
+    0.4879977609239025,
+    0.5399266748547695
+   ]
+  },
+  {
+   "tag": "iter70",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/target",
+   "games": 1000,
+   "winrate": 0.525,
+   "ci90": [
+    0.4989903192766839,
+    0.5508747446138019
+   ]
+  },
+  {
+   "tag": "iter80",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/target",
+   "games": 1000,
+   "winrate": 0.564,
+   "ci90": [
+    0.5380657520685752,
+    0.5895888114910681
+   ]
+  },
+  {
+   "tag": "iter90",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/target",
+   "games": 1000,
+   "winrate": 0.596,
+   "ci90": [
+    0.5702482522539317,
+    0.6212335930855336
+   ]
+  },
+  {
+   "tag": "iter100",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/target",
+   "games": 1000,
+   "winrate": 0.63,
+   "ci90": [
+    0.60456540190472,
+    0.654732930325806
+   ]
+  },
+  {
+   "tag": "iter110",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/target",
+   "games": 1000,
+   "winrate": 0.67,
+   "ci90": [
+    0.645109722023628,
+    0.6939727124316751
+   ]
+  },
+  {
+   "tag": "iter120",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/target",
+   "games": 1000,
+   "winrate": 0.664,
+   "ci90": [
+    0.639015779585622,
+    0.6880990395359647
+   ]
+  },
+  {
+   "tag": "iter130",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/target",
+   "games": 1000,
+   "winrate": 0.668,
+   "ci90": [
+    0.6430779128117317,
+    0.6920153165323326
+   ]
+  },
+  {
+   "tag": "iter140",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/target",
+   "games": 1000,
+   "winrate": 0.699,
+   "ci90": [
+    0.6746281715451463,
+    0.7222977370231203
+   ]
+  },
+  {
+   "tag": "iter150",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/target",
+   "games": 1000,
+   "winrate": 0.699,
+   "ci90": [
+    0.6746281715451463,
+    0.7222977370231203
+   ]
+  }
+ ],
+ "gauntlet": [],
+ "best": "r1-br-r1-iter1500/iter140",
+ "lastStyle": {
+  "truco": 0.246,
+  "farol": 0.74,
+  "envido": 0.684,
+  "farol_envido": 0.359,
+  "envido_<24": 0.455,
+  "envido_24-27": 0.964,
+  "envido_28-30": 0.995,
+  "envido_31+": 1.0,
+  "quiere_truco": 0.676,
+  "sube_truco": 0.017,
+  "quiere_envido": 0.314,
+  "acepta_envido_<24": 0.074,
+  "acepta_envido_24-27": 0.768,
+  "acepta_envido_28-30": 0.93,
+  "acepta_envido_31+": 0.998,
+  "farol_envido_exito": 0.482,
+  "farol_envido_pts": -0.46,
+  "farol_envido_dW": -0.0054,
+  "tantos_envido_exito": 0.487,
+  "tantos_envido_pts": 1.05,
+  "tantos_envido_dW": 0.0422
+ },
+ "lastEntropyByDecision": {
+  "cartas": 0.168,
+  "turno": 0.136,
+  "resp_truco": 0.067,
+  "resp_envido": 0.079
+ }
+}

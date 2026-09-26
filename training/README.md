@@ -56,6 +56,19 @@ bash training/train.sh r2
 Con `eval.gauntlet`, cada 10 iteraciones además de la difícil juega duelos contra redes fijas (versiones
 anteriores y atacantes), y la "mejor red" se elige por el promedio de esos duelos.
 
+## Registro (para la tesis)
+
+Todo lo que se corre queda registrado en git, en `results/`:
+
+```bash
+python training/learner/run.py archive --run r2                     # registro de la corrida → results/runs/r2/
+python training/learner/run.py archive --run r2 --backup ~/ruta     # además, copia de las redes fuera del repo
+python training/learner/run.py duel --a runs/r2/policies/best --b runs/r1/policies/iter_001500 \
+    --pairs 1000 --note "¿r2 mejora a r1?"                         # → results/duelos.jsonl
+```
+
+Y cada paso con su porqué va en `results/BITACORA.md`.
+
 ## Reglas de la carpeta
 
 - **El motor del juego es uno solo** (`src/engine`, TypeScript). Acá no se reescriben reglas:
@@ -77,7 +90,8 @@ training/
   actors/rollout.ts    TS: juega partidas con el motor (imitación, PPO, evaluación, tabla W)
   learner/             Python/PyTorch: run.py (todo el entrenamiento), common.py, parity_check.py
   setup.sh, train.sh   preparar la Mac y lanzar/retomar
-  results/             resúmenes que sí se versionan
+  results/             lo que sí va a git: BITACORA.md (registro cronológico), <corrida>.md,
+                       runs/<corrida>/ (config, log comprimido, resumen) y duelos.jsonl
   runs/<id>/           (no va a git) checkpoints, logs y evaluaciones de cada corrida
 ```
 

@@ -1,0 +1,68 @@
+{
+  "players": 2,
+  "seed": 1,
+  "workers": 16,
+  "wtable": {
+    "matches": 8000
+  },
+  "bc": {
+    "matches": 100000,
+    "teacher": "hard",
+    "opponents": [
+      {
+        "kind": "heur",
+        "difficulty": "hard",
+        "weight": 0.5
+      },
+      {
+        "kind": "heur",
+        "difficulty": "normal",
+        "weight": 0.3
+      },
+      {
+        "kind": "heur",
+        "difficulty": "easy",
+        "weight": 0.2
+      }
+    ],
+    "epochs": 8,
+    "batch": 8192,
+    "lr": 0.001,
+    "evalPairs": 2000
+  },
+  "ppo": {
+    "iterations": 1500,
+    "matchesPerIter": 4096,
+    "epochs": 4,
+    "minibatch": 16384,
+    "lr": 0.0003,
+    "criticLr": 0.001,
+    "clip": 0.2,
+    "gaeLambda": 0.95,
+    "entropy": 0.01,
+    "klBc": 0.02,
+    "klBcFinal": 0.005,
+    "klBcDecayIters": 2000,
+    "maxGradNorm": 1.0,
+    "snapshotEvery": 10,
+    "leagueSize": 40,
+    "opponents": {
+      "self": 0.5,
+      "league": 0.3,
+      "hard": 0.1,
+      "normal": 0.05,
+      "easy": 0.05
+    }
+  },
+  "eval": {
+    "every": 10,
+    "pairs": 1000,
+    "opponent": "hard"
+  },
+  "checkpoint": {
+    "keepLast": 5,
+    "keepBest": 3,
+    "backupDir": null
+  },
+  "_comment": "Corrida principal en la MacBook Pro M5 Max (18 n\u00facleos, GPU de 40, 128 GB). Siempre sin flor. Lo que no est\u00e1 ac\u00e1 sale de DEFAULTS en learner/run.py. PPO corta a las 1500 iteraciones (~9 h); para seguir, subir 'iterations' y relanzar."
+}

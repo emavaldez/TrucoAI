@@ -695,7 +695,7 @@ def cmd_train(args) -> None:
         config = merge(config, SMOKE)
     run = Run(args.run, config, args.workers)
     log(f"corrida '{args.run}' · {run.workers} actores en paralelo · red en {run.dev} · observación {run.layout['obsDim']} ({run.layout['layoutHash']})")
-    run.event("start", workers=run.workers, device=str(run.dev))
+    run.event("start", workers=run.workers, device=str(run.dev), commit=git_commit(), config=config)
     run.adopt_parent()
     run.phase_wtable()
     run.phase_bcdata()
@@ -760,6 +760,7 @@ def cmd_exploit(args) -> None:
         "eval": {"every": 10, "pairs": args.pairs, "opponent": f"mlp:{target}"},
     })
     run = Run(name, config, args.workers)
+    run.event("start", workers=run.workers, device=str(run.dev), commit=git_commit(), config=config, exploit=tag)
     log(f"explotabilidad: entreno una red solo para ganarle a {tag} ({args.iters} iteraciones, {run.workers} actores)")
     run.phase_ppo()
     evals = [json.loads(line) for line in (d / "log.jsonl").read_text().splitlines() if '"kind": "eval"' in line]
@@ -768,6 +769,112 @@ def cmd_exploit(args) -> None:
         log(f"resultado: la mejor respuesta le gana a {tag} el {100 * best['winrate']:.1f}% "
             f"(IC90 {100 * best['ci90'][0]:.1f}–{100 * best['ci90'][1]:.1f}). "
             "Cerca de 50–55%: sólida. Arriba de ~65%: tiene un agujero explotable.")
+
+
+RESULTS = TRAINING / "results"
+
+
+def policy_label(spec: str) -> str:
+    return spec if spec in ("hard", "normal", "easy") else "/".join(training_path(spec).parts[-3:])
+
+
+def cmd_duel(args) -> None:
+    """
+    Duelo entre dos redes (o una red y una heurística) en partidas duplicadas. El resultado se agrega a
+    training/results/duelos.jsonl, que va a git: es el registro de todas las comparaciones.
+    """
+    workers = args.workers or default_workers()
+    a = training_path(args.a)
+    if not a.with_suffix(".json").exists():
+        raise SystemExit(f"no existe la red {a}.json")
+    if args.b in ("hard", "normal", "easy"):
+        b_spec = {"kind": "heur", "difficulty": args.b}
+    else:
+        b = training_path(args.b)
+        if not b.with_suffix(".json").exists():
+            raise SystemExit(f"no existe la red {b}.json")
+        b_spec = {"kind": "mlp", "path": str(b)}
+    tmp = TRAINING / "runs" / f"tmp-duel-{os.getpid()}"
+    remove_tree(tmp)
+    jobs = [
+        {"mode": "eval", "seed": args.seed + i, "matches": m, "players": args.players, "out": str(tmp / f"e{i}.json"),
+         "a": {"kind": "mlp", "path": str(a)}, "b": b_spec}
+        for i, m in enumerate(split_matches(args.pairs, workers))
+    ]
+    started = time.time()
+    run_actors(jobs, tmp, workers)
+    games = wins = pa = pb = 0
+    for i in range(len(jobs)):
+        r = json.loads((tmp / f"e{i}.json").read_text())
+        games += r["games"]
+        wins += r["winsA"]
+        pa += r["pointsA"]
+        pb += r["pointsB"]
+    remove_tree(tmp)
+    low, high = wilson(wins, games)
+    record = {"date": time.strftime("%Y-%m-%d %H:%M"), "a": policy_label(args.a), "b": policy_label(args.b),
+              "players": args.players, "games": games, "winrate": wins / games, "ci90": [low, high],
+              "pointsPerGame": [pa / games, pb / games], "seed": args.seed, "commit": git_commit(),
+              "seconds": round(time.time() - started, 1), "note": args.note or ""}
+    RESULTS.mkdir(parents=True, exist_ok=True)
+    append_jsonl(RESULTS / "duelos.jsonl", record)
+    log(f"{record['a']} vs {record['b']}: {100 * wins / games:.1f}% (IC90 {100 * low:.1f}–{100 * high:.1f}) en {games} partidas"
+        " → training/results/duelos.jsonl")
+
+
+def cmd_archive(args) -> None:
+    """
+    Guarda el registro de una corrida para la tesis:
+    - en training/results/runs/<corrida>/ (va a git): configuración, manifiesto, log.jsonl y stdout.log
+      comprimidos y un resumen (evaluaciones, mejor red, última iteración);
+    - con --backup <carpeta>: además copia la corrida entera menos lo que se regenera (datos de imitación,
+      temporales y checkpoints viejos): redes guardadas, tabla W, red de imitación y el último checkpoint.
+    """
+    import gzip
+
+    d = TRAINING / "runs" / args.run
+    if not d.exists():
+        raise SystemExit(f"no existe la corrida {args.run}")
+    out = RESULTS / "runs" / args.run
+    out.mkdir(parents=True, exist_ok=True)
+    for f in ("config.json", "manifest.json"):
+        if (d / f).exists():
+            shutil.copyfile(d / f, out / f)
+    for f in ("log.jsonl", "stdout.log"):
+        if (d / f).exists():
+            with open(d / f, "rb") as src, gzip.open(out / f"{f}.gz", "wb", compresslevel=9) as dst:
+                shutil.copyfileobj(src, dst)
+    log_path = d / "log.jsonl"
+    lines = log_path.read_text().splitlines() if log_path.exists() else []
+    records = [json.loads(line) for line in lines if line.strip()]
+    iters = [r for r in records if r["kind"] == "ppo_iter"]
+    summary = {
+        "run": args.run,
+        "archived": time.strftime("%Y-%m-%d %H:%M"),
+        "starts": [{"t": r["t"], "commit": r.get("commit")} for r in records if r["kind"] == "start"],
+        "lastIter": iters[-1]["iter"] if iters else 0,
+        "evals": [{k: r[k] for k in ("tag", "opponent", "games", "winrate", "ci90")} for r in records if r["kind"] == "eval"],
+        "gauntlet": [{k: r[k] for k in ("iter", "score", "rates")} for r in records if r["kind"] == "gauntlet"],
+        "best": json.loads((d / "policies" / "best.json").read_text()).get("tag") if (d / "policies" / "best.json").exists() else None,
+        "lastStyle": iters[-1].get("style") if iters else None,
+        "lastEntropyByDecision": iters[-1].get("ent_by") if iters else None,
+    }
+    atomic_write_bytes(out / "summary.json", json.dumps(summary, indent=1, ensure_ascii=False).encode())
+    log(f"registro de {args.run} en training/results/runs/{args.run}/ (va a git)")
+    if args.backup:
+        dest = Path(args.backup).expanduser() / args.run
+        ckpts = sorted((d / "ckpt").glob("iter_*.pt"))
+        skip_ckpts = {p.name for p in ckpts[:-1]}
+
+        def ignore(folder: str, names: list[str]) -> set[str]:
+            here = Path(folder)
+            drop = {n for n in names if n.startswith("tmp") or n == "bcdata"}
+            if here.name == "ckpt":
+                drop |= {n for n in names if n in skip_ckpts}
+            return drop
+
+        shutil.copytree(d, dest, ignore=ignore, dirs_exist_ok=True)
+        log(f"copia de respaldo en {dest}")
 
 
 def cmd_eval(args) -> None:
@@ -794,6 +901,17 @@ def main() -> None:
     x.add_argument("--iters", type=int, default=150)
     x.add_argument("--pairs", type=int, default=500)
     x.add_argument("--workers", type=int, default=6)
+    du = sub.add_parser("duel", help="duelo entre dos redes; se registra en training/results/duelos.jsonl")
+    du.add_argument("--a", required=True, help="red (ruta sin extensión, relativa a training/ o absoluta)")
+    du.add_argument("--b", required=True, help="otra red, o hard / normal / easy")
+    du.add_argument("--pairs", type=int, default=1000)
+    du.add_argument("--players", type=int, default=2)
+    du.add_argument("--seed", type=int, default=888_000)
+    du.add_argument("--workers", type=int)
+    du.add_argument("--note", help="para qué se corrió (queda en el registro)")
+    ar = sub.add_parser("archive", help="guarda el registro de una corrida (y opcionalmente una copia de respaldo)")
+    ar.add_argument("--run", required=True)
+    ar.add_argument("--backup", help="carpeta de respaldo fuera del repo (iCloud, disco externo)")
     e = sub.add_parser("eval")
     e.add_argument("--run", required=True)
     e.add_argument("--policy")
@@ -802,7 +920,8 @@ def main() -> None:
     e.add_argument("--workers", type=int)
     args = parser.parse_args()
     torch.set_num_threads(max(1, (os.cpu_count() or 4) // 4))
-    {"train": cmd_train, "status": cmd_status, "eval": cmd_eval, "exploit": cmd_exploit}[args.cmd](args)
+    {"train": cmd_train, "status": cmd_status, "eval": cmd_eval, "exploit": cmd_exploit,
+     "duel": cmd_duel, "archive": cmd_archive}[args.cmd](args)
 
 
 if __name__ == "__main__":

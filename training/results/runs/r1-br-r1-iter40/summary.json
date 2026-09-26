@@ -1,0 +1,64 @@
+{
+ "run": "r1-br-r1-iter40",
+ "archived": "2026-09-26 15:57",
+ "starts": [],
+ "lastIter": 45,
+ "evals": [
+  {
+   "tag": "iter10",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter40/target",
+   "games": 1000,
+   "winrate": 0.288,
+   "ci90": [
+    0.2650409474688355,
+    0.31210331073984526
+   ]
+  },
+  {
+   "tag": "iter20",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter40/target",
+   "games": 1000,
+   "winrate": 0.507,
+   "ci90": [
+    0.4810090341901185,
+    0.5329531836992174
+   ]
+  },
+  {
+   "tag": "iter30",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter40/target",
+   "games": 1000,
+   "winrate": 0.658,
+   "ci90": [
+    0.6329262600056534,
+    0.6822209437822165
+   ]
+  },
+  {
+   "tag": "iter40",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter40/target",
+   "games": 1000,
+   "winrate": 0.717,
+   "ci90": [
+    0.6930061870018692,
+    0.739822567567547
+   ]
+  }
+ ],
+ "gauntlet": [],
+ "best": "r1-br-r1-iter40/iter40",
+ "lastStyle": {
+  "truco": 0.249,
+  "farol": 0.496,
+  "envido": 0.779,
+  "quiere_truco": 0.661,
+  "sube_truco": 0.052,
+  "quiere_envido": 0.263
+ },
+ "lastEntropyByDecision": {
+  "cartas": 0.09,
+  "turno": 0.202,
+  "resp_truco": 0.076,
+  "resp_envido": 0.06
+ }
+}
