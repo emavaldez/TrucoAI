@@ -93,9 +93,42 @@ fijas, no contra la heurística.
   truco: la 1500 se deja correr con el truco y a la vez miente de más. En el envido aguanta: a la atacante
   mentir en el envido le cuesta (ΔW −0,007) y no le caza los faroles (acepta con <24 el 7%).
 
-## 2026-09-26 — r2 (commit `5a78ee5`)
+## 2026-09-26 13:01 — r2 (commit `1acc2df`, código de r2 en `5a78ee5`)
 
 Sigue r1 desde la 1500 hasta la 2000 con las tres atacantes como rivales fijos de la liga (15% de las
 partidas) y la mejor red elegida por duelos contra la 1500 de r1 y las atacantes de la 1500 y la 270
-(`config/r2.json`). Objetivo: que la atacante de la 1500 baje de 70% hacia 50%, y que una prueba de
-explotabilidad nueva quede claramente por debajo de 70%.
+(`config/r2.json`). Terminó a las 15:57 (500 iteraciones, ~3 h). Detalle en `results/r2.md`.
+
+| Iteración | vs 1500 de r1 | vs atacante de la 1500 | vs atacante de la 270 |
+|---|---|---|---|
+| 1510 | 51,6% | 58,1% | 62,0% |
+| 1560 | 51,1% | 70,8% | 68,1% |
+| 2000 | 52,3% | 66,0% | 72,6% |
+
+- El agujero del truco se tapó en ~60 iteraciones (la 1500 perdía 30–70 con la atacante; r2 le gana 66–34).
+- Contra la 1500 de r1, +2 puntos; contra la difícil, igual (82–86%).
+- Desde la 1560 los duelos quedan planos (62–64% de promedio): las 500 iteraciones sobraron. La "mejor"
+  quedó en la 1530 por ruido.
+- Estilo: quiere el truco 47% (antes 41%); el resto casi igual.
+
+## 2026-09-26 18:43 — Error en la prueba de explotabilidad de r2 (arreglado en `1a79a01`)
+
+La prueba heredaba de r2 el `init` (seguir desde r1 iteración 1500): arrancaba en la 1500 con tope 150 y
+cortaba sin entrenar. Se arregló para que la atacante arranque siempre de la red de imitación y juegue
+solo contra la objetivo, sin atacantes ni duelos de la corrida madre. El intento fallido quedó como un
+evento `start` más en el log de `r2-br-r2-iter2000`.
+
+## 2026-09-26 19:16 — Explotabilidad de r2 iteración 2000 (`r2-br-r2-iter2000`)
+
+Mismo presupuesto que las pruebas anteriores (150 iteraciones, 500 pares por evaluación):
+
+| Iteración de la atacante | contra r1 1500 | contra r2 2000 |
+|---|---|---|
+| 50 | 44,1% | 40,1% |
+| 100 | 63,0% | 46,7% |
+| 150 | 69,9% | **51,1%** (IC90 48,5–53,7) |
+
+La atacante apenas llega a empatar, y sin una estrategia clara: farol de truco 40% y quiere truco 41%
+(la de r1 había llegado a 74% y 68%). **r2 es mucho menos explotable que r1 1500**, al menos con este
+presupuesto de ataque: la curva seguía subiendo despacio (+0,5 puntos cada 10 iteraciones), así que es
+una cota inferior, no una prueba de que no tenga agujeros.

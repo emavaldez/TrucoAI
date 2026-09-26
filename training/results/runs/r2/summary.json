@@ -1,0 +1,2495 @@
+{
+ "run": "r2",
+ "archived": "2026-09-26 23:11",
+ "starts": [
+  {
+   "t": 1790438472.510931,
+   "commit": "1acc2dfcb0263a9b9836c9fb51b6591777cc61d7"
+  }
+ ],
+ "lastIter": 2000,
+ "evals": [
+  {
+   "tag": "iter1510",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.816,
+   "ci90": [
+    0.8013233055030442,
+    0.8298227459999465
+   ]
+  },
+  {
+   "tag": "iter1510-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.516,
+   "ci90": [
+    0.4899954734235754,
+    0.5419181674663356
+   ]
+  },
+  {
+   "tag": "iter1510-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.581,
+   "ci90": [
+    0.5551489628129164,
+    0.6064138441922574
+   ]
+  },
+  {
+   "tag": "iter1510-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.62,
+   "ci90": [
+    0.5944586232302702,
+    0.6448936834440613
+   ]
+  },
+  {
+   "tag": "iter1520",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.827,
+   "ci90": [
+    0.8126473570837192,
+    0.8404689683639959
+   ]
+  },
+  {
+   "tag": "iter1520-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.531,
+   "ci90": [
+    0.5049915623785954,
+    0.5568411168456069
+   ]
+  },
+  {
+   "tag": "iter1520-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.698,
+   "ci90": [
+    0.6736084660486586,
+    0.7213228399639885
+   ]
+  },
+  {
+   "tag": "iter1520-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.654,
+   "ci90": [
+    0.6288690093056466,
+    0.6782997842597456
+   ]
+  },
+  {
+   "tag": "iter1530",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.834,
+   "ci90": [
+    0.8198641499589087,
+    0.8472332589081765
+   ]
+  },
+  {
+   "tag": "iter1530-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.511,
+   "ci90": [
+    0.4850019701841558,
+    0.5369386579276579
+   ]
+  },
+  {
+   "tag": "iter1530-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.745,
+   "ci90": [
+    0.7216865081858505,
+    0.7669911179409098
+   ]
+  },
+  {
+   "tag": "iter1530-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.684,
+   "ci90": [
+    0.659346465402638,
+    0.7076604048313373
+   ]
+  },
+  {
+   "tag": "iter1540",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.8385,
+   "ci90": [
+    0.8245080929112019,
+    0.8515771552969069
+   ]
+  },
+  {
+   "tag": "iter1540-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.526,
+   "ci90": [
+    0.4999902662500438,
+    0.5518694001960616
+   ]
+  },
+  {
+   "tag": "iter1540-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.693,
+   "ci90": [
+    0.6685119370810851,
+    0.7164463561534647
+   ]
+  },
+  {
+   "tag": "iter1540-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.672,
+   "ci90": [
+    0.6471420293117706,
+    0.6959296102547715
+   ]
+  },
+  {
+   "tag": "iter1550",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.822,
+   "ci90": [
+    0.8074976096520576,
+    0.8356322276389645
+   ]
+  },
+  {
+   "tag": "iter1550-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.511,
+   "ci90": [
+    0.4850019701841558,
+    0.5369386579276579
+   ]
+  },
+  {
+   "tag": "iter1550-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.688,
+   "ci90": [
+    0.6634187056844955,
+    0.7115665747719572
+   ]
+  },
+  {
+   "tag": "iter1550-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.657,
+   "ci90": [
+    0.6319117660478262,
+    0.6812408351844244
+   ]
+  },
+  {
+   "tag": "iter1560",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.82,
+   "ci90": [
+    0.8054388645649908,
+    0.8336963774633541
+   ]
+  },
+  {
+   "tag": "iter1560-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.511,
+   "ci90": [
+    0.4850019701841558,
+    0.5369386579276579
+   ]
+  },
+  {
+   "tag": "iter1560-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.708,
+   "ci90": [
+    0.6838116023436893,
+    0.7310657292251521
+   ]
+  },
+  {
+   "tag": "iter1560-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.681,
+   "ci90": [
+    0.6562936388983348,
+    0.7047294236687821
+   ]
+  },
+  {
+   "tag": "iter1570",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.8375,
+   "ci90": [
+    0.8234757881933724,
+    0.8506121623833979
+   ]
+  },
+  {
+   "tag": "iter1570-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.494,
+   "ci90": [
+    0.4680434440040938,
+    0.5199889406621896
+   ]
+  },
+  {
+   "tag": "iter1570-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.705,
+   "ci90": [
+    0.6807492342347212,
+    0.7281442896672619
+   ]
+  },
+  {
+   "tag": "iter1570-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.664,
+   "ci90": [
+    0.639015779585622,
+    0.6880990395359647
+   ]
+  },
+  {
+   "tag": "iter1580",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.8385,
+   "ci90": [
+    0.8245080929112019,
+    0.8515771552969069
+   ]
+  },
+  {
+   "tag": "iter1580-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.509,
+   "ci90": [
+    0.48300529484970084,
+    0.534946128150874
+   ]
+  },
+  {
+   "tag": "iter1580-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.679,
+   "ci90": [
+    0.654259060978975,
+    0.702774796476903
+   ]
+  },
+  {
+   "tag": "iter1580-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.675,
+   "ci90": [
+    0.6501914292094573,
+    0.6988640180239432
+   ]
+  },
+  {
+   "tag": "iter1590",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.85,
+   "ci90": [
+    0.836393173260362,
+    0.8626609977081403
+   ]
+  },
+  {
+   "tag": "iter1590-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.48,
+   "ci90": [
+    0.4541000928085719,
+    0.5060078560790395
+   ]
+  },
+  {
+   "tag": "iter1590-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.651,
+   "ci90": [
+    0.625827335067538,
+    0.6753576508309961
+   ]
+  },
+  {
+   "tag": "iter1590-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.67,
+   "ci90": [
+    0.645109722023628,
+    0.6939727124316751
+   ]
+  },
+  {
+   "tag": "iter1600",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.8455,
+   "ci90": [
+    0.8317394528078812,
+    0.8583268788195977
+   ]
+  },
+  {
+   "tag": "iter1600-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.506,
+   "ci90": [
+    0.48001105933781035,
+    0.5319565559959062
+   ]
+  },
+  {
+   "tag": "iter1600-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.662,
+   "ci90": [
+    0.6369854511643975,
+    0.6861401628459503
+   ]
+  },
+  {
+   "tag": "iter1600-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.663,
+   "ci90": [
+    0.6380005540846625,
+    0.6871196624813047
+   ]
+  },
+  {
+   "tag": "iter1610",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.85,
+   "ci90": [
+    0.836393173260362,
+    0.8626609977081403
+   ]
+  },
+  {
+   "tag": "iter1610-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.51,
+   "ci90": [
+    0.484003580676829,
+    0.5359424448793653
+   ]
+  },
+  {
+   "tag": "iter1610-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.683,
+   "ci90": [
+    0.6583287281899853,
+    0.7066835394883705
+   ]
+  },
+  {
+   "tag": "iter1610-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.67,
+   "ci90": [
+    0.645109722023628,
+    0.6939727124316751
+   ]
+  },
+  {
+   "tag": "iter1620",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.859,
+   "ci90": [
+    0.8457129955614299,
+    0.8713168540891197
+   ]
+  },
+  {
+   "tag": "iter1620-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.521,
+   "ci90": [
+    0.49499157115287357,
+    0.5468950825151345
+   ]
+  },
+  {
+   "tag": "iter1620-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.674,
+   "ci90": [
+    0.6491748369893654,
+    0.6978860076884156
+   ]
+  },
+  {
+   "tag": "iter1620-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.685,
+   "ci90": [
+    0.6603643314272751,
+    0.7086371413623196
+   ]
+  },
+  {
+   "tag": "iter1630",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.8555,
+   "ci90": [
+    0.8420866032292306,
+    0.8679527047116341
+   ]
+  },
+  {
+   "tag": "iter1630-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.504,
+   "ci90": [
+    0.4780154205478404,
+    0.5299629896746374
+   ]
+  },
+  {
+   "tag": "iter1630-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.668,
+   "ci90": [
+    0.6430779128117317,
+    0.6920153165323326
+   ]
+  },
+  {
+   "tag": "iter1630-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.693,
+   "ci90": [
+    0.6685119370810851,
+    0.7164463561534647
+   ]
+  },
+  {
+   "tag": "iter1640",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.848,
+   "ci90": [
+    0.8343243588574365,
+    0.8607352168483886
+   ]
+  },
+  {
+   "tag": "iter1640-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.518,
+   "ci90": [
+    0.4919936010328812,
+    0.5439092449682685
+   ]
+  },
+  {
+   "tag": "iter1640-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.672,
+   "ci90": [
+    0.6471420293117706,
+    0.6959296102547715
+   ]
+  },
+  {
+   "tag": "iter1640-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.681,
+   "ci90": [
+    0.6562936388983348,
+    0.7047294236687821
+   ]
+  },
+  {
+   "tag": "iter1650",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.8495,
+   "ci90": [
+    0.8358758947264938,
+    0.8621796274263395
+   ]
+  },
+  {
+   "tag": "iter1650-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.52,
+   "ci90": [
+    0.49399214392096047,
+    0.5458999071914281
+   ]
+  },
+  {
+   "tag": "iter1650-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.691,
+   "ci90": [
+    0.6664742513068421,
+    0.7144948368164689
+   ]
+  },
+  {
+   "tag": "iter1650-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.685,
+   "ci90": [
+    0.6603643314272751,
+    0.7086371413623196
+   ]
+  },
+  {
+   "tag": "iter1660",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.857,
+   "ci90": [
+    0.8436404507007386,
+    0.8693948036871338
+   ]
+  },
+  {
+   "tag": "iter1660-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.52,
+   "ci90": [
+    0.49399214392096047,
+    0.5458999071914281
+   ]
+  },
+  {
+   "tag": "iter1660-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.66,
+   "ci90": [
+    0.6349556120038703,
+    0.6841807968952386
+   ]
+  },
+  {
+   "tag": "iter1660-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.693,
+   "ci90": [
+    0.6685119370810851,
+    0.7164463561534647
+   ]
+  },
+  {
+   "tag": "iter1670",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.864,
+   "ci90": [
+    0.8508981942239005,
+    0.8761181435833421
+   ]
+  },
+  {
+   "tag": "iter1670-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.506,
+   "ci90": [
+    0.48001105933781035,
+    0.5319565559959062
+   ]
+  },
+  {
+   "tag": "iter1670-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.675,
+   "ci90": [
+    0.6501914292094573,
+    0.6988640180239432
+   ]
+  },
+  {
+   "tag": "iter1670-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.703,
+   "ci90": [
+    0.6787083384273838,
+    0.7261959803633604
+   ]
+  },
+  {
+   "tag": "iter1680",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.854,
+   "ci90": [
+    0.840533229861692,
+    0.8665101316321647
+   ]
+  },
+  {
+   "tag": "iter1680-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.512,
+   "ci90": [
+    0.48600046338471636,
+    0.5379347672827168
+   ]
+  },
+  {
+   "tag": "iter1680-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.718,
+   "ci90": [
+    0.6940285094805916,
+    0.7407948476444441
+   ]
+  },
+  {
+   "tag": "iter1680-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.698,
+   "ci90": [
+    0.6736084660486586,
+    0.7213228399639885
+   ]
+  },
+  {
+   "tag": "iter1690",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.8385,
+   "ci90": [
+    0.8245080929112019,
+    0.8515771552969069
+   ]
+  },
+  {
+   "tag": "iter1690-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.515,
+   "ci90": [
+    0.48899656529482466,
+    0.5409224730394668
+   ]
+  },
+  {
+   "tag": "iter1690-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.693,
+   "ci90": [
+    0.6685119370810851,
+    0.7164463561534647
+   ]
+  },
+  {
+   "tag": "iter1690-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.72,
+   "ci90": [
+    0.6960735809813734,
+    0.7427389812549012
+   ]
+  },
+  {
+   "tag": "iter1700",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.831,
+   "ci90": [
+    0.8167701964815279,
+    0.8443353194915415
+   ]
+  },
+  {
+   "tag": "iter1700-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.534,
+   "ci90": [
+    0.5079935903707817,
+    0.559822896520279
+   ]
+  },
+  {
+   "tag": "iter1700-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.695,
+   "ci90": [
+    0.6705501504423794,
+    0.7183973479034094
+   ]
+  },
+  {
+   "tag": "iter1700-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.7,
+   "ci90": [
+    0.6756480111482328,
+    0.723272499975653
+   ]
+  },
+  {
+   "tag": "iter1710",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.8255,
+   "ci90": [
+    0.8111019948349107,
+    0.8390183841657965
+   ]
+  },
+  {
+   "tag": "iter1710-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.514,
+   "ci90": [
+    0.4879977609239025,
+    0.5399266748547695
+   ]
+  },
+  {
+   "tag": "iter1710-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.671,
+   "ci90": [
+    0.6461258132646459,
+    0.6949512237462767
+   ]
+  },
+  {
+   "tag": "iter1710-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.69,
+   "ci90": [
+    0.66545560537678,
+    0.7135188801909116
+   ]
+  },
+  {
+   "tag": "iter1720",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.824,
+   "ci90": [
+    0.8095570097105311,
+    0.8375674228431682
+   ]
+  },
+  {
+   "tag": "iter1720-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.511,
+   "ci90": [
+    0.4850019701841558,
+    0.5369386579276579
+   ]
+  },
+  {
+   "tag": "iter1720-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.665,
+   "ci90": [
+    0.6400311279360579,
+    0.6890782937411483
+   ]
+  },
+  {
+   "tag": "iter1720-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.7,
+   "ci90": [
+    0.6756480111482328,
+    0.723272499975653
+   ]
+  },
+  {
+   "tag": "iter1730",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.834,
+   "ci90": [
+    0.8198641499589087,
+    0.8472332589081765
+   ]
+  },
+  {
+   "tag": "iter1730-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.515,
+   "ci90": [
+    0.48899656529482466,
+    0.5409224730394668
+   ]
+  },
+  {
+   "tag": "iter1730-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.692,
+   "ci90": [
+    0.6674930284240601,
+    0.7154706622548703
+   ]
+  },
+  {
+   "tag": "iter1730-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.703,
+   "ci90": [
+    0.6787083384273838,
+    0.7261959803633604
+   ]
+  },
+  {
+   "tag": "iter1740",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.848,
+   "ci90": [
+    0.8343243588574365,
+    0.8607352168483886
+   ]
+  },
+  {
+   "tag": "iter1740-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.521,
+   "ci90": [
+    0.49499157115287357,
+    0.5468950825151345
+   ]
+  },
+  {
+   "tag": "iter1740-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.645,
+   "ci90": [
+    0.61974720824003,
+    0.6694701623247873
+   ]
+  },
+  {
+   "tag": "iter1740-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.705,
+   "ci90": [
+    0.6807492342347212,
+    0.7281442896672619
+   ]
+  },
+  {
+   "tag": "iter1750",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.841,
+   "ci90": [
+    0.8270896620740141,
+    0.8539888302124411
+   ]
+  },
+  {
+   "tag": "iter1750-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.525,
+   "ci90": [
+    0.4989903192766839,
+    0.5508747446138019
+   ]
+  },
+  {
+   "tag": "iter1750-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.675,
+   "ci90": [
+    0.6501914292094573,
+    0.6988640180239432
+   ]
+  },
+  {
+   "tag": "iter1750-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.699,
+   "ci90": [
+    0.6746281715451463,
+    0.7222977370231203
+   ]
+  },
+  {
+   "tag": "iter1760",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.844,
+   "ci90": [
+    0.8301890927986533,
+    0.8568812923818176
+   ]
+  },
+  {
+   "tag": "iter1760-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.524,
+   "ci90": [
+    0.49799047631022075,
+    0.5498799850246456
+   ]
+  },
+  {
+   "tag": "iter1760-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.683,
+   "ci90": [
+    0.6583287281899853,
+    0.7066835394883705
+   ]
+  },
+  {
+   "tag": "iter1760-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.71,
+   "ci90": [
+    0.6858538687769875,
+    0.7330126679030928
+   ]
+  },
+  {
+   "tag": "iter1770",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.8405,
+   "ci90": [
+    0.8265732552737715,
+    0.8535065881970145
+   ]
+  },
+  {
+   "tag": "iter1770-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.531,
+   "ci90": [
+    0.5049915623785954,
+    0.5568411168456069
+   ]
+  },
+  {
+   "tag": "iter1770-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.672,
+   "ci90": [
+    0.6471420293117706,
+    0.6959296102547715
+   ]
+  },
+  {
+   "tag": "iter1770-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.706,
+   "ci90": [
+    0.681769886613808,
+    0.7291182398437945
+   ]
+  },
+  {
+   "tag": "iter1780",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.827,
+   "ci90": [
+    0.8126473570837192,
+    0.8404689683639959
+   ]
+  },
+  {
+   "tag": "iter1780-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.521,
+   "ci90": [
+    0.49499157115287357,
+    0.5468950825151345
+   ]
+  },
+  {
+   "tag": "iter1780-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.661,
+   "ci90": [
+    0.6359704705586592,
+    0.6851605408960691
+   ]
+  },
+  {
+   "tag": "iter1780-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.685,
+   "ci90": [
+    0.6603643314272751,
+    0.7086371413623196
+   ]
+  },
+  {
+   "tag": "iter1790",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.8385,
+   "ci90": [
+    0.8245080929112019,
+    0.8515771552969069
+   ]
+  },
+  {
+   "tag": "iter1790-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.523,
+   "ci90": [
+    0.4969907373200898,
+    0.5488851214591571
+   ]
+  },
+  {
+   "tag": "iter1790-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.67,
+   "ci90": [
+    0.645109722023628,
+    0.6939727124316751
+   ]
+  },
+  {
+   "tag": "iter1790-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.68,
+   "ci90": [
+    0.6552762861760147,
+    0.7037521738354827
+   ]
+  },
+  {
+   "tag": "iter1800",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.834,
+   "ci90": [
+    0.8198641499589087,
+    0.8472332589081765
+   ]
+  },
+  {
+   "tag": "iter1800-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.5,
+   "ci90": [
+    0.4740253864788856,
+    0.5259746135211144
+   ]
+  },
+  {
+   "tag": "iter1800-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.668,
+   "ci90": [
+    0.6430779128117317,
+    0.6920153165323326
+   ]
+  },
+  {
+   "tag": "iter1800-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.713,
+   "ci90": [
+    0.6889183083343611,
+    0.7359320360125774
+   ]
+  },
+  {
+   "tag": "iter1810",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.82,
+   "ci90": [
+    0.8054388645649908,
+    0.8336963774633541
+   ]
+  },
+  {
+   "tag": "iter1810-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.531,
+   "ci90": [
+    0.5049915623785954,
+    0.5568411168456069
+   ]
+  },
+  {
+   "tag": "iter1810-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.638,
+   "ci90": [
+    0.6126591005820267,
+    0.6625960520934547
+   ]
+  },
+  {
+   "tag": "iter1810-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.695,
+   "ci90": [
+    0.6705501504423794,
+    0.7183973479034094
+   ]
+  },
+  {
+   "tag": "iter1820",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.835,
+   "ci90": [
+    0.820895821824325,
+    0.8481988846740987
+   ]
+  },
+  {
+   "tag": "iter1820-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.525,
+   "ci90": [
+    0.4989903192766839,
+    0.5508747446138019
+   ]
+  },
+  {
+   "tag": "iter1820-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.67,
+   "ci90": [
+    0.645109722023628,
+    0.6939727124316751
+   ]
+  },
+  {
+   "tag": "iter1820-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.712,
+   "ci90": [
+    0.6878966892601547,
+    0.7349590525311643
+   ]
+  },
+  {
+   "tag": "iter1830",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.825,
+   "ci90": [
+    0.8105869580793271,
+    0.8385347721057107
+   ]
+  },
+  {
+   "tag": "iter1830-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.519,
+   "ci90": [
+    0.49299282055572075,
+    0.5449046280010483
+   ]
+  },
+  {
+   "tag": "iter1830-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.691,
+   "ci90": [
+    0.6664742513068421,
+    0.7144948368164689
+   ]
+  },
+  {
+   "tag": "iter1830-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.702,
+   "ci90": [
+    0.6776880942025727,
+    0.725221622032552
+   ]
+  },
+  {
+   "tag": "iter1840",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.8365,
+   "ci90": [
+    0.8224436659578015,
+    0.8496469869876301
+   ]
+  },
+  {
+   "tag": "iter1840-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.528,
+   "ci90": [
+    0.50199047234603,
+    0.5538583992113142
+   ]
+  },
+  {
+   "tag": "iter1840-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.685,
+   "ci90": [
+    0.6603643314272751,
+    0.7086371413623196
+   ]
+  },
+  {
+   "tag": "iter1840-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.695,
+   "ci90": [
+    0.6705501504423794,
+    0.7183973479034094
+   ]
+  },
+  {
+   "tag": "iter1850",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.8285,
+   "ci90": [
+    0.8141931003244118,
+    0.8419191715703112
+   ]
+  },
+  {
+   "tag": "iter1850-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.51,
+   "ci90": [
+    0.484003580676829,
+    0.5359424448793653
+   ]
+  },
+  {
+   "tag": "iter1850-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.671,
+   "ci90": [
+    0.6461258132646459,
+    0.6949512237462767
+   ]
+  },
+  {
+   "tag": "iter1850-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.693,
+   "ci90": [
+    0.6685119370810851,
+    0.7164463561534647
+   ]
+  },
+  {
+   "tag": "iter1860",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.8395,
+   "ci90": [
+    0.8255405814760213,
+    0.8525419643634262
+   ]
+  },
+  {
+   "tag": "iter1860-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.515,
+   "ci90": [
+    0.48899656529482466,
+    0.5409224730394668
+   ]
+  },
+  {
+   "tag": "iter1860-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.638,
+   "ci90": [
+    0.6126591005820267,
+    0.6625960520934547
+   ]
+  },
+  {
+   "tag": "iter1860-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.701,
+   "ci90": [
+    0.6766679852390775,
+    0.7242471284404278
+   ]
+  },
+  {
+   "tag": "iter1870",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.8345,
+   "ci90": [
+    0.8203799635779025,
+    0.847716094104852
+   ]
+  },
+  {
+   "tag": "iter1870-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.52,
+   "ci90": [
+    0.49399214392096047,
+    0.5458999071914281
+   ]
+  },
+  {
+   "tag": "iter1870-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.613,
+   "ci90": [
+    0.5873906265599126,
+    0.637999462225083
+   ]
+  },
+  {
+   "tag": "iter1870-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.687,
+   "ci90": [
+    0.6624004512338462,
+    0.7105902266669875
+   ]
+  },
+  {
+   "tag": "iter1880",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.8305,
+   "ci90": [
+    0.8162546908096395,
+    0.8438521763477607
+   ]
+  },
+  {
+   "tag": "iter1880-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.513,
+   "ci90": [
+    0.4869990602927902,
+    0.5389307729302624
+   ]
+  },
+  {
+   "tag": "iter1880-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.662,
+   "ci90": [
+    0.6369854511643975,
+    0.6861401628459503
+   ]
+  },
+  {
+   "tag": "iter1880-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.682,
+   "ci90": [
+    0.6573111194629568,
+    0.7057065456597795
+   ]
+  },
+  {
+   "tag": "iter1890",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.825,
+   "ci90": [
+    0.8105869580793271,
+    0.8385347721057107
+   ]
+  },
+  {
+   "tag": "iter1890-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.534,
+   "ci90": [
+    0.5079935903707817,
+    0.559822896520279
+   ]
+  },
+  {
+   "tag": "iter1890-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.646,
+   "ci90": [
+    0.6207602659638285,
+    0.6704517071566083
+   ]
+  },
+  {
+   "tag": "iter1890-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.69,
+   "ci90": [
+    0.66545560537678,
+    0.7135188801909116
+   ]
+  },
+  {
+   "tag": "iter1900",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.8415,
+   "ci90": [
+    0.8276061157120612,
+    0.8544710253900633
+   ]
+  },
+  {
+   "tag": "iter1900-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.52,
+   "ci90": [
+    0.49399214392096047,
+    0.5458999071914281
+   ]
+  },
+  {
+   "tag": "iter1900-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.666,
+   "ci90": [
+    0.6410465994073885,
+    0.6900574248254369
+   ]
+  },
+  {
+   "tag": "iter1900-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.701,
+   "ci90": [
+    0.6766679852390775,
+    0.7242471284404278
+   ]
+  },
+  {
+   "tag": "iter1910",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.848,
+   "ci90": [
+    0.8343243588574365,
+    0.8607352168483886
+   ]
+  },
+  {
+   "tag": "iter1910-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.528,
+   "ci90": [
+    0.50199047234603,
+    0.5538583992113142
+   ]
+  },
+  {
+   "tag": "iter1910-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.664,
+   "ci90": [
+    0.639015779585622,
+    0.6880990395359647
+   ]
+  },
+  {
+   "tag": "iter1910-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.688,
+   "ci90": [
+    0.6634187056844955,
+    0.7115665747719572
+   ]
+  },
+  {
+   "tag": "iter1920",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.841,
+   "ci90": [
+    0.8270896620740141,
+    0.8539888302124411
+   ]
+  },
+  {
+   "tag": "iter1920-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.51,
+   "ci90": [
+    0.484003580676829,
+    0.5359424448793653
+   ]
+  },
+  {
+   "tag": "iter1920-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.639,
+   "ci90": [
+    0.6136713357239456,
+    0.6635784195071552
+   ]
+  },
+  {
+   "tag": "iter1920-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.694,
+   "ci90": [
+    0.6695309776340049,
+    0.7174219181561644
+   ]
+  },
+  {
+   "tag": "iter1930",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.8515,
+   "ci90": [
+    0.8379453114745434,
+    0.8641048059409668
+   ]
+  },
+  {
+   "tag": "iter1930-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.517,
+   "ci90": [
+    0.490994485329422,
+    0.5429137581161084
+   ]
+  },
+  {
+   "tag": "iter1930-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.643,
+   "ci90": [
+    0.6177214470759811,
+    0.6675067183775973
+   ]
+  },
+  {
+   "tag": "iter1930-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.72,
+   "ci90": [
+    0.6960735809813734,
+    0.7427389812549012
+   ]
+  },
+  {
+   "tag": "iter1940",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.8475,
+   "ci90": [
+    0.8338072794707584,
+    0.8602536474193977
+   ]
+  },
+  {
+   "tag": "iter1940-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.521,
+   "ci90": [
+    0.49499157115287357,
+    0.5468950825151345
+   ]
+  },
+  {
+   "tag": "iter1940-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.65,
+   "ci90": [
+    0.6248136830799146,
+    0.674376700263
+   ]
+  },
+  {
+   "tag": "iter1940-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.727,
+   "ci90": [
+    0.7032358591682141,
+    0.7495389209573965
+   ]
+  },
+  {
+   "tag": "iter1950",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.832,
+   "ci90": [
+    0.8178013385526812,
+    0.8453014750517267
+   ]
+  },
+  {
+   "tag": "iter1950-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.525,
+   "ci90": [
+    0.4989903192766839,
+    0.5508747446138019
+   ]
+  },
+  {
+   "tag": "iter1950-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.649,
+   "ci90": [
+    0.6238001504087163,
+    0.6733956303785789
+   ]
+  },
+  {
+   "tag": "iter1950-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.72,
+   "ci90": [
+    0.6960735809813734,
+    0.7427389812549012
+   ]
+  },
+  {
+   "tag": "iter1960",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.8225,
+   "ci90": [
+    0.8080123979254539,
+    0.8361160881812377
+   ]
+  },
+  {
+   "tag": "iter1960-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.537,
+   "ci90": [
+    0.5109965574223652,
+    0.5628037371355539
+   ]
+  },
+  {
+   "tag": "iter1960-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.653,
+   "ci90": [
+    0.6278549979403659,
+    0.677319193069407
+   ]
+  },
+  {
+   "tag": "iter1960-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.716,
+   "ci90": [
+    0.691984006096128,
+    0.7388501459176688
+   ]
+  },
+  {
+   "tag": "iter1970",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.8265,
+   "ci90": [
+    0.812132194194391,
+    0.8399854824376548
+   ]
+  },
+  {
+   "tag": "iter1970-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.526,
+   "ci90": [
+    0.4999902662500438,
+    0.5518694001960616
+   ]
+  },
+  {
+   "tag": "iter1970-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.644,
+   "ci90": [
+    0.6187342686849846,
+    0.6684884993242133
+   ]
+  },
+  {
+   "tag": "iter1970-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.698,
+   "ci90": [
+    0.6736084660486586,
+    0.7213228399639885
+   ]
+  },
+  {
+   "tag": "iter1980",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.821,
+   "ci90": [
+    0.8064681557745,
+    0.8346643838851836
+   ]
+  },
+  {
+   "tag": "iter1980-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.515,
+   "ci90": [
+    0.48899656529482466,
+    0.5409224730394668
+   ]
+  },
+  {
+   "tag": "iter1980-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.648,
+   "ci90": [
+    0.6227867368197988,
+    0.6724144414118769
+   ]
+  },
+  {
+   "tag": "iter1980-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.698,
+   "ci90": [
+    0.6736084660486586,
+    0.7213228399639885
+   ]
+  },
+  {
+   "tag": "iter1990",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.811,
+   "ci90": [
+    0.7961823941855097,
+    0.8249771691607883
+   ]
+  },
+  {
+   "tag": "iter1990-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.519,
+   "ci90": [
+    0.49299282055572075,
+    0.5449046280010483
+   ]
+  },
+  {
+   "tag": "iter1990-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.654,
+   "ci90": [
+    0.6288690093056466,
+    0.6782997842597456
+   ]
+  },
+  {
+   "tag": "iter1990-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.713,
+   "ci90": [
+    0.6889183083343611,
+    0.7359320360125774
+   ]
+  },
+  {
+   "tag": "iter2000",
+   "opponent": "hard",
+   "games": 2000,
+   "winrate": 0.8195,
+   "ci90": [
+    0.8049242796301479,
+    0.8332123135825278
+   ]
+  },
+  {
+   "tag": "iter2000-vs-r1/iter_001500",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1/policies/iter_001500",
+   "games": 1000,
+   "winrate": 0.523,
+   "ci90": [
+    0.4969907373200898,
+    0.5488851214591571
+   ]
+  },
+  {
+   "tag": "iter2000-vs-r1-br-r1-iter1500/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter1500/policies/best",
+   "games": 1000,
+   "winrate": 0.66,
+   "ci90": [
+    0.6349556120038703,
+    0.6841807968952386
+   ]
+  },
+  {
+   "tag": "iter2000-vs-r1-br-r1-iter270/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r1-br-r1-iter270/policies/best",
+   "games": 1000,
+   "winrate": 0.726,
+   "ci90": [
+    0.7022122415020737,
+    0.7485679360679174
+   ]
+  }
+ ],
+ "gauntlet": [
+  {
+   "iter": 1510,
+   "score": 0.5723333333333334,
+   "rates": [
+    0.516,
+    0.581,
+    0.62
+   ]
+  },
+  {
+   "iter": 1520,
+   "score": 0.6276666666666667,
+   "rates": [
+    0.531,
+    0.698,
+    0.654
+   ]
+  },
+  {
+   "iter": 1530,
+   "score": 0.6466666666666666,
+   "rates": [
+    0.511,
+    0.745,
+    0.684
+   ]
+  },
+  {
+   "iter": 1540,
+   "score": 0.6303333333333333,
+   "rates": [
+    0.526,
+    0.693,
+    0.672
+   ]
+  },
+  {
+   "iter": 1550,
+   "score": 0.6186666666666666,
+   "rates": [
+    0.511,
+    0.688,
+    0.657
+   ]
+  },
+  {
+   "iter": 1560,
+   "score": 0.6333333333333333,
+   "rates": [
+    0.511,
+    0.708,
+    0.681
+   ]
+  },
+  {
+   "iter": 1570,
+   "score": 0.621,
+   "rates": [
+    0.494,
+    0.705,
+    0.664
+   ]
+  },
+  {
+   "iter": 1580,
+   "score": 0.621,
+   "rates": [
+    0.509,
+    0.679,
+    0.675
+   ]
+  },
+  {
+   "iter": 1590,
+   "score": 0.6003333333333334,
+   "rates": [
+    0.48,
+    0.651,
+    0.67
+   ]
+  },
+  {
+   "iter": 1600,
+   "score": 0.6103333333333333,
+   "rates": [
+    0.506,
+    0.662,
+    0.663
+   ]
+  },
+  {
+   "iter": 1610,
+   "score": 0.621,
+   "rates": [
+    0.51,
+    0.683,
+    0.67
+   ]
+  },
+  {
+   "iter": 1620,
+   "score": 0.6266666666666667,
+   "rates": [
+    0.521,
+    0.674,
+    0.685
+   ]
+  },
+  {
+   "iter": 1630,
+   "score": 0.6216666666666667,
+   "rates": [
+    0.504,
+    0.668,
+    0.693
+   ]
+  },
+  {
+   "iter": 1640,
+   "score": 0.6236666666666667,
+   "rates": [
+    0.518,
+    0.672,
+    0.681
+   ]
+  },
+  {
+   "iter": 1650,
+   "score": 0.632,
+   "rates": [
+    0.52,
+    0.691,
+    0.685
+   ]
+  },
+  {
+   "iter": 1660,
+   "score": 0.6243333333333333,
+   "rates": [
+    0.52,
+    0.66,
+    0.693
+   ]
+  },
+  {
+   "iter": 1670,
+   "score": 0.628,
+   "rates": [
+    0.506,
+    0.675,
+    0.703
+   ]
+  },
+  {
+   "iter": 1680,
+   "score": 0.6426666666666666,
+   "rates": [
+    0.512,
+    0.718,
+    0.698
+   ]
+  },
+  {
+   "iter": 1690,
+   "score": 0.6426666666666666,
+   "rates": [
+    0.515,
+    0.693,
+    0.72
+   ]
+  },
+  {
+   "iter": 1700,
+   "score": 0.6429999999999999,
+   "rates": [
+    0.534,
+    0.695,
+    0.7
+   ]
+  },
+  {
+   "iter": 1710,
+   "score": 0.625,
+   "rates": [
+    0.514,
+    0.671,
+    0.69
+   ]
+  },
+  {
+   "iter": 1720,
+   "score": 0.6253333333333333,
+   "rates": [
+    0.511,
+    0.665,
+    0.7
+   ]
+  },
+  {
+   "iter": 1730,
+   "score": 0.6366666666666666,
+   "rates": [
+    0.515,
+    0.692,
+    0.703
+   ]
+  },
+  {
+   "iter": 1740,
+   "score": 0.6236666666666667,
+   "rates": [
+    0.521,
+    0.645,
+    0.705
+   ]
+  },
+  {
+   "iter": 1750,
+   "score": 0.633,
+   "rates": [
+    0.525,
+    0.675,
+    0.699
+   ]
+  },
+  {
+   "iter": 1760,
+   "score": 0.639,
+   "rates": [
+    0.524,
+    0.683,
+    0.71
+   ]
+  },
+  {
+   "iter": 1770,
+   "score": 0.6363333333333333,
+   "rates": [
+    0.531,
+    0.672,
+    0.706
+   ]
+  },
+  {
+   "iter": 1780,
+   "score": 0.6223333333333333,
+   "rates": [
+    0.521,
+    0.661,
+    0.685
+   ]
+  },
+  {
+   "iter": 1790,
+   "score": 0.6243333333333334,
+   "rates": [
+    0.523,
+    0.67,
+    0.68
+   ]
+  },
+  {
+   "iter": 1800,
+   "score": 0.627,
+   "rates": [
+    0.5,
+    0.668,
+    0.713
+   ]
+  },
+  {
+   "iter": 1810,
+   "score": 0.6213333333333333,
+   "rates": [
+    0.531,
+    0.638,
+    0.695
+   ]
+  },
+  {
+   "iter": 1820,
+   "score": 0.6356666666666667,
+   "rates": [
+    0.525,
+    0.67,
+    0.712
+   ]
+  },
+  {
+   "iter": 1830,
+   "score": 0.6373333333333333,
+   "rates": [
+    0.519,
+    0.691,
+    0.702
+   ]
+  },
+  {
+   "iter": 1840,
+   "score": 0.636,
+   "rates": [
+    0.528,
+    0.685,
+    0.695
+   ]
+  },
+  {
+   "iter": 1850,
+   "score": 0.6246666666666667,
+   "rates": [
+    0.51,
+    0.671,
+    0.693
+   ]
+  },
+  {
+   "iter": 1860,
+   "score": 0.618,
+   "rates": [
+    0.515,
+    0.638,
+    0.701
+   ]
+  },
+  {
+   "iter": 1870,
+   "score": 0.6066666666666667,
+   "rates": [
+    0.52,
+    0.613,
+    0.687
+   ]
+  },
+  {
+   "iter": 1880,
+   "score": 0.6190000000000001,
+   "rates": [
+    0.513,
+    0.662,
+    0.682
+   ]
+  },
+  {
+   "iter": 1890,
+   "score": 0.6233333333333334,
+   "rates": [
+    0.534,
+    0.646,
+    0.69
+   ]
+  },
+  {
+   "iter": 1900,
+   "score": 0.629,
+   "rates": [
+    0.52,
+    0.666,
+    0.701
+   ]
+  },
+  {
+   "iter": 1910,
+   "score": 0.6266666666666666,
+   "rates": [
+    0.528,
+    0.664,
+    0.688
+   ]
+  },
+  {
+   "iter": 1920,
+   "score": 0.6143333333333333,
+   "rates": [
+    0.51,
+    0.639,
+    0.694
+   ]
+  },
+  {
+   "iter": 1930,
+   "score": 0.6266666666666666,
+   "rates": [
+    0.517,
+    0.643,
+    0.72
+   ]
+  },
+  {
+   "iter": 1940,
+   "score": 0.6326666666666667,
+   "rates": [
+    0.521,
+    0.65,
+    0.727
+   ]
+  },
+  {
+   "iter": 1950,
+   "score": 0.6313333333333334,
+   "rates": [
+    0.525,
+    0.649,
+    0.72
+   ]
+  },
+  {
+   "iter": 1960,
+   "score": 0.6353333333333334,
+   "rates": [
+    0.537,
+    0.653,
+    0.716
+   ]
+  },
+  {
+   "iter": 1970,
+   "score": 0.6226666666666666,
+   "rates": [
+    0.526,
+    0.644,
+    0.698
+   ]
+  },
+  {
+   "iter": 1980,
+   "score": 0.6203333333333333,
+   "rates": [
+    0.515,
+    0.648,
+    0.698
+   ]
+  },
+  {
+   "iter": 1990,
+   "score": 0.6286666666666667,
+   "rates": [
+    0.519,
+    0.654,
+    0.713
+   ]
+  },
+  {
+   "iter": 2000,
+   "score": 0.6363333333333333,
+   "rates": [
+    0.523,
+    0.66,
+    0.726
+   ]
+  }
+ ],
+ "best": "r2/iter1530",
+ "lastStyle": {
+  "truco": 0.185,
+  "farol": 0.337,
+  "envido": 0.603,
+  "farol_envido": 0.402,
+  "envido_<24": 0.452,
+  "envido_24-27": 0.817,
+  "envido_28-30": 0.811,
+  "envido_31+": 0.833,
+  "quiere_truco": 0.47,
+  "sube_truco": 0.019,
+  "quiere_envido": 0.3,
+  "acepta_envido_<24": 0.186,
+  "acepta_envido_24-27": 0.835,
+  "acepta_envido_28-30": 0.957,
+  "acepta_envido_31+": 1.0,
+  "farol_envido_exito": 0.551,
+  "farol_envido_pts": -0.49,
+  "farol_envido_dW": -0.0095,
+  "tantos_envido_exito": 0.561,
+  "tantos_envido_pts": 1.07,
+  "tantos_envido_dW": 0.0389
+ },
+ "lastEntropyByDecision": {
+  "cartas": 0.069,
+  "turno": 0.273,
+  "resp_truco": 0.12,
+  "resp_envido": 0.136
+ }
+}
