@@ -749,6 +749,11 @@ def cmd_exploit(args) -> None:
         for phase in ("wtable", "bcdata", "bc"):
             atomic_write_bytes(d / f"{phase}.done", json.dumps({"from": args.run}).encode())
     base = json.loads((parent / "config.json").read_text())
+    # La atacante arranca siempre de la red de imitación y juega solo contra la objetivo: nada de lo que
+    # la corrida madre heredó (init), ni atacantes en la liga, ni duelos.
+    base.pop("init", None)
+    base.get("ppo", {}).pop("exploiters", None)
+    base.get("eval", {}).pop("gauntlet", None)
     config = merge(base, {
         "ppo": {
             "iterations": args.iters,
