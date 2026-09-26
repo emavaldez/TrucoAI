@@ -1,0 +1,34 @@
+{
+  "_comment": "r2: sigue r1 desde la iteración 1500 hasta la 2000, con las redes que explotaron a r1 (en la 40, la 270 y la 1500) como rivales fijos de la liga, para tapar el agujero del truco. La mejor red se elige por duelos contra la 1500 de r1 y contra las atacantes, no contra la difícil (que ya no discrimina). Siempre sin flor.",
+  "players": 2,
+  "seed": 2,
+  "workers": 16,
+  "init": {"fromRun": "r1", "iter": 1500},
+  "wtable": {"matches": 8000},
+  "bc": {"matches": 100000, "epochs": 8, "batch": 8192, "evalPairs": 2000},
+  "ppo": {
+    "matchesPerIter": 4096,
+    "minibatch": 16384,
+    "iterations": 2000,
+    "opponents": {"self": 0.4, "league": 0.3, "exploiters": 0.15, "hard": 0.1, "normal": 0.025, "easy": 0.025},
+    "exploiters": [
+      "runs/r1-br-r1-iter40/policies/current",
+      "runs/r1-br-r1-iter270/policies/best",
+      "runs/r1-br-r1-iter1500/policies/best"
+    ]
+  },
+  "eval": {
+    "every": 10,
+    "pairs": 1000,
+    "opponent": "hard",
+    "gauntlet": {
+      "pairs": 500,
+      "opponents": [
+        "runs/r1/policies/iter_001500",
+        "runs/r1-br-r1-iter1500/policies/best",
+        "runs/r1-br-r1-iter270/policies/best"
+      ]
+    }
+  },
+  "checkpoint": {"keepLast": 5, "keepBest": 3, "backupDir": null}
+}

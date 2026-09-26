@@ -101,6 +101,12 @@ SMOKE: dict = {
 }
 
 
+def training_path(p: str) -> Path:
+    """Rutas de la configuración: absolutas o relativas a training/."""
+    q = Path(p).expanduser()
+    return q if q.is_absolute() else TRAINING / q
+
+
 def merge(base: dict, over: dict) -> dict:
     out = copy.deepcopy(base)
     for key, value in over.items():
@@ -146,6 +152,25 @@ class Run:
                     f"La observación cambió ({saved['layoutHash']} → {self.layout['layoutHash']}): "
                     "esta corrida no se puede retomar; empezá otra con --run."
                 )
+
+    def adopt_parent(self) -> None:
+        """
+        `init: {fromRun, iter}`: la corrida sigue desde un checkpoint de otra (pesos, optimizador, liga,
+        contador de iteraciones) con la misma tabla W y la misma red de imitación como ancla del KL.
+        La corrida original no se toca.
+        """
+        init = self.cfg.get("init")
+        if not init or self.done("bc"):
+            return
+        parent = TRAINING / "runs" / init["fromRun"]
+        ck = parent / "ckpt" / f"iter_{init['iter']:06d}.pt"
+        if not ck.exists():
+            raise SystemExit(f"no existe el checkpoint {ck}")
+        for f in ("wtable.json", "bc.pt"):
+            shutil.copy2(parent / f, self.dir / f)
+        for phase in ("wtable", "bcdata", "bc"):
+            self.mark(phase, {"from": init["fromRun"], "iter": init["iter"]})
+        log(f"sigue desde {init['fromRun']} iteración {init['iter']}")
 
     def done(self, phase: str) -> bool:
         return (self.dir / f"{phase}.done").exists()
@@ -313,7 +338,7 @@ class Run:
         result = {"tag": tag, "opponent": opponent, "games": games, "winrate": wins / games, "ci90": [low, high],
                   "pointsPerGame": [pa / games, pb / games], "seconds": time.time() - started}
         self.event("eval", **result)
-        shown = "la red objetivo" if opponent.startswith("mlp:") else f"'{opponent}'"
+        shown = f"la red {'/'.join(Path(opponent[4:]).parts[-3:])}" if opponent.startswith("mlp:") else f"'{opponent}'"
         log(f"evaluación {tag} contra {shown}: {100 * wins / games:.1f}% (IC90 {100 * low:.1f}–{100 * high:.1f}) en {games} partidas")
         return result
 
@@ -354,6 +379,16 @@ class Run:
             state = ck["state"]
             random.setstate(ck["py_random"])
             log(f"fase 4/4: PPO — retomo desde la iteración {state['iter']}")
+        elif self.cfg.get("init"):
+            init = self.cfg["init"]
+            ck = torch.load(TRAINING / "runs" / init["fromRun"] / "ckpt" / f"iter_{init['iter']:06d}.pt", map_location="cpu", weights_only=False)
+            policy.load_state_dict(ck["policy"])
+            critic.load_state_dict(ck["critic"])
+            opt.load_state_dict(ck["opt"])
+            # La liga (redes guardadas de la corrida madre) y el contador siguen; la "mejor" se vuelve a elegir.
+            state = {**ck["state"], "best": [], "evals": []}
+            random.setstate(ck["py_random"])
+            log(f"fase 4/4: PPO — arranco desde {init['fromRun']} iteración {state['iter']}")
         else:
             policy.load_state_dict(anchor.state_dict())
             log("fase 4/4: PPO — arranco desde la red de imitación")
@@ -402,7 +437,21 @@ class Run:
             if it % e["every"] == 0:
                 result = self.evaluate(current, e["pairs"], e["opponent"], tag=f"iter{it}")
                 state["evals"].append({"iter": it, "winrate": result["winrate"], "ci90": result["ci90"]})
-                self.update_best(state, it, result, policy)
+                gauntlet = e.get("gauntlet")
+                if gauntlet:
+                    # Duelos contra redes fijas (versiones anteriores y atacantes): la difícil ya no discrimina.
+                    rates = []
+                    for spec in gauntlet["opponents"]:
+                        opp = spec if spec in ("hard", "normal", "easy") else f"mlp:{training_path(spec)}"
+                        name = spec if spec in ("hard", "normal", "easy") else training_path(spec).parent.parent.name + "/" + Path(spec).name
+                        r = self.evaluate(current, gauntlet["pairs"], opp, tag=f"iter{it}-vs-{name}")
+                        rates.append(r["winrate"])
+                    score = sum(rates) / len(rates)
+                    self.event("gauntlet", iter=it, score=score, rates=rates)
+                    log(f"duelos iter{it}: promedio {100 * score:.1f}% ({', '.join(f'{100 * x:.1f}' for x in rates)})")
+                    self.update_best(state, it, {**result, "winrate": score}, policy)
+                else:
+                    self.update_best(state, it, result, policy)
             self.save_ckpt(policy, critic, opt, state, it)
 
     def league_opponents(self, state: dict, c: dict) -> list[dict]:
@@ -413,6 +462,17 @@ class Run:
         for diff in ("hard", "normal", "easy"):
             if w.get(diff):
                 out.append({"kind": "heur", "difficulty": diff, "weight": w[diff], "name": f"heur-{diff}"})
+        exploiters = c.get("exploiters") or []
+        if exploiters and w.get("exploiters"):
+            # Redes entrenadas para explotar versiones anteriores: rivales fijos, mismo peso cada una.
+            for path in exploiters:
+                base = training_path(path)
+                if not base.with_suffix(".json").exists():
+                    raise SystemExit(f"no existe la red atacante {base}.json")
+                out.append({"kind": "mlp", "path": str(base), "weight": w["exploiters"] / len(exploiters),
+                            "name": "exp-" + base.parent.parent.name.replace("r1-br-", "")})
+        elif w.get("exploiters"):
+            out[0]["weight"] += w["exploiters"]
         league = state["league"]
         if league and w.get("league"):
             # PFSP: más peso a los rivales del pasado a los que todavía no les ganamos.
@@ -636,6 +696,7 @@ def cmd_train(args) -> None:
     run = Run(args.run, config, args.workers)
     log(f"corrida '{args.run}' · {run.workers} actores en paralelo · red en {run.dev} · observación {run.layout['obsDim']} ({run.layout['layoutHash']})")
     run.event("start", workers=run.workers, device=str(run.dev))
+    run.adopt_parent()
     run.phase_wtable()
     run.phase_bcdata()
     run.phase_bc()

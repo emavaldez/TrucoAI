@@ -45,6 +45,17 @@ python training/learner/run.py exploit --run r1 --target best --iters 150 --work
 Entrena una red nueva cuyo único rival es la red objetivo (congelada). Si le gana cerca de 50–55%, la
 objetivo es sólida; arriba de ~65%, tiene un agujero que se puede explotar.
 
+**Seguir desde otra corrida** (`init` en la configuración): `training/config/r2.json` retoma r1 en la
+iteración 1500 y suma a la liga las redes que la explotaron (`ppo.exploiters`). `train.sh <corrida>` usa
+`training/config/<corrida>.json` si existe:
+
+```bash
+bash training/train.sh r2
+```
+
+Con `eval.gauntlet`, cada 10 iteraciones además de la difícil juega duelos contra redes fijas (versiones
+anteriores y atacantes), y la "mejor red" se elige por el promedio de esos duelos.
+
 ## Reglas de la carpeta
 
 - **El motor del juego es uno solo** (`src/engine`, TypeScript). Acá no se reescriben reglas:
