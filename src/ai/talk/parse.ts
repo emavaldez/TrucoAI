@@ -84,7 +84,9 @@ export function parseRules(raw: string): Understanding | null {
   if (!t) return null;
   const words = t.split(' ');
   // Pregunta: con signo, o empezando como pregunta ("tenés tanto", "cuántos tenés", "canto").
-  const question = raw.includes('?') || /^(tenes|tienes|traes|cuanto|cuantos|como venis|como andas|canto|cantamos|lo canto)\b/.test(t);
+  const question =
+    raw.includes('?') ||
+    /^(tenes|tienes|tienen|traes|traen|cuanto|cuantos|como venis|como vienen|como andas|canto|cantamos|lo canto|que (tenes|tienen|traes|traen|te queda|les queda|te quedan|les quedan))\b/.test(t);
   // Una orden al compañero al principio de la frase manda sobre el resto ("matala que no tengo").
   const leadingOrder = /^(mata|matala|matalo|pasa|pasala|parda|pardala|emparda|empardala|empata|empatala)\b/.test(t);
   const tanto = has(t, /\b(tanto|tantos|puntos)\b/);
@@ -112,7 +114,7 @@ export function parseRules(raw: string): Understanding | null {
   if (question && has(t, /\b(mato|paso|juego|tiro|voy)\b.* o \b/)) return result('PREG_QUE_HAGO', t);
   if (question && has(t, /\b(canto|cantamos|cantas|lo canto|canto yo|cantamos o no)\b/)) return result(tanto ? 'PREG_CANTO_TANTO' : 'PREG_CANTO', t);
   if (question && !leadingOrder && (tanto || has(t, /\bcuanto(s)? (tenes|tienes|traes)\b|\b(flor|veinte|treinta|2\d|3[0-3])\b/))) return result('PREG_TANTO', t);
-  if (question && !leadingOrder && has(t, /\b(tenes|tienes|traes|venis|andas|armado|cartas|algo|con que)\b/)) return result('PREG_CARTAS', t);
+  if (question && !leadingOrder && has(t, /\b(tenes|tienes|tienen|traes|traen|venis|vienen|andas|armado|cartas|algo|con que|queda|quedan)\b/)) return result('PREG_CARTAS', t);
 
   // Consejos sobre el tanto ("cantá el tanto", "callado el tanto").
   if (has(t, /\b(no cantes|callado|callate)( con)?( el| los)? tantos?\b|\b(el )?tanto no\b|\bno canten el tanto\b/)) return result('IND_CALLADO_TANTO', t);
@@ -124,10 +126,10 @@ export function parseRules(raw: string): Understanding | null {
 
   // Lo que uno dice que tiene (o no).
   const about = (tanto || /\btengo (\d{1,2}|veinti\w+|treinta\w*)\b/.test(t) ? 'tanto' : 'cartas') as 'tanto' | 'cartas';
-  if (!leadingOrder && (has(t, /\b(no tengo|no traigo|estoy seco|ni un poroto|no tengo nada)\b|\btengo (nada|cualquier cosa|basura|poco|malas)\b/) || t === 'nada')) return result('NO_TENGO', t, { about });
+  if (!leadingOrder && (has(t, /\b(no tengo|no traigo|estoy seco|ni un poroto|no tengo nada|no me queda|no me quedan)\b|\btengo (nada|cualquier cosa|basura|poco|malas)\b/) || t === 'nada')) return result('NO_TENGO', t, { about });
   const score = /\btengo (\d{1,2})\b/.exec(t);
   if (score) return result('TENGO', t, { about: 'tanto', score: Number(score[1]) });
-  if (!leadingOrder && has(t, /\b(tengo|traigo)\b/)) return result('TENGO', t, { about, card: parseCard(t) });
+  if (!leadingOrder && has(t, /\b(tengo|traigo|me queda|me quedan)\b/)) return result('TENGO', t, { about, card: parseCard(t) });
 
   // Indicaciones de cartas ("matá", "pasá", "tirá la más baja").
   if (has(t, /\b(mata|matala|matalo|ganala|gana esa|pisala)\b/) || has(t, /\b(tira|juga|echa|mete) la (mas )?(alta|grande|fuerte|mejor)\b/)) return result('IND_MATA', t);

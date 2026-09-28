@@ -21,7 +21,7 @@ import {
   type PublicClaim,
   type TeamAdvice,
 } from '../ai/talk/team.js';
-import { availableSigns, INSTRUCTIONS, type GivenInstruction, type Instruction, type Signal, type SignKind } from '../ai/signs.js';
+import { availableSigns, instructionInfo, INSTRUCTIONS, type GivenInstruction, type Instruction, type Signal, type SignKind } from '../ai/signs.js';
 import {
   EMPTY_TALK,
   dealTalk,
@@ -71,7 +71,7 @@ export const NORMAL_TIMING: Timing = {
   handOverDelay: 1300,
   autoFlorDelay: 700,
   sayingGap: 900,
-  consultWait: 6000,
+  consultWait: 10000,
 };
 
 export const FAST_TIMING: Timing = {
@@ -125,9 +125,13 @@ export interface ControllerSnapshot {
 /** Consulta de un compañero de la IA al equipo, esperando tu respuesta. */
 export interface Consult {
   askerId: PlayerId;
-  kind: 'tanto' | 'respuesta';
+  /** tanto: el pie pregunta si canta · respuesta: qué contestar a un canto · jugada: qué carta jugar */
+  kind: 'tanto' | 'respuesta' | 'jugada';
   question: string;
   options: string[];
+  /** cuánto espera (ms) desde `id`: cambia cada vez que se estira la espera (para la barra de tiempo) */
+  waitMs: number;
+  id: number;
 }
 
 /** Algo que alguien dijo en la mesa (público). */
@@ -187,6 +191,12 @@ export class GameController {
   /** consultas ya hechas en esta mano (para no repetirlas) */
   private asked = new Set<string>();
   private consult: Consult | null = null;
+  /** la decisión programada del que consultó (para estirar la espera si estás escribiendo o hablando) */
+  private consultTimer: { cancel: () => void; actor: PlayerId; version: number } | null = null;
+  private consultHolds = 0;
+  private consultSeq = 0;
+  /** baza en la que el humano ya indicó algo de cartas (-1: todavía no en esta mano) */
+  private humanInstructedTrick = -1;
 
   constructor(opts: ControllerOptions) {
     this.scheduler = opts.scheduler;
@@ -272,6 +282,7 @@ export class GameController {
   sendHumanInstruction(kind: Instruction): boolean {
     if (!this.humanInstructionOptions().includes(kind)) return false;
     this.setInstruction({ from: HUMAN_ID, kind });
+    if (instructionInfo(kind).group === 'cartas') this.humanInstructedTrick = this.state.hand.tricks.length;
     this.lastEvents = [];
     this.notify();
     return true;
@@ -318,7 +329,7 @@ export class GameController {
     const answer = (advice: TeamAdvice): SayResult => {
       this.advice = { ...this.advice, ...advice };
       if (consult) this.answerConsult();
-      if (consult && aiPie && consult.askerId === aiPie) this.say(aiPie, 'Dale.');
+      if (consult) this.say(consult.askerId, 'Dale.');
       return done({ understood: u, ok: true });
     };
     const notYourTurn = (word: string): string =>
@@ -333,7 +344,10 @@ export class GameController {
       case 'FALTA_ENVIDO': {
         const call = u.label === 'ENVIDO' ? 'E' : u.label === 'REAL_ENVIDO' ? 'R' : 'F';
         const word = u.label === 'ENVIDO' ? 'envido' : u.label === 'REAL_ENVIDO' ? 'real envido' : 'falta envido';
-        if (consult?.kind === 'respuesta' && !legal.some((a) => a.type === 'CALL_ENVIDO')) return answer({ resp: 'subile' });
+        // Contestando «¿qué hacemos?» a un truco: «el envido está primero» (canta el que contesta).
+        if (consult?.kind === 'respuesta' && this.state.phase === 'AWAITING_TRUCO') {
+          if (getLegalActions(this.state, consult.askerId).some((a) => a.type === 'CALL_ENVIDO')) return answer({ resp: 'envido', call });
+        } else if (consult?.kind === 'respuesta' && !legal.some((a) => a.type === 'CALL_ENVIDO')) return answer({ resp: 'subile', call: u.label === 'ENVIDO' ? undefined : call });
         if (consult?.kind === 'tanto') return answer({ tanto: 'canta' });
         const pieOnly = this.signalsAllowed() && !this.isPieNow(HUMAN_ID) && this.state.hand.tricks.length === 0;
         return play((a) => a.type === 'CALL_ENVIDO' && a.call === call, pieOnly ? `Dijiste «${word}», pero el envido lo canta el pie.` : notYourTurn(word));
@@ -376,6 +390,7 @@ export class GameController {
           return done({ understood: u, ok: false, note: this.signalsAllowed() ? 'En la 1ra baza indica el pie; desde la 2da, cualquiera.' : 'Las indicaciones son para jugar en equipo (4 o 6).' });
         }
         const ok = this.sendHumanInstruction(kind);
+        if (ok && consult?.kind === 'jugada') return answer({});
         return { understood: u, ok, note: ok ? undefined : 'Esa indicación ya no se puede dar en esta mano.' };
       }
       case 'PREG_TANTO':
@@ -444,14 +459,46 @@ export class GameController {
     if (!this.signalsAllowed() || getActor(this.state) !== HUMAN_ID) return [];
     const legal = getLegalActions(this.state, HUMAN_ID);
     if (this.state.phase === 'AWAITING_TRUCO' || this.state.phase === 'AWAITING_ENVIDO') return ['¿Qué hacemos?'];
-    if (this.isPieNow(HUMAN_ID) && legal.some((a) => a.type === 'CALL_ENVIDO')) return ['¿Canto tanto?'];
-    return [];
+    if (this.state.phase !== 'PLAYING') return [];
+    if (this.isPieNow(HUMAN_ID)) {
+      return legal.some((a) => a.type === 'CALL_ENVIDO') ? ['¿Canto tanto?', '¿Tienen algo?'] : ['¿Tienen algo?'];
+    }
+    // No sos el pie: en la 1ra baza se le pregunta al pie; después se coordina entre todos.
+    return this.state.hand.tricks.length === 0 ? ['¿Qué juego?'] : ['¿Qué hago?', '¿Qué te queda?'];
+  }
+
+  /**
+   * Estirar la espera de una consulta (estás escribiendo o hablando): el que preguntó espera otro rato
+   * entero. Hasta 3 veces por consulta. Devuelve si la estiró.
+   */
+  holdConsult(): boolean {
+    const consult = this.consult;
+    const timer = this.consultTimer;
+    if (!consult || !timer || this.consultHolds >= 3 || this.timing.consultWait <= 0) return false;
+    if (timer.version !== this.state.version || getActor(this.state) !== timer.actor) return false;
+    timer.cancel();
+    this.consultHolds += 1;
+    this.consult = { ...consult, waitMs: this.timing.consultWait, id: ++this.consultSeq };
+    this.scheduleConsultDecision(timer.actor, this.timing.consultWait);
+    this.notify();
+    return true;
+  }
+
+  private scheduleConsultDecision(actor: PlayerId, ms: number): void {
+    const version = this.state.version;
+    const cancel = this.scheduler.schedule(ms, () => {
+      if (this.state.version !== version) return;
+      this.playAi(actor);
+    });
+    this.consultTimer = { cancel, actor, version };
   }
 
   /** Se contestó la consulta: el que preguntó decide enseguida (sin esperar el resto del tiempo). */
   private answerConsult(): void {
     const consult = this.consult;
     this.consult = null;
+    this.consultTimer?.cancel();
+    this.consultTimer = null;
     if (!consult || getActor(this.state) !== consult.askerId) return;
     const version = this.state.version;
     this.scheduler.schedule(400, () => {
@@ -461,29 +508,59 @@ export class GameController {
   }
 
   /**
-   * Antes de que decida una IA del equipo del humano: el pie pregunta si canta el tanto (1ra baza) y el
-   * que contesta un canto pregunta qué hacer. Los otros compañeros de la IA contestan enseguida; al humano
-   * se le dan respuestas rápidas y un rato para contestar. Devuelve cuánto hay que esperar (0 si no preguntó).
+   * Antes de que decida una IA del equipo del humano, se habla en equipo (GDD §2.3):
+   * - el pie pregunta si canta el tanto (1ra baza);
+   * - el que contesta un canto pregunta qué hacer («el envido está primero» si todavía se puede);
+   * - antes de jugar una carta: si sos el pie, tu compañero te pregunta qué juega (en cualquier baza, salvo
+   *   que ya le hayas indicado en esta baza); si el pie es de la IA, le pregunta a él en la 1ra baza, y desde
+   *   la 2da pregunta a todos (el pie contesta y vos podés indicar).
+   * Los compañeros de la IA contestan enseguida; al humano se le dan respuestas rápidas y un rato para
+   * contestar. Devuelve cuánto hay que esperar (0 si no hay que esperarte).
    */
   private maybeConsult(actor: PlayerId): number {
     if (!this.signalsAllowed() || actor === HUMAN_ID || this.teamOf(actor) !== this.teamOf(HUMAN_ID)) return 0;
     const state = this.state;
     const legal = getLegalActions(state, actor);
-    let consult: Consult | null = null;
-    if (state.phase === 'PLAYING' && this.isPieNow(actor) && state.hand.tricks.length === 0 && legal.some((a) => a.type === 'CALL_ENVIDO') && !this.asked.has('tanto')) {
+    const trick = state.hand.tricks.length;
+    const humanPie = this.isPieNow(HUMAN_ID);
+    const aiPie = partnersOf(state, HUMAN_ID).find((id) => id !== HUMAN_ID && this.isPieNow(id));
+    let consult: Omit<Consult, 'waitMs' | 'id'> | null = null;
+    let wait = this.timing.consultWait;
+    if (state.phase === 'PLAYING' && this.isPieNow(actor) && trick === 0 && legal.some((a) => a.type === 'CALL_ENVIDO') && !this.asked.has('tanto')) {
       this.asked.add('tanto');
       consult = { askerId: actor, kind: 'tanto', question: '¿Canto tanto?', options: ['Cantá el tanto', 'Jugá callado', 'Tengo tanto', 'No tengo nada'] };
     } else if (state.phase === 'AWAITING_TRUCO' || state.phase === 'AWAITING_ENVIDO') {
       const key = `resp-${state.phase}-${state.hand.truco.level}-${state.hand.envido.chain.length}`;
       if (!this.asked.has(key)) {
         this.asked.add(key);
-        consult = { askerId: actor, kind: 'respuesta', question: '¿Qué hacemos?', options: ['Quiero', 'No quiero', 'Subile'] };
+        const options = ['Quiero', 'No quiero', 'Subile'];
+        if (state.phase === 'AWAITING_TRUCO' && legal.some((a) => a.type === 'CALL_ENVIDO')) options.unshift('El envido está primero');
+        consult = { askerId: actor, kind: 'respuesta', question: '¿Qué hacemos?', options };
+      }
+    } else if (state.phase === 'PLAYING' && legal.some((a) => a.type === 'PLAY_CARD') && !this.isPieNow(actor)) {
+      const key = `jugada-${trick}-${actor}`;
+      if (this.asked.has(key) || this.humanInstructedTrick === trick) return 0;
+      this.asked.add(key);
+      const questions = ['¿Qué juego?', '¿Qué tiro?', '¿Qué hago?'];
+      const question = questions[Math.floor(this.rng.next() * questions.length)];
+      const options = ['¡Matá!', 'Pasá', 'Pardá', 'Jugá tranquilo'];
+      if (humanPie) {
+        consult = { askerId: actor, kind: 'jugada', question, options };
+      } else if (aiPie) {
+        // Le pregunta al pie de la IA, que contesta con lo que indica.
+        this.say(actor, question);
+        this.say(aiPie, pieWhatToDo(this.instructionsFor(actor)));
+        if (trick === 0) return 0;
+        // Desde la 2da baza se coordina entre todos: tenés un rato para indicar otra cosa.
+        this.consult = { askerId: actor, kind: 'jugada', question, options, waitMs: Math.round(wait * 0.5), id: ++this.consultSeq };
+        this.consultHolds = 0;
+        return this.consult.waitMs;
       }
     }
     if (!consult) return 0;
     this.say(actor, consult.question);
     for (const partner of partnersOf(state, actor)) {
-      if (partner === HUMAN_ID) continue;
+      if (partner === HUMAN_ID || consult.kind === 'jugada') continue;
       if (consult.kind === 'tanto') {
         const reply = aiTantoAnswer(state, partner, this.rng);
         this.say(partner, reply.text);
@@ -492,8 +569,10 @@ export class GameController {
         this.say(partner, aiResponseOpinion(state, partner).text);
       }
     }
-    this.consult = consult;
-    return this.timing.consultWait;
+    if (wait <= 0) wait = 0;
+    this.consult = { ...consult, waitMs: wait, id: ++this.consultSeq };
+    this.consultHolds = 0;
+    return wait;
   }
 
   /** Alguien dice algo en voz alta (queda en `speech` para los globos y la voz). */
@@ -612,6 +691,8 @@ export class GameController {
     this.slowPlay = new Set();
     this.asked = new Set();
     this.consult = null;
+    this.consultTimer = null;
+    this.humanInstructedTrick = -1;
     this.talk = dealTalk(this.state, (playerId) => playerId !== HUMAN_ID);
     this.refreshAiInstructions(true);
   }
@@ -740,10 +821,13 @@ export class GameController {
 
     this.thinking = actor;
     const consultWait = this.humanPolicy === undefined ? this.maybeConsult(actor) : 0;
-    this.scheduler.schedule(Math.max(wait + this.delay(), consultWait), () => {
-      if (this.state.version !== version) return;
-      this.playAi(actor);
-    });
+    if (consultWait > 0) this.scheduleConsultDecision(actor, Math.max(wait + this.delay(), consultWait));
+    else {
+      this.scheduler.schedule(wait + this.delay(), () => {
+        if (this.state.version !== version) return;
+        this.playAi(actor);
+      });
+    }
     this.notify();
   }
 
@@ -751,7 +835,10 @@ export class GameController {
     const policy = actor === HUMAN_ID ? this.humanPolicy : this.policies.get(actor);
     const legal = getLegalActions(this.state, actor);
     if (legal.length === 0) return;
-    if (this.consult?.askerId === actor) this.consult = null;
+    if (this.consult?.askerId === actor) {
+      this.consult = null;
+      this.consultTimer = null;
+    }
     let action = legal[0];
     if (policy) {
       try {
@@ -769,7 +856,7 @@ export class GameController {
           const view = exclude ? { ...obs, legalActions: obs.legalActions.filter((a) => !exclude(a)) } : obs;
           action = policy.decide(view, this.rng, this.signalsFor(actor), told, this.claims);
         }
-        if (this.state.phase === 'AWAITING_TRUCO' || this.state.phase === 'AWAITING_ENVIDO') this.advice = { ...this.advice, resp: undefined };
+        if (this.state.phase === 'AWAITING_TRUCO' || this.state.phase === 'AWAITING_ENVIDO') this.advice = { ...this.advice, resp: undefined, call: undefined };
       } catch (error) {
         console.warn('[truco] la IA falló al decidir; juega la primera acción legal', error);
       }

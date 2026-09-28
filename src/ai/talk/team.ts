@@ -7,7 +7,7 @@
 //   jugar al pie rival no canta; espera que el rival cante y le sube.
 
 import { cardRank, envidoScore, getLegalActions, pieOf } from '../../engine/index.js';
-import type { Action, Card, MatchState, PlayerId, Rng, TeamId } from '../../engine/index.js';
+import type { Action, Card, EnvidoCall, MatchState, PlayerId, Rng, TeamId } from '../../engine/index.js';
 import type { Signal } from '../signs.js';
 
 /** Lo que alguien dijo en voz alta sobre su mano (puede ser mentira). */
@@ -20,7 +20,10 @@ export interface PublicClaim {
 /** Consejo del equipo para el que decide (el pie o el que contesta). */
 export interface TeamAdvice {
   tanto?: 'canta' | 'callado';
-  resp?: 'quiero' | 'no' | 'subile';
+  /** contestar un canto: querer, no querer, subir, o (a un truco en la 1ra baza) «el envido está primero» */
+  resp?: 'quiero' | 'no' | 'subile' | 'envido';
+  /** qué envido cantar al subir o con «el envido está primero» (si se nombró) */
+  call?: EnvidoCall;
 }
 
 /** Si alguien le cree a un dicho: condición sobre sus 3 cartas repartidas. */
@@ -127,7 +130,13 @@ export function tacticalDecision(args: {
     }
     if (advice.resp === 'quiero') return pick(find((a) => a.type === 'ANSWER_ENVIDO' && a.answer === 'QUIERO'));
     if (advice.resp === 'no') return pick(find((a) => a.type === 'ANSWER_ENVIDO' && a.answer === 'NO_QUIERO'));
-    if (advice.resp === 'subile') return pick(find((a) => a.type === 'CALL_ENVIDO' && a.call === 'R') ?? find((a) => a.type === 'CALL_ENVIDO'));
+    if (advice.resp === 'subile' || advice.resp === 'envido') {
+      return pick(
+        find((a) => a.type === 'CALL_ENVIDO' && a.call === advice.call) ??
+          find((a) => a.type === 'CALL_ENVIDO' && a.call === 'R') ??
+          find((a) => a.type === 'CALL_ENVIDO'),
+      );
+    }
     return null;
   }
   // Contestar un truco del rival.
@@ -135,6 +144,10 @@ export function tacticalDecision(args: {
     if (advice.resp === 'quiero') return pick(find((a) => a.type === 'ANSWER_TRUCO' && a.answer === 'QUIERO'));
     if (advice.resp === 'no') return pick(find((a) => a.type === 'ANSWER_TRUCO' && a.answer === 'NO_QUIERO'));
     if (advice.resp === 'subile') return pick(find((a) => a.type === 'CALL_TRUCO') ?? find((a) => a.type === 'ANSWER_TRUCO' && a.answer === 'QUIERO'));
+    // «El envido está primero»: antes de contestar el truco, se canta el envido.
+    if (advice.resp === 'envido') {
+      return pick(find((a) => a.type === 'CALL_ENVIDO' && a.call === (advice.call ?? 'E')) ?? find((a) => a.type === 'CALL_ENVIDO'));
+    }
     return null;
   }
   // Cantar o no el tanto (el pie, en su turno de la 1ra baza). Solo en equipo (4 y 6).

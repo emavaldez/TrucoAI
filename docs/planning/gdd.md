@@ -113,9 +113,17 @@ redes se entrenaron con la mesa cerrada de §2.2.
   rival no quiere, son 2 tantos en vez de 1; si quiere, 4 o más. Para que el rival se anime, el compañero que tiene
   el tanto dice en voz alta «no, nada» cuando el pie pregunta (ya se lo dijo con la seña). Lo hacen las IA (pie y
   compañeros) y lo puede hacer el humano.
+- **Antes de jugar una carta se consulta** [DECISIÓN 2026-09-28]: en la 1ra baza cada compañero le pregunta al pie
+  «¿qué juego?» / «¿qué tiro?» / «¿qué hago?» (si el pie es la IA, contesta con lo que indica). Si sos el pie, tus
+  compañeros te preguntan en cada baza, salvo que ya les hayas indicado en esa baza. Desde la 2da baza se coordina
+  entre todos, con el pie primero: el compañero pregunta, el pie contesta y vos podés indicar otra cosa.
 - **Consultas al humano:** cuando un compañero de la IA consulta, aparecen respuestas rápidas («Cantá el tanto»,
-  «Jugá callado», «Tengo tanto», «No tengo nada»; «Quiero», «No quiero», «Subile») y se puede contestar hablando. Si
-  no contestás en unos segundos, decide solo.
+  «Jugá callado», «Tengo tanto», «No tengo nada»; «Quiero», «No quiero», «Subile» y, si te cantan truco en la 1ra
+  baza, «El envido está primero»; «¡Matá!», «Pasá», «Pardá», «Jugá tranquilo») y se puede contestar hablando. Una
+  barra muestra el tiempo (10 s); si empezás a escribir o a hablar, espera otro rato (hasta 3 veces). Si no
+  contestás, decide solo.
+- **Preguntas del humano:** al pie, «¿qué hago?», «¿qué juego?», «¿qué tiro?»; al equipo, «¿tenés tanto?»,
+  «¿tienen algo?», «¿qué tenés?», «¿qué te queda?». La barra sugiere la que conviene en cada momento.
 - **La red no escucha lenguaje:** en Experta, las consultas, el engaño y el esperar y subir son una capa de reglas
   encima de la red (`tacticalDecision` en `src/ai/talk/team.ts`). Para que la red aprenda a escuchar y a mentir
   hace falta entrenarla con lo que se dice en voz alta (propuesta r4).
@@ -377,7 +385,8 @@ en la línea de los papers de `Papers/` y del plan para AI and Games Conference.
   las preguntas al compañero ("¿tenés tanto?", "¿cómo venís?", "¿canto?", "¿qué hacemos?") las contesta en voz
   alta, en términos de seña (nunca cartas exactas), y puede mentir para engañar al rival (§2.3); "tengo…" / "no
   tengo nada", si es cierto y todavía podés hacer señas, le llega a tu pie como seña; la charla la contesta un
-  rival. Las IA hablan con globos y con la voz del navegador. Arriba de la barra, las respuestas rápidas cuando un
+  rival. Las IA hablan con globos y con la voz del navegador: se elige sola la mejor voz en español (rioplatense y
+  natural primero, una distinta por jugador si hay varias) y se puede cambiar en el menú («Voz»). Arriba de la barra, las respuestas rápidas cuando un
   compañero te consulta; en la barra, la pregunta que te conviene hacer («¿Canto tanto?», «¿Qué hacemos?»).
 - **Responsive:** jugable en 390×844 (móvil) y 1280×800, en 2, 4 y 6 jugadores, sin jugadores cortados;
   botones táctiles ≥ 44 px. Jugable con teclado.

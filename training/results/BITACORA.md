@@ -232,3 +232,12 @@ contestás, decide solo).
 - Limitación para la tesis: la red Experta **no escucha lenguaje**. En Experta, consultas, engaño y esperar y subir
   son reglas encima de la red (`tacticalDecision`). Propuesta r4: sumar a la observación lo dicho en voz alta
   (dichos públicos de cada jugador sobre tanto y cartas) y dejar que la red aprenda a creer, desconfiar y mentir.
+
+## 2026-09-28 — Más charla de equipo (después de probarlo)
+
+Lo que encontró Emmanuel jugando: le cantaron truco y no pudo decir «el envido está primero» (la consulta del pie no
+lo ofrecía y el tiempo era corto); siendo pie, sus compañeros jugaban sin preguntarle. Cambios: la consulta a un
+truco en la 1ra baza ofrece «El envido está primero»; la espera sube a 10 s con barra de tiempo y se estira si
+estás escribiendo o hablando; los compañeros preguntan antes de jugar («¿qué juego?», «¿qué tiro?», «¿qué hago?»)
+al pie en la 1ra baza y a todos desde la 2da, con el pie primero; preguntas nuevas «¿tienen algo?», «¿qué tenés?»,
+«¿qué te queda?»; voz elegida por calidad (rioplatense y natural primero) y elegible en el menú.

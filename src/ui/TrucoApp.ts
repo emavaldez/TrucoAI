@@ -202,6 +202,10 @@ export class TrucoApp {
     this.talkQuick = root.querySelector('.talk-quick') as HTMLElement;
     this.talkSuggest = root.querySelector('.talk-suggest') as HTMLElement;
     this.setupTalkbar();
+    // Las voces llegan tarde en Chrome: cuando llegan, el menú muestra la lista para elegir.
+    this.sound.onVoices = () => {
+      if (this.screen === 'menu') this.render();
+    };
     if (this.freeTalk) void loadSemantic();
 
     // Las redes del nivel Experta (~3 MB): se bajan en segundo plano; hasta que llegan juega la difícil.
@@ -316,7 +320,10 @@ export class TrucoApp {
       this.fit();
     }
     if (this.screen === 'menu' || !this.controller || !this.snapshot) {
-      this.canvas.innerHTML = renderMenu(this.settings, this.mode, this.sound.enabled, this.advice, this.freeTalk);
+      this.canvas.innerHTML = renderMenu(this.settings, this.mode, this.sound.enabled, this.advice, this.freeTalk, {
+        options: this.sound.voiceOptions(),
+        selected: this.sound.voicePref,
+      });
       this.canvas.dataset.screen = 'menu';
       this.restoreFocus(focusKey, 'menu');
       return;
@@ -530,7 +537,10 @@ export class TrucoApp {
     if (!ui) return;
     if (ui === 'flor') this.settings = { ...this.settings, flor: input.checked };
     else if (ui === 'picapica') this.settings = { ...this.settings, picaPica: input.checked };
-    else if (ui === 'sound') {
+    else if (ui === 'voice') {
+      this.sound.setVoice((event.target as unknown as HTMLSelectElement).value);
+      return;
+    } else if (ui === 'sound') {
       this.sound.setEnabled(input.checked);
       this.render();
       return;
@@ -620,6 +630,9 @@ export class TrucoApp {
       this.setTalkOpen(true);
       input.focus();
     });
+    // Si te están consultando y empezás a escribir, el compañero te espera.
+    input.addEventListener('input', () => this.holdConsult());
+    input.addEventListener('focus', () => this.holdConsult());
     input.addEventListener('blur', () => {
       // En el celular, al salir de la barra sin escribir nada vuelve a plegarse.
       setTimeout(() => {
@@ -643,6 +656,7 @@ export class TrucoApp {
     recognition.maxAlternatives = 3;
     recognition.continuous = false;
     this.listening = true;
+    this.holdConsult();
     mic.classList.add('talk-mic--on');
     input.placeholder = 'Te escucho…';
     recognition.onresult = (event) => {
@@ -691,9 +705,11 @@ export class TrucoApp {
   private renderQuick(noTalk: boolean, barHidden: boolean): void {
     const snap = this.snapshot;
     const consult = !noTalk && snap ? snap.consult : null;
-    const suggestions = !consult && !noTalk && snap && !barHidden ? snap.suggestions : [];
+    const all = !consult && !noTalk && snap && !barHidden ? snap.suggestions : [];
+    // En el celular la barra es angosta: una sola sugerencia.
+    const suggestions = this.mode === 'portrait' ? all.slice(0, 1) : all;
     const title = consult ? `${playerName(snap!.state, consult.askerId)}: «${consult.question}»` : '';
-    const key = `${title}|${consult?.options.join('|') ?? ''}|${suggestions.join('|')}|${barHidden}`;
+    const key = `${consult?.id ?? ''}|${title}|${consult?.options.join('|') ?? ''}|${suggestions.join('|')}|${barHidden}`;
     if (key === this.quickKey) return;
     this.quickKey = key;
     const button = (text: string, cls: string): string => `<button type="button" class="${cls}" data-say="${escapeHtml(text)}">${escapeHtml(text)}</button>`;
@@ -701,9 +717,25 @@ export class TrucoApp {
     this.talkQuick.hidden = !consult;
     this.talkQuick.classList.toggle('talk-quick--low', barHidden);
     this.talkQuick.innerHTML = consult
-      ? `<span class="talk-quick-title">${escapeHtml(title)}</span>` + consult.options.map((text) => button(text, 'talk-quick-btn')).join('')
+      ? `<span class="talk-quick-title">${escapeHtml(title)}</span>` +
+        consult.options.map((text) => button(text, 'talk-quick-btn')).join('') +
+        // Barra de tiempo: si no contestás, decide solo (escribir o hablar la estira).
+        (consult.waitMs > 0
+          ? `<span class="talk-quick-timer" aria-hidden="true"><span style="animation-duration:${consult.waitMs}ms"></span></span>`
+          : '')
       : '';
     this.talkSuggest.innerHTML = suggestions.map((text) => button(text, 'talk-suggest-btn')).join('');
+  }
+
+  private lastHold = 0;
+
+  /** Estás escribiendo o hablando durante una consulta: que el compañero espere (como mucho cada 2 s). */
+  private holdConsult(): void {
+    if (!this.snapshot?.consult || !this.controller) return;
+    const now = Date.now();
+    if (now - this.lastHold < 2000) return;
+    this.lastHold = now;
+    this.controller.holdConsult();
   }
 
   private setTalkOpen(open: boolean): void {

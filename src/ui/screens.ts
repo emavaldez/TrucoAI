@@ -25,7 +25,24 @@ const PLAYER_TEXT: Record<2 | 4 | 6, string> = { 2: 'Mano a mano', 4: 'Dos contr
 
 // ---------- menú ----------
 
-export function renderMenu(settings: MatchSettings, mode: LayoutMode, sound = true, advice = false, freeTalk = false): string {
+export function renderMenu(
+  settings: MatchSettings,
+  mode: LayoutMode,
+  sound = true,
+  advice = false,
+  freeTalk = false,
+  voice: { options: readonly { id: string; label: string }[]; selected: string } = { options: [], selected: 'auto' },
+): string {
+  // Elegir la voz (solo si el navegador tiene voces en español y hay sonido).
+  const voiceRow =
+    sound && voice.options.length > 0
+      ? `<label class="toggle toggle--select"><span>Voz</span><select data-ui="voice" data-testid="menu-voice">` +
+        `<option value="auto"${voice.selected === 'auto' ? ' selected' : ''}>Automática (una por jugador)</option>` +
+        voice.options
+          .map((o) => `<option value="${escapeHtml(o.id)}"${voice.selected === o.id ? ' selected' : ''}>${escapeHtml(o.label)}</option>`)
+          .join('') +
+        `</select></label>`
+      : '';
   const players = ([2, 4, 6] as const)
     .map(
       (n) =>
@@ -51,6 +68,7 @@ export function renderMenu(settings: MatchSettings, mode: LayoutMode, sound = tr
     `<label class="toggle"><span>Jugar con flor</span><input type="checkbox" data-ui="flor" data-testid="menu-flor"${settings.flor ? ' checked' : ''}></label>` +
     `<label class="toggle${picaDisabled ? ' toggle--off' : ''}"><span>Pica Pica <em>· solo con 6</em></span><input type="checkbox" data-ui="picapica" data-testid="menu-picapica"${settings.picaPica ? ' checked' : ''}${picaDisabled ? ' disabled' : ''}></label>` +
     `<label class="toggle"><span>Sonido <em>· voces de los cantos</em></span><input type="checkbox" data-ui="sound" data-testid="menu-sound"${sound ? ' checked' : ''}></label>` +
+    voiceRow +
     `<label class="toggle"><span>Consejos de la red <em>· qué jugaría la Experta</em></span><input type="checkbox" data-ui="advice" data-testid="menu-advice"${advice ? ' checked' : ''}></label>` +
     `<label class="toggle"><span>Entender frases libres <em>· modelo de Google, ~200 MB · <span data-testid="freetalk-status">${freeTalk ? 'activo' : 'apagado'}</span></em></span><input type="checkbox" data-ui="freetalk" data-testid="menu-freetalk"${freeTalk ? ' checked' : ''}></label>` +
     `</fieldset>` +

@@ -51,6 +51,14 @@ describe('intérprete por reglas', () => {
     expect(parseRules('tengo 30')).toMatchObject({ label: 'TENGO', about: 'tanto', score: 30 });
   });
 
+  it('preguntas al pie y al equipo: «¿qué juego?», «¿qué tiro?», «¿tienen algo?», «¿qué te queda?»', () => {
+    for (const text of ['¿qué hago?', '¿qué juego?', '¿qué tiro?']) expect(parseRules(text)?.label).toBe('PREG_QUE_HAGO');
+    for (const text of ['¿tienen algo?', '¿qué tenés?', '¿qué te queda?', '¿qué les queda?']) expect(parseRules(text)?.label).toBe('PREG_CARTAS');
+    expect(parseRules('me queda el ancho')?.label).toBe('TENGO');
+    expect(parseRules('no me queda nada')?.label).toBe('NO_TENGO');
+    expect(parseRules('el envido está primero')?.label).toBe('ENVIDO');
+  });
+
   it('lo que no reconoce queda sin entender (para el modelo o para preguntar)', () => {
     expect(parseRules('qué lindo día para jugar')).toBeNull();
     expect(parseRules('')).toBeNull();

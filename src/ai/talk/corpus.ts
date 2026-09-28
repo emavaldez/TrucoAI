@@ -109,8 +109,8 @@ export const CORPUS: Corpus = {
     libres: ["¿cómo venís de puntos?", "decime tus tantos", "¿estás bien de puntos?"],
   },
   PREG_CARTAS: {
-    reglas: ["¿tenés algo?", "¿cómo venís?", "¿traés cartas?", "¿tenés con qué?", "¿tenés el ancho?", "¿tenés cartas?"],
-    ejemplos: ["¿tenés algo compañero?", "¿qué tenés vos?", "¿tenés alguna buena?", "¿tenés el ancho de espada?", "¿tenés un tres?", "¿venís bien?", "¿traés algo?", "¿tenés algo grande?", "¿qué cartas tenés?", "¿tenés el siete?", "¿tenés para matar?", "¿cómo andás?", "¿estás armado?"],
+    reglas: ["¿tenés algo?", "¿cómo venís?", "¿traés cartas?", "¿tenés con qué?", "¿tenés el ancho?", "¿tenés cartas?", "¿tienen algo?", "¿qué tenés?", "¿qué te queda?"],
+    ejemplos: ["¿tenés algo compañero?", "¿qué tenés vos?", "¿tenés alguna buena?", "¿tenés el ancho de espada?", "¿tenés un tres?", "¿venís bien?", "¿traés algo?", "¿tenés algo grande?", "¿qué cartas tenés?", "¿tenés el siete?", "¿tenés para matar?", "¿cómo andás?", "¿estás armado?", "¿qué les queda?", "¿cómo vienen?", "¿qué tienen?", "que te queda", "¿te queda algo?", "¿tienen para matar?"],
     libres: ["¿vale la pena pelear esta?", "¿cómo viene la mano?", "contame qué tenés"],
   },
   PREG_CANTO: {
@@ -130,12 +130,12 @@ export const CORPUS: Corpus = {
   },
   TENGO: {
     reglas: ["tengo 30", "tengo el ancho", "tengo buen tanto", "tengo algo", "tengo 27", "traigo el siete de oro", "tengo un tres", "tengo tanto"],
-    ejemplos: ["tengo 33", "tengo treinta", "tengo 28", "tengo el ancho de espada", "tengo el siete de oro", "tengo dos tres", "tengo buenas cartas", "tengo mucho tanto", "tengo algo bueno", "tengo el macho", "tengo la hembra", "traigo el ancho", "tengo cartas", "tengo flor", "tengo 31", "tengo con qué", "tengo tantos"],
+    ejemplos: ["tengo 33", "tengo treinta", "tengo 28", "tengo el ancho de espada", "tengo el siete de oro", "tengo dos tres", "tengo buenas cartas", "tengo mucho tanto", "tengo algo bueno", "tengo el macho", "tengo la hembra", "traigo el ancho", "tengo cartas", "tengo flor", "tengo 31", "tengo con qué", "tengo tantos", "me queda el ancho", "me queda un tres"],
     libres: ["vengo cargado", "estoy armado", "vengo bien"],
   },
   NO_TENGO: {
     reglas: ["no tengo nada", "nada", "estoy seco", "ni un poroto", "no tengo tanto", "no traigo nada", "no tengo cartas"],
-    ejemplos: ["no tengo nada che", "no tengo ni un tanto", "nada de nada", "no tengo cartas buenas", "estoy seco compañero", "no traigo tanto", "ni un poroto tengo", "tengo cualquier cosa", "no tengo ninguna buena", "nada, todo malo", "tengo nada", "no tengo tantos"],
+    ejemplos: ["no tengo nada che", "no tengo ni un tanto", "nada de nada", "no tengo cartas buenas", "estoy seco compañero", "no traigo tanto", "ni un poroto tengo", "tengo cualquier cosa", "no tengo ninguna buena", "nada, todo malo", "tengo nada", "no tengo tantos", "no me queda nada"],
     libres: ["vengo pelado", "son todas malas", "basura tengo"],
   },
   CHARLA: {

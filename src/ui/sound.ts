@@ -7,6 +7,34 @@ import type { GameEvent, MatchState, PlayerId } from '../engine/index.js';
 import { ENVIDO_LABELS, TRUCO_LABELS } from './text.js';
 
 const SOUND_KEY = 'trucoai.sound.v1';
+const VOICE_KEY = 'trucoai.voice.v1';
+
+/** Voces "de juguete" de macOS (burbujas, órgano, robots…): nunca para la mesa. */
+const NOVELTY = /(albert|bad news|bahh|bells|boing|bubbles|cellos|good news|jester|organ|superstar|trinoids|whisper|wobble|zarvox|grandma|grandpa|abuel|eddy|flo\b|reed|rocko|sandy|shelley)/i;
+
+/**
+ * Qué tan buena es una voz para la mesa (pedido de Emmanuel 2026-09-28: "una voz más copada"): primero las
+ * rioplatenses (es-AR, es-UY), después las latinoamericanas y al final las de España; las naturales o
+ * mejoradas (Premium, Enhanced, Natural, Neural, Online, Google) suben mucho; las de juguete, afuera.
+ */
+export function voiceScore(voice: { name: string; lang: string; localService?: boolean }): number {
+  const lang = voice.lang.toLowerCase().replace('_', '-');
+  if (!lang.startsWith('es')) return -1000;
+  let score = lang === 'es-ar' ? 50 : lang === 'es-uy' ? 45 : /^es-(419|mx|us|co|cl|pe|ve)$/.test(lang) ? 30 : 15;
+  if (/premium|enhanced|mejorad|natural|neural|online/i.test(voice.name)) score += 25;
+  if (/google/i.test(voice.name)) score += 12;
+  if (voice.localService === false) score += 3;
+  if (NOVELTY.test(voice.name)) score -= 500;
+  return score;
+}
+
+function readVoicePref(): string {
+  try {
+    return window.localStorage.getItem(VOICE_KEY) ?? 'auto';
+  } catch {
+    return 'auto';
+  }
+}
 
 const FLOR_ANSWER_SPEECH: Record<string, string> = {
   ACHICO: 'Con flor me achico',
@@ -27,14 +55,23 @@ function readEnabled(): boolean {
 export class SoundBoard {
   enabled: boolean;
   private audio: AudioContext | null = null;
-  private voice: SpeechSynthesisVoice | null = null;
+  /** voces buenas en español, de mejor a peor; cada asiento habla con una distinta si hay varias */
+  private voices: SpeechSynthesisVoice[] = [];
+  /** 'auto' o el nombre de la voz elegida en el menú */
+  voicePref = 'auto';
+  /** se llama cuando el navegador termina de cargar las voces (para mostrarlas en el menú) */
+  onVoices: (() => void) | null = null;
   private timers: ReturnType<typeof setTimeout>[] = [];
 
   constructor(enabled?: boolean) {
     this.enabled = enabled ?? readEnabled();
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      this.voicePref = readVoicePref();
       this.pickVoice();
-      window.speechSynthesis.addEventListener?.('voiceschanged', () => this.pickVoice());
+      window.speechSynthesis.addEventListener?.('voiceschanged', () => {
+        this.pickVoice();
+        this.onVoices?.();
+      });
     }
   }
 
@@ -76,14 +113,43 @@ export class SoundBoard {
 
   private pickVoice(): void {
     try {
-      const voices = window.speechSynthesis.getVoices();
-      const spanish = voices.filter((voice) => voice.lang.toLowerCase().startsWith('es'));
-      const prefer = ['es-ar', 'es-419', 'es-uy', 'es-mx', 'es-us', 'es-es'];
-      this.voice =
-        prefer.map((lang) => spanish.find((voice) => voice.lang.toLowerCase() === lang)).find(Boolean) ?? spanish[0] ?? null;
+      this.voices = window.speechSynthesis
+        .getVoices()
+        .filter((voice) => voiceScore(voice) > 0)
+        .sort((a, b) => voiceScore(b) - voiceScore(a));
     } catch {
-      this.voice = null;
+      this.voices = [];
     }
+  }
+
+  /** Las voces en español para elegir en el menú (la mejor primero). */
+  voiceOptions(): { id: string; label: string }[] {
+    return this.voices.map((voice) => ({ id: voice.name, label: `${voice.name.replace(/^Google /, 'Google · ')} (${voice.lang})` }));
+  }
+
+  /** Elegir voz ('auto' = una distinta y buena para cada asiento). Dice algo para probarla. */
+  setVoice(id: string): void {
+    this.voicePref = id;
+    try {
+      window.localStorage.setItem(VOICE_KEY, id);
+    } catch {
+      // sin almacenamiento: vale para esta sesión
+    }
+    if (this.enabled) {
+      this.stop();
+      this.speak('¡Quiero retruco!', 1);
+    }
+  }
+
+  /** La voz de un asiento: la elegida, o (automático) las mejores repartidas entre los asientos. */
+  private voiceFor(seat: number): { voice: SpeechSynthesisVoice | null; shared: boolean } {
+    const chosen = this.voicePref !== 'auto' ? this.voices.find((voice) => voice.name === this.voicePref) : undefined;
+    if (chosen) return { voice: chosen, shared: true };
+    if (this.voices.length === 0) return { voice: null, shared: true };
+    // Las que están cerca de la mejor (no mezclar una natural con una robótica).
+    const best = voiceScore(this.voices[0]);
+    const good = this.voices.filter((voice) => voiceScore(voice) >= best - 20).slice(0, 6);
+    return { voice: good[seat % good.length], shared: good.length < 3 };
   }
 
   private later(ms: number, fn: () => void): void {
@@ -150,11 +216,12 @@ export class SoundBoard {
     try {
       if (!('speechSynthesis' in window)) return;
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = this.voice?.lang ?? 'es-AR';
-      if (this.voice) utterance.voice = this.voice;
-      utterance.rate = 1.05;
-      // Cada asiento con un tono un poco distinto, para distinguir quién habla.
-      utterance.pitch = [1, 0.8, 1.25, 0.9, 1.15, 0.75][seat % 6];
+      const { voice, shared } = this.voiceFor(seat);
+      utterance.lang = voice?.lang ?? 'es-AR';
+      if (voice) utterance.voice = voice;
+      // Un poco más rápido y con ganas; si varios asientos comparten voz, un tono apenas distinto (sin robot).
+      utterance.rate = /[!¡]/.test(text) ? 1.12 : 1.06;
+      utterance.pitch = shared ? [1, 0.92, 1.08, 0.95, 1.05, 0.9][seat % 6] : 1;
       utterance.volume = 0.95;
       window.speechSynthesis.speak(utterance);
     } catch {
