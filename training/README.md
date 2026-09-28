@@ -84,8 +84,11 @@ primera vez):
 node --import tsx training/lang/eval-intents.ts     # → training/results/intents-eval.json
 ```
 
-Da el acierto de las reglas (frases de referencia y libres), el del modelo dejando cada frase afuera de los
-ejemplos (con log-loss y calibración, ECE, para varias temperaturas) y el de la combinación que usa el juego.
+Entrena con `reglas` + `ejemplos` y prueba con las `libres` (que nunca se usan para entrenar): el acierto de
+las reglas, el del vecino más parecido y el de una regresión logística sobre los vectores de EmbeddingGemma
+(regularización y temperatura por validación cruzada), con log-loss y calibración (ECE), y el de la combinación
+que usa el juego. Guarda el clasificador en `public/models/intent-head.json` (lo usa el juego; commitearlo) y el
+reporte en `training/results/intents-eval.json`. Con `EVAL_FAKE=1` corre con vectores falsos (para probar el script).
 
 ## Reglas de la carpeta
 

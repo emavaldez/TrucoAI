@@ -8,7 +8,7 @@ import { createManualScheduler } from '../../../app/scheduler.js';
 import { corpusEntries } from '../corpus.js';
 import { normalize, parseCard, parseRules } from '../parse.js';
 import { partnerEnvidoAnswer, partnerTrucoAnswer, resolveCard } from '../respond.js';
-import { buildBank, semanticScores, setSemanticBank } from '../semantic.js';
+import { buildBank, semanticScores, setSemanticBank, setSemanticHead } from '../semantic.js';
 import { interpret } from '../understand.js';
 
 function card(id: string): Card {
@@ -163,6 +163,26 @@ describe('modelo semántico (con vectores falsos: el de verdad se mide en la Mac
     expect((await interpret('truco', true)).understood?.source).toBe('reglas');
     const free = await interpret('zzz quierooo', true);
     expect(free.understood?.source ?? free.guess?.source).toBe('modelo');
+    setSemanticBank(null);
+  });
+
+  it('con el clasificador entrenado (regresión logística) usa sus pesos y su temperatura', async () => {
+    const embed = async (texts: string[]) => texts.map((text) => Float32Array.from([text.includes('mazo') ? 1 : 0, text.includes('mazo') ? 0 : 1]));
+    setSemanticHead(embed, {
+      format: 'trucoai-intent-head-v1',
+      model: 'onnx-community/embeddinggemma-300m-ONNX',
+      labels: ['MAZO', 'QUIERO'],
+      dim: 2,
+      W: [
+        [4, 0],
+        [0, 4],
+      ],
+      b: [0, 0],
+      temperature: 1,
+    });
+    const scores = await semanticScores('me tomo el mazo');
+    expect(scores[0].label).toBe('MAZO');
+    expect(scores[0].prob).toBeGreaterThan(0.95);
     setSemanticBank(null);
   });
 });

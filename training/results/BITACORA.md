@@ -184,3 +184,27 @@ Idea de Emmanuel: hablarle o escribirle a la IA (compañero o rival) y que actú
 - Corpus etiquetado: 146 frases de referencia (las reglas aciertan 146/146) y 62 libres (las reglas entienden
   4/62: es lo que tiene que cubrir el modelo). La medición del modelo corre en la Mac (`training/lang/eval-intents.ts`).
 
+## 2026-09-28 11:50 — Primera medición del lenguaje (`results/intents-eval-v1.json`)
+
+Corrida en la Mac con EmbeddingGemma q4 (vecino más parecido, banco = todo el corpus, leave-one-out):
+
+| | Referencia (146) | Libres (62) |
+|---|---|---|
+| Reglas | 100% | 6% bien, 10% mal, 84% sin entender |
+| EmbeddingGemma (vecino) | 53% (todo el corpus) | 32% |
+| Combinado (T = 0,05) | — | 15% bien, 18% mal, 68% pregunta de nuevo |
+
+- T = 0,05 es la mejor calibrada (ECE 0,10); el problema es el acierto: con 8–12 ejemplos por intención el vecino
+  más parecido agrupa por *tema* (envido, truco) más que por *acto de habla* (cantar, preguntar, afirmar, ordenar).
+- Las reglas se equivocaban con seguridad en 6 libres (esas nunca llegan al modelo).
+
+Cambios (v2):
+- `ejemplos`: 356 frases más para entrenar (lunfardo, sin tildes, como las escribe el reconocimiento de voz); las
+  libres quedan solo para probar (se sacaron del entrenamiento las casi idénticas a una libre).
+- Clasificador entrenado sobre los vectores (regresión logística, validación cruzada de 5 partes), que el juego
+  usa en vez del vecino más parecido (`public/models/intent-head.json`).
+- Reglas más prudentes (preguntas solo con signo o empezando como pregunta, números sueltos no son cartas,
+  órdenes al principio de la frase mandan, charla solo con marcas claras). Ojo: se ajustaron mirando los errores
+  en las libres, así que las libres pasan a ser conjunto de *desarrollo*; la prueba final tiene que ser con frases
+  reales de jugadores.
+
