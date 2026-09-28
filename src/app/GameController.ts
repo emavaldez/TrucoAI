@@ -426,7 +426,7 @@ export class GameController {
       case 'TENGO':
       case 'NO_TENGO': {
         // Contestándole al pie «¿canto tanto?», «tengo» / «no tengo nada» son sobre el tanto.
-        const about = u.about ?? (consult?.kind === 'tanto' ? 'tanto' : 'cartas');
+        const about = consult?.kind === 'tanto' && !u.card ? 'tanto' : (u.about ?? 'cartas');
         this.claims.push({ from: HUMAN_ID, about, level: u.label === 'NO_TENGO' ? 'nada' : u.score !== undefined && u.score >= 28 ? 'mucho' : 'algo' });
         // Si todavía puede hacerle señas al pie y lo que dice es cierto, al pie le llega como seña.
         const options = this.humanSignalOptions();
