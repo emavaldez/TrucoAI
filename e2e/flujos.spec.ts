@@ -148,9 +148,14 @@ test('nivel Experta con consejos: la red juega y en tu turno ves el % de cada op
   await expect(page.getByTestId('menu')).toContainText('Tus compañeros también son la red');
   await page.getByTestId('menu-advice').check();
   await page.getByTestId('menu-start').click();
-  // En tu turno (jugar una carta o contestar un canto) aparecen los porcentajes.
+  // En tu turno (jugar una carta o contestar un canto) aparecen los porcentajes. La semilla es al azar: si la
+  // mano termina antes de que te toque (un truco no querido, un mazo), se pasa a la siguiente.
   const badges = page.locator('#truco-canvas [data-advice]');
-  await expect(badges.first()).toBeVisible({ timeout: 20_000 });
+  await expect(async () => {
+    const next = page.getByTestId('next-hand');
+    if (await next.isVisible()) await next.click({ timeout: 1000 });
+    await expect(badges.first()).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 45_000 });
   const values = await badges.evaluateAll((els) => els.map((el) => Number((el as HTMLElement).dataset.advice?.replace('%', ''))));
   // Porcentajes redondeados de una distribución: suman ~100 y hay una opción marcada como la preferida.
   expect(Math.abs(values.reduce((a, b) => a + b, 0) - 100)).toBeLessThanOrEqual(values.length);
