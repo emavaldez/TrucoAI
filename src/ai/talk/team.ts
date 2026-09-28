@@ -16,6 +16,8 @@ export interface PublicClaim {
   about: 'tanto' | 'cartas';
   /** 'calla': le tocaba hablar (le preguntaron) y no dijo nada (r4: la red también puede callarse) */
   level: 'mucho' | 'algo' | 'nada' | 'calla';
+  /** cuánto le cree el que escucha (0–1); sin esto, TRUST_PUBLIC_CLAIMS (r4-reputación: según lo que lo pescaron) */
+  trust?: number;
 }
 
 /** Consejo del equipo para el que decide (el pie o el que contesta). */

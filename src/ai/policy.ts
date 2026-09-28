@@ -153,7 +153,7 @@ export class HeuristicPolicy implements Policy {
     // Lo que dijeron los rivales en voz alta: a veces se lo cree (y se puede comer un engaño).
     const rivals = heard.filter((claim) => team.get(claim.from) !== undefined && team.get(claim.from) !== obs.selfTeam);
     for (const claim of rivals) {
-      if (rng.next() >= TRUST_PUBLIC_CLAIMS) continue;
+      if (rng.next() >= (claim.trust ?? TRUST_PUBLIC_CLAIMS)) continue;
       this.knowledge ??= { forced: new Map(), tests: new Map() };
       this.knowledge.tests.set(claim.from, [...(this.knowledge.tests.get(claim.from) ?? []), claimTest(claim)]);
     }

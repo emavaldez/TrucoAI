@@ -79,6 +79,16 @@ Necesita `runs/r3/ckpt/iter_000560.pt` y `runs/r3/policies/best`. Solo 4 jugador
 
 Un duelo con charla: `python training/learner/run.py duel --a runs/r4-piloto/policies/best --b hard --players 4 --talk tanto`.
 
+**Reputación (r4-reputación):** `bash training/train.sh r4-reputacion` (usa `config/r4-reputacion.json`; necesita
+`runs/r4-piloto/ckpt/iter_000240.pt`, `runs/r4-piloto/policies/best` y `runs/r3/policies/best`). Se habla del tanto
+y de las cartas; lo dicho se comprueba al terminar la mano (el tanto si lo cantó o jugó sus tres cartas; las cartas
+si las jugó todas) y cada jugador arrastra en la partida cuántas veces dijo la verdad y cuántas lo pescaron
+mintiendo (`src/ai/talk/reputation.ts`). La red lo ve; la heurística le cree 75% de entrada y 30 puntos menos por
+cada mentira pescada. La trayectoria de cada jugador es la partida entera (`talk.matchCredit`): una mentira carga
+con lo que cueste en las manos siguientes; las primeras 10 iteraciones solo aprende el crítico
+(`ppo.criticWarmup`). En la línea `charla`, además: `dice_cartas`, `pescada_mintiendo` y
+`canta_si_nada_confiable` / `canta_si_nada_mentiroso` (¿le cree menos al que ya pescó?).
+
 ## Registro (para la tesis)
 
 Todo lo que se corre queda registrado en git, en `results/`:

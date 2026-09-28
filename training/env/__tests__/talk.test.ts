@@ -7,6 +7,7 @@ import type { Action, MatchState, PlayerId } from '../../../src/engine/index.js'
 import { N_ACTIONS, talkIndex, talkMask, talkOf, FIRST_TALK_ACTION } from '../../../src/ai/rl/actions.js';
 import { encodeObs, layoutHash, obsLayout } from '../../../src/ai/rl/encode.js';
 import { claimMoments, latestClaims, trueLevel } from '../../../src/ai/talk/claims.js';
+import { addVerdicts, checkClaims, trustFor, type Reputation } from '../../../src/ai/talk/reputation.js';
 import { card, deckFor } from '../../../src/engine/__tests__/helpers.js';
 
 const HANDS = {
@@ -107,5 +108,46 @@ describe('cuándo se habla (los mismos momentos que el juego)', () => {
   it('en 2 jugadores nadie habla', () => {
     const state = createMatch({ rules: { playerCount: 2 }, seed: 1 });
     expect(claimMoments(state, getActor(state) as PlayerId, new Set(), ['tanto', 'cartas'])).toEqual([]);
+  });
+});
+
+describe('reputación en la partida', () => {
+  it('la observación con reputación suma 12 entradas después de lo dicho', () => {
+    const sample = getObservation(match(), 'p0');
+    const layout = obsLayout(sample, true, true);
+    expect(layout.at(-1)).toEqual({ name: 'reputation', size: 12 });
+    const x = encodeObs(sample, { claims: [], reputation: { p2: { verdad: 5, mentira: 3 } } });
+    expect(x.length).toBe(1066);
+    // p2 es el asiento relativo 2: verdad (5/5) y mentira (3/3) al tope.
+    expect(x[1054 + 4]).toBe(1);
+    expect(x[1054 + 5]).toBe(1);
+  });
+
+  it('al terminar la mano se comprueba lo dicho del tanto (si lo cantó o jugó sus tres cartas)', () => {
+    let state = match();
+    // p0 tiene 33: dice "nada" (mentira) y lo cantan en el envido.
+    state = act(state, { type: 'PLAY_CARD', cardId: '4-basto' });
+    state = act(state, { type: 'PLAY_CARD', cardId: '4-copa' });
+    state = act(state, { type: 'CALL_ENVIDO', call: 'E' });
+    state = act(state, { type: 'ANSWER_ENVIDO', answer: 'QUIERO' });
+    const verdicts = checkClaims(state, [
+      { from: 'p0', about: 'tanto', level: 'nada', cards: [] },
+      { from: 'p1', about: 'tanto', level: 'nada', cards: [] },
+      { from: 'p2', about: 'tanto', level: 'calla', cards: [] },
+    ]);
+    const byPlayer = Object.fromEntries(verdicts.map((v) => [v.from, v.verdict]));
+    // p0 cantó 33 → mentira; p1 no dijo sus tantos (a menos que haya tenido que decirlos) → no se sabe o verdad.
+    expect(byPlayer.p0).toBe('mentira');
+    expect(byPlayer.p2).toBeUndefined();
+    const rep: Reputation = {};
+    addVerdicts(rep, verdicts);
+    expect(rep.p0).toEqual({ verdad: 0, mentira: 1 });
+  });
+
+  it('la heurística le cree menos al que pescó mintiendo', () => {
+    expect(trustFor(undefined)).toBe(0.75);
+    expect(trustFor({ verdad: 0, mentira: 1 })).toBeCloseTo(0.45);
+    expect(trustFor({ verdad: 0, mentira: 5 })).toBe(0.05);
+    expect(trustFor({ verdad: 10, mentira: 0 })).toBe(0.95);
   });
 });

@@ -9,6 +9,7 @@ import type { MatchState, Observation, PlayerId } from '../../engine/index.js';
 import type { Signal, SignKind } from '../signs.js';
 import { signalsFor, teamInstructions, type TableTalk } from '../tableTalk.js';
 import { latestClaims } from '../talk/claims.js';
+import type { Reputation } from '../talk/reputation.js';
 import type { PublicClaim } from '../talk/team.js';
 import { TALK_LEVELS } from './actions.js';
 import { cardIndex, cardRank, envidoValue, sortedHand, suitIndex } from './cards.js';
@@ -84,6 +85,11 @@ export interface EncodeExtras {
    * al final: las redes de r4 lo ven; las anteriores no (su observación no cambia).
    */
   claims?: readonly PublicClaim[];
+  /**
+   * Reputación en la partida (r4-reputación): por jugador, cuántas veces lo que dijo resultó verdad y cuántas
+   * mentira. Si viene, la observación suma el tramo `reputation` después de `claims`.
+   */
+  reputation?: Reputation;
 }
 
 function build(obs: Observation, extras: EncodeExtras = {}): Builder {
@@ -225,6 +231,15 @@ function build(obs: Observation, extras: EncodeExtras = {}): Builder {
       put((rel(claim.from) * 2 + topic) * TALK_LEVELS.length + TALK_LEVELS.indexOf(claim.level), 1);
     }
   }
+  if (extras.reputation !== undefined) {
+    const put = b.section('reputation', MAX_SEATS * 2);
+    for (const seat of obs.seats) {
+      const rep = extras.reputation[seat.id];
+      if (!rep) continue;
+      put(rel(seat.id) * 2, Math.min(1, rep.verdad / 5));
+      put(rel(seat.id) * 2 + 1, Math.min(1, rep.mentira / 3));
+    }
+  }
   return b;
 }
 
@@ -255,8 +270,8 @@ export function layoutHash(layout: { name: string; size: number }[]): string {
 }
 
 /** Tramos del vector (nombre y tamaño), para documentar y verificar compatibilidad. */
-export function obsLayout(sample: Observation, withClaims = false): { name: string; size: number }[] {
-  return build(sample, withClaims ? { claims: [] } : {}).layout;
+export function obsLayout(sample: Observation, withClaims = false, withReputation = false): { name: string; size: number }[] {
+  return build(sample, { ...(withClaims ? { claims: [] } : {}), ...(withReputation ? { reputation: {} } : {}) }).layout;
 }
 
 export const PRIV_DIM = (MAX_SEATS - 1) * 41;

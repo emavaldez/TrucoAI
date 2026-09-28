@@ -135,7 +135,8 @@ class Run:
         self.cfg = config
         self.workers = workers or config.get("workers") or default_workers()
         # r4: con charla pública, la observación suma lo dicho en voz alta (tramo `claims`).
-        self.layout = obs_layout(config["players"], claims=bool(config.get("talk")))
+        talk = config.get("talk") or {}
+        self.layout = obs_layout(config["players"], claims=bool(talk), reputation=bool(talk.get("reputation")))
         self.dev = device()
         self.log_path = self.dir / "log.jsonl"
         manifest = self.dir / "manifest.json"
@@ -405,7 +406,7 @@ class Run:
         return {"kind": "heur", "difficulty": opponent}
 
     def evaluate(self, policy_base: Path, pairs: int, opponent: str, tag: str, players: int | None = None) -> dict:
-        tmp = self.dir / f"tmp-eval-{tag}"
+        tmp = self.dir / f"tmp-eval-{tag.replace('/', '-')}"
         remove_tree(tmp)
         n_players = players or self.cfg["players"]
         jobs = [
@@ -506,7 +507,10 @@ class Run:
             stats = self.merge_stats(data.metas)
             self.update_league_scores(state, stats)
             kl_beta = c["klBcFinal"] + (c["klBc"] - c["klBcFinal"]) * max(0.0, 1 - it / max(1, c["klBcDecayIters"]))
-            metrics = self.ppo_update(policy, critic, anchor, opt, data, c, kl_beta)
+            # Con la partida entera como trayectoria (r4-reputación), el crítico tiene que aprender a estimar otra cosa:
+            # las primeras iteraciones solo aprende él (la política no se mueve).
+            warm = it <= c.get("criticWarmup", 0)
+            metrics = self.ppo_update(policy, critic, anchor, opt, data, c, kl_beta, warm)
             remove_tree(tmp)
             state["iter"] = it
             dt = time.time() - t0
@@ -630,11 +634,15 @@ class Run:
         - miente_*: dijo "nada" teniendo 28 o más, o "mucho" teniendo 23 o menos;
         - canta_si_*: siendo pie en la 1ra baza, cuánto canta envido según lo que dijo del tanto el otro equipo;
         - engano_*: manos en que su equipo dijo "nada" con 28 o más: cuánto cantó el rival y puntos de envido netos.
+        - canta_si_nada_confiable / canta_si_nada_mentiroso (con reputación): lo mismo, según si el que dijo "nada"
+          ya fue pescado mintiendo en la partida (¿le cree menos?);
+        - pescada_mintiendo: de lo que dijo y se pudo comprobar al terminar la mano, cuánto era mentira.
         """
         grids = {"engano": np.zeros((3, 4)), "resto": np.zeros((3, 4))}
         cartas = np.zeros((3, 4))
-        listen = {k: np.zeros(2) for k in ("nada", "tiene", "nada_dicho")}
+        listen = {k: np.zeros(2) for k in ("nada", "tiene", "nada_dicho", "nada_confiable", "nada_mentiroso")}
         bait = np.zeros(3)
+        caught = np.zeros(2)
         found = False
         for meta in metas:
             cl = meta.get("claims")
@@ -645,7 +653,8 @@ class Run:
                 grids[k] += np.array(cl["tanto"][k])
             cartas += np.array(cl["cartas"])
             for k in listen:
-                listen[k] += cl["escucha"][k]
+                listen[k] += cl["escucha"].get(k, [0, 0])
+            caught += cl.get("pescado", [0, 0])
             bait += [cl["engano"]["hands"], cl["engano"]["rivalSang"], cl["engano"]["points"]]
         if not found:
             return {}
@@ -666,6 +675,9 @@ class Run:
         for k, (opp, calls) in listen.items():
             if opp:
                 out[f"canta_si_{k}"] = round(float(calls / opp), 3)
+        if caught[0]:
+            # De lo que dijo y se pudo comprobar al final de la mano, cuánto era mentira (la pescaron).
+            out["pescada_mintiendo"] = round(float(caught[1] / caught[0]), 3)
         if bait[0]:
             out["engano_manos"] = int(bait[0])
             out["engano_rival_canta"] = round(float(bait[1] / bait[0]), 3)
@@ -721,7 +733,7 @@ class Run:
                 entry["wins"] = entry["wins"] * 0.9 + s["wins"]
                 entry["matches"] = entry["matches"] * 0.9 + s["matches"]
 
-    def ppo_update(self, policy, critic, anchor, opt, data, c: dict, kl_beta: float) -> dict:
+    def ppo_update(self, policy, critic, anchor, opt, data, c: dict, kl_beta: float, warm: bool = False) -> dict:
         dev = self.dev
         obs = torch.from_numpy(data.obs).to(dev).float() / 255.0
         priv = torch.from_numpy(data.priv).to(dev).float() / 255.0
@@ -768,7 +780,7 @@ class Run:
                 kl_bc = (probs * (logp_all - anchor_logp).masked_fill(mask[idx] == 0, 0)).sum(-1).mean()
                 v = critic(obs[idx], priv[idx])
                 loss_v = F.mse_loss(v, ret[idx])
-                loss = loss_pi + 0.5 * loss_v - c["entropy"] * entropy + kl_beta * kl_bc
+                loss = 0.5 * loss_v if warm else loss_pi + 0.5 * loss_v - c["entropy"] * entropy + kl_beta * kl_bc
                 opt.zero_grad()
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(list(policy.parameters()) + list(critic.parameters()), c["maxGradNorm"])

@@ -23,6 +23,7 @@ import {
   type TableTalk,
 } from '../../src/ai/tableTalk.js';
 import { claimMoments, trueLevel } from '../../src/ai/talk/claims.js';
+import { addVerdicts, checkClaims, trustFor, type Reputation, type SpokenClaim } from '../../src/ai/talk/reputation.js';
 import { aiCardsAnswer, aiTantoAnswer, rivalPieStillToAct, tacticalDecision, type PublicClaim } from '../../src/ai/talk/team.js';
 import {
   FIRST_TALK_ACTION,
@@ -77,8 +78,14 @@ interface Job {
   b?: AgentSpec;
   /** ppo: premio por cumplir cada indicación del pie (se suma a la recompensa de esa decisión) */
   obeyBonus?: number;
-  /** r4: se habla en voz alta en la mesa (de qué temas); sin esto, nadie dice nada (como hasta r3) */
-  talk?: { topics: TalkTopic[] };
+  /**
+   * r4: se habla en voz alta en la mesa (de qué temas); sin esto, nadie dice nada (como hasta r3).
+   * `reputation`: lo dicho se comprueba al terminar cada mano y cada jugador arrastra en la partida cuántas veces
+   * dijo la verdad y cuántas mintió (la red lo ve; la heurística le cree según eso).
+   * `matchCredit`: la trayectoria de cada jugador es la partida entera (el premio sigue siendo mano por mano, pero
+   * una mentira carga con lo que cueste en las manos siguientes).
+   */
+  talk?: { topics: TalkTopic[]; reputation?: boolean; matchCredit?: boolean };
 }
 
 // ---------- agentes ----------
@@ -90,6 +97,8 @@ interface Agent {
   policy?: Policy;
   /** la red ve lo dicho (se entrenó con el tramo `claims`) */
   hears?: boolean;
+  /** la red ve además la reputación (tramo `reputation`) */
+  hearsRep?: boolean;
   mute?: boolean;
   deaf?: boolean;
 }
@@ -98,6 +107,7 @@ interface Agent {
 interface Hashes {
   base: string;
   claims: string;
+  reputation: string;
 }
 
 const mlpCache = new Map<string, Mlp>();
@@ -112,12 +122,13 @@ async function makeAgent(spec: AgentSpec, learner: Agent | null, name: string, h
   let mlp = mlpCache.get(spec.path);
   if (!mlp) {
     mlp = await loadMlp(spec.path);
-    if (mlp.meta.layoutHash !== hashes.base && mlp.meta.layoutHash !== hashes.claims) {
-      throw new Error(`la red ${spec.path} se entrenó con otra observación (${mlp.meta.layoutHash} ≠ ${hashes.base} / ${hashes.claims})`);
+    if (![hashes.base, hashes.claims, hashes.reputation].includes(mlp.meta.layoutHash)) {
+      throw new Error(`la red ${spec.path} se entrenó con otra observación (${mlp.meta.layoutHash} ≠ ${Object.values(hashes).join(' / ')})`);
     }
     mlpCache.set(spec.path, mlp);
   }
-  return { name, mlp, greedy: spec.greedy, hears: mlp.meta.layoutHash === hashes.claims, ...flags };
+  const hash = mlp.meta.layoutHash;
+  return { name, mlp, greedy: spec.greedy, hears: hash !== hashes.base, hearsRep: hash === hashes.reputation, ...flags };
 }
 
 /** ¿Esta red sabe hablar? (tiene las salidas 19–26) */
@@ -172,6 +183,8 @@ interface Step {
   logp: number;
   /** premio por obedecer al pie en esta decisión (ya multiplicado) */
   bonus?: number;
+  /** con `matchCredit`: el premio de la mano que terminó después de esta decisión */
+  handReward?: number;
 }
 
 class Recorder {
@@ -195,7 +208,7 @@ class Recorder {
       this.act.push([step.act], 1);
       this.logp.push(step.logp);
       const last = i === steps.length - 1;
-      this.rew.push((last ? reward : 0) + (step.bonus ?? 0));
+      this.rew.push((last ? reward : 0) + (step.bonus ?? 0) + (step.handReward ?? 0));
       this.done.push([last ? 1 : 0], 1);
     });
   }
@@ -274,8 +287,10 @@ function emptyTalkStats(): TalkStats {
 interface ClaimStats {
   tanto: { engano: number[][]; resto: number[][] };
   cartas: number[][];
-  escucha: Record<'nada' | 'tiene' | 'nada_dicho', [number, number]>;
+  escucha: Record<'nada' | 'tiene' | 'nada_dicho' | 'nada_confiable' | 'nada_mentiroso', [number, number]>;
   engano: { hands: number; rivalSang: number; points: number };
+  /** dichos de la red que se pudieron comprobar: [comprobados, mentiras pescadas] */
+  pescado: [number, number];
 }
 
 function emptyClaimStats(): ClaimStats {
@@ -283,8 +298,9 @@ function emptyClaimStats(): ClaimStats {
   return {
     tanto: { engano: grid(), resto: grid() },
     cartas: grid(),
-    escucha: { nada: [0, 0], tiene: [0, 0], nada_dicho: [0, 0] },
+    escucha: { nada: [0, 0], tiene: [0, 0], nada_dicho: [0, 0], nada_confiable: [0, 0], nada_mentiroso: [0, 0] },
     engano: { hands: 0, rivalSang: 0, points: 0 },
+    pescado: [0, 0],
   };
 }
 
@@ -327,7 +343,11 @@ function playMatch(
   let talk: TableTalk = EMPTY_TALK;
   // Charla pública (r4): lo dicho en esta mano, qué momentos ya se hablaron, quién espera para subir el envido.
   const withClaims = !!job.talk;
-  let claims: PublicClaim[] = [];
+  const withRep = !!job.talk?.reputation;
+  const matchCredit = !!job.talk?.matchCredit;
+  /** reputación en la partida (no se borra entre manos) */
+  const reputation: Reputation = {};
+  let claims: SpokenClaim[] = [];
   let said = new Set<string>();
   let slowPlay = new Set<TeamId>();
   const baitTeams = new Set<TeamId>();
@@ -335,8 +355,13 @@ function playMatch(
   /** La observación codificada para este agente: las redes de r4 ven lo dicho; las demás, no. */
   const encodeFor = (agent: Agent, obs: ReturnType<typeof getObservation>, extras: ReturnType<typeof talkExtras>): Float32Array => {
     const hears = agent.mlp ? agent.hears : withClaims;
-    return encodeObs(obs, hears ? { ...extras, claims: agent.deaf ? [] : claims } : extras);
+    const hearsRep = agent.mlp ? agent.hearsRep : withRep;
+    if (!hears) return encodeObs(obs, extras);
+    return encodeObs(obs, { ...extras, claims: agent.deaf ? [] : claims, ...(hearsRep ? { reputation: agent.deaf ? {} : reputation } : {}) });
   };
+
+  /** Lo dicho, como lo escucha la heurística: con reputación, le cree más o menos a cada uno. */
+  const heardClaims = (): PublicClaim[] => (withRep ? claims.map((c) => ({ ...c, trust: trustFor(reputation[c.from]) })) : claims);
 
   /** Alguien dice algo en voz alta (o se calla) en un momento de la charla. */
   const speak = (speaker: PlayerId, topic: TalkTopic, key: string): void => {
@@ -365,7 +390,7 @@ function playMatch(
       if (topic === 'tanto' && level === 'nada' && truth === 0) baitTeams.add(teamOf(state, speaker));
     }
     said.add(key);
-    claims.push({ from: speaker, about: topic, level });
+    claims.push({ from: speaker, about: topic, level, cards: topic === 'cartas' ? (state.hand.hands[speaker] ?? []).map((c) => c.id) : [] });
   };
 
   const pushStep = (playerId: PlayerId, step: Step): void => {
@@ -446,9 +471,30 @@ function playMatch(
           : wValue(wtable, after[team], after[1 - team], manoTeam === team ? 0 : 1);
       return end - before;
     };
-    for (const [playerId, steps] of pending) {
-      if (steps.length === 0 || !recorder) continue;
-      recorder.trajectory(steps, rewardFor(teamOf(state, playerId)));
+    if (matchCredit) {
+      // La partida entera es una trayectoria: el premio de la mano se anota en la última decisión de cada uno.
+      for (const [playerId, steps] of pending) {
+        const last = steps[steps.length - 1];
+        if (last) last.handReward = (last.handReward ?? 0) + rewardFor(teamOf(state, playerId));
+      }
+      if (state.phase === 'MATCH_OVER' && recorder) for (const steps of pending.values()) if (steps.length > 0) recorder.trajectory(steps, 0);
+    } else {
+      for (const [playerId, steps] of pending) {
+        if (steps.length === 0 || !recorder) continue;
+        recorder.trajectory(steps, rewardFor(teamOf(state, playerId)));
+      }
+    }
+    if (withRep) {
+      const verdicts = checkClaims(state, claims);
+      addVerdicts(reputation, verdicts);
+      if (claimStats) {
+        for (const v of verdicts) {
+          const seat = seatIndex.get(v.from) as number;
+          if (!record(seat) || !seatAgents[seat].mlp) continue;
+          claimStats.pescado[0] += 1;
+          if (v.verdict === 'mentira') claimStats.pescado[1] += 1;
+        }
+      }
     }
     const result = state.hand.envido.result;
     if (envido && result) {
@@ -469,7 +515,7 @@ function playMatch(
         if (result) claimStats.engano.points += result.winnerTeam === team ? result.points : -result.points;
       }
     }
-    pending.clear();
+    if (!matchCredit || state.phase === 'MATCH_OVER') pending.clear();
     sang.clear();
     talk = EMPTY_TALK;
   };
@@ -500,8 +546,16 @@ function playMatch(
         // Escuchar: ¿canta envido distinto según lo que dijo del tanto el otro equipo?
         const rivals = claims.filter((c) => c.about === 'tanto' && c.level !== 'calla' && teamOf(state, c.from) !== teamOf(state, actor));
         const bucket = rivals.length === 0 ? 'nada_dicho' : rivals.some((c) => c.level !== 'nada') ? 'tiene' : 'nada';
+        const calls = ENVIDO_CALLS.has(choice.action) ? 1 : 0;
         claimStats.escucha[bucket][0] += 1;
-        if (ENVIDO_CALLS.has(choice.action)) claimStats.escucha[bucket][1] += 1;
+        claimStats.escucha[bucket][1] += calls;
+        if (bucket === 'nada' && withRep) {
+          // ¿Le cree menos a un "no tengo nada" de alguien que ya pescó mintiendo?
+          const liar = rivals.some((c) => (reputation[c.from]?.mentira ?? 0) > 0);
+          const sub = liar ? 'nada_mentiroso' : 'nada_confiable';
+          claimStats.escucha[sub][0] += 1;
+          claimStats.escucha[sub][1] += calls;
+        }
       }
       if (record(seat) && ENVIDO_CALLS.has(choice.action) && !sang.has(actor)) {
         sang.set(actor, envidoScore(state.hand.dealt[actor] ?? []) <= 23 ? 'farol' : 'tantos');
@@ -527,7 +581,7 @@ function playMatch(
       else {
         const exclude = tactic?.exclude;
         const view = exclude ? { ...obs, legalActions: obs.legalActions.filter((a) => !exclude(a)) } : obs;
-        const heard = job.talk && !agent.deaf ? claims : [];
+        const heard = job.talk && !agent.deaf ? heardClaims() : [];
         action = agent.policy.decide(view, rng, signals, instructionsFor(state, talk, actor), heard);
       }
       if (record(seat) && recorder && obs.legalActions.length > 1) {
@@ -562,9 +616,13 @@ async function main(): Promise<void> {
   const job = JSON.parse(await readFile(process.argv[2], 'utf8')) as Job;
   const rng = createRng(job.seed >>> 0);
   const sample = getObservation(createMatch({ rules: { playerCount: job.players, flor: false, picaPica: false }, seed: 1 }), 'p0');
-  const layout = obsLayout(sample, !!job.talk);
+  const layout = obsLayout(sample, !!job.talk, !!job.talk?.reputation);
   const hash = layoutHash(layout);
-  const hashes: Hashes = { base: layoutHash(obsLayout(sample)), claims: layoutHash(obsLayout(sample, true)) };
+  const hashes: Hashes = {
+    base: layoutHash(obsLayout(sample)),
+    claims: layoutHash(obsLayout(sample, true)),
+    reputation: layoutHash(obsLayout(sample, true, true)),
+  };
   const obsDim = layout.reduce((sum, part) => sum + part.size, 0);
   const n = job.players;
   const started = Date.now();

@@ -40,10 +40,10 @@ def default_workers() -> int:
 
 # ---------- layout de la observación (lo dice el TS) ----------
 
-def obs_layout(players: int = 2, claims: bool = False) -> dict:
-    """claims: con el tramo de lo dicho en voz alta (r4)."""
+def obs_layout(players: int = 2, claims: bool = False, reputation: bool = False) -> dict:
+    """claims: con el tramo de lo dicho en voz alta (r4); reputation: con la reputación en la partida."""
     out = subprocess.run(
-        ["node", "--import", "tsx", "training/env/layout-cli.ts", str(players), *(["--claims"] if claims else [])],
+        ["node", "--import", "tsx", "training/env/layout-cli.ts", str(players), *(["--claims"] if claims else []), *(["--reputation"] if reputation else [])],
         cwd=REPO, check=True, capture_output=True, text=True,
     )
     return json.loads(out.stdout)

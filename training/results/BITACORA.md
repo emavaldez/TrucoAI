@@ -263,3 +263,25 @@ Diseño del piloto (4 jugadores, solo el tanto; `config/r4-piloto.json`):
 - Riesgo (resultado interesante en sí): que la charla termine sin significar nada (equilibrio de "balbuceo").
 - Prueba local (2 núcleos, `--smoke`): corre de punta a punta; al empezar, igual que r3 contra la difícil (73% en
   600 partidas) y 49% contra r3.
+
+## 2026-09-28 16:24–17:34 — r4-piloto: la charla terminó en "balbuceo" (`results/r4-piloto.md`)
+
+- Juega mejor que r3 en 4 (55% contra r3, 73–75% contra la difícil), pero contra sí misma callada o sorda queda
+  en 50%: hablar y escuchar no le dan ventaja.
+- Al principio (imitando) lo que decía informaba; a la iteración 50 mentía "nada" con 28+ el 74%; al final dice
+  casi lo mismo tenga lo que tenga y no le cree a nadie. El engaño casi no funciona (el rival canta 10–17%).
+- Lectura: con la seña privada el compañero ya sabe el tanto; en público solo sirve engañar y el rival aprende
+  a no creer. Y no había memoria entre manos ni el premio de una mentira cargaba con lo que costaba después.
+- Emmanuel no quiso probar sin señas (r4b). Observación suya: a 30 puntos se arrastra el creer y el mentir.
+
+## 2026-09-28 — r4-reputación (diseño)
+
+- Lo dicho se comprueba al terminar la mano con lo que se vio en la mesa; cada jugador arrastra en la partida sus
+  verdades y mentiras pescadas. La red las ve (12 entradas); la heurística le cree según eso.
+- La trayectoria es la partida entera: una mentira carga con lo que cueste en las manos siguientes. 10
+  iteraciones de calentamiento del crítico (tiene que aprender a estimar la partida, no la mano).
+- También se habla de las cartas cuando cantan truco ("¿qué hacemos?"): ahí hablar sí le puede servir al
+  compañero (las señas son del principio y no dicen lo que queda).
+- Más partidas contra heurísticas que escuchan (20% difícil). Duelos contra la difícil, r3, r4-piloto y contra sí
+  misma callada y sorda.
+- Prueba local (`--smoke`): corre de punta a punta.

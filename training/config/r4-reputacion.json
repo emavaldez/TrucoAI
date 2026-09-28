@@ -1,0 +1,40 @@
+{
+  "_comment": "r4-reputación: la red habla del tanto y de las cartas, y lo que dice se comprueba al terminar la mano (el tanto si lo cantó o jugó sus tres cartas; las cartas si las jugó todas). Cada jugador arrastra en la partida cuántas veces dijo la verdad y cuántas lo pescaron mintiendo: la red lo ve (12 entradas nuevas) y la heurística le cree según eso (75% de entrada, 30 puntos menos por cada mentira pescada). La trayectoria de cada jugador es la partida entera: una mentira carga con lo que cueste en las manos siguientes. Arranca de la mejor de r4-piloto (iteración 240); imitación solo de lo que se dice (ahora también de las cartas); las primeras 10 iteraciones solo aprende el crítico. Más partidas contra heurísticas que escuchan (20% difícil).",
+  "players": 4,
+  "seed": 5,
+  "workers": 16,
+  "talk": {"topics": ["tanto", "cartas"], "reputation": true, "matchCredit": true},
+  "init": {"fromCkpt": "runs/r4-piloto/ckpt/iter_000240.pt", "wtableFrom": "r4-piloto"},
+  "wtable": {"matches": 8000},
+  "bc": {
+    "matches": 4000,
+    "playerMix": {"4": 1},
+    "onlyTalk": true,
+    "epochs": 6,
+    "batch": 512,
+    "lr": 1e-3,
+    "evalPairs": 300
+  },
+  "ppo": {
+    "matchesPerIter": 1024,
+    "minibatch": 8192,
+    "iterations": 300,
+    "criticWarmup": 10,
+    "playerMix": {"4": 1},
+    "klBc": 0.01,
+    "klBcFinal": 0.002,
+    "klBcDecayIters": 200,
+    "opponents": {"self": 0.4, "league": 0.3, "hard": 0.2, "normal": 0.05, "easy": 0.05},
+    "obeyBonus": {"start": 0.005, "floor": 0.005, "decayIters": 1}
+  },
+  "eval": {
+    "every": 20,
+    "pairs": 300,
+    "opponent": "hard",
+    "players": [4],
+    "select": [4],
+    "gauntlet": {"pairs": 300, "opponents": ["hard", "runs/r3/policies/best", "runs/r4-piloto/policies/best"]},
+    "talkAblation": true
+  },
+  "checkpoint": {"keepLast": 5, "keepBest": 3, "backupDir": null}
+}
