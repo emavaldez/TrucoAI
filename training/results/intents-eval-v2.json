@@ -1,0 +1,128 @@
+{
+ "fecha": "2026-09-28T15:56:22.628Z",
+ "corpus": {
+  "entrenamiento": 558,
+  "libres": 71,
+  "intenciones": 25
+ },
+ "reglas": {
+  "reglas": {
+   "n": 172,
+   "acierto": 1,
+   "sinEntender": 0,
+   "equivocadas": 0
+  },
+  "ejemplos": {
+   "n": 386,
+   "acierto": 0.9222797927461139,
+   "sinEntender": 0.07253886010362694,
+   "equivocadas": 0.0051813471502590676
+  },
+  "libres": {
+   "n": 71,
+   "acierto": 0.1267605633802817,
+   "sinEntender": 0.8028169014084507,
+   "equivocadas": 0.07042253521126761
+  }
+ },
+ "vecino": {
+  "porTemperatura": {
+   "T=0.02": {
+    "libres": {
+     "n": 71,
+     "acierto": 0.4084507042253521,
+     "logLoss": 2.6996727646230245,
+     "ece": 0.2987746422280309
+    },
+    "entrenamientoLOO": {
+     "n": 558,
+     "acierto": 0.7885304659498208,
+     "logLoss": 0.7246275138951389,
+     "ece": 0.0769068762600283
+    }
+   },
+   "T=0.03": {
+    "libres": {
+     "n": 71,
+     "acierto": 0.4084507042253521,
+     "logLoss": 2.2448918096746273,
+     "ece": 0.15829923212526426
+    },
+    "entrenamientoLOO": {
+     "n": 558,
+     "acierto": 0.7885304659498208,
+     "logLoss": 0.6794912407521757,
+     "ece": 0.04850852639542332
+    }
+   },
+   "T=0.05": {
+    "libres": {
+     "n": 71,
+     "acierto": 0.4084507042253521,
+     "logLoss": 2.1312353183655937,
+     "ece": 0.2049282328831275
+    },
+    "entrenamientoLOO": {
+     "n": 558,
+     "acierto": 0.7885304659498208,
+     "logLoss": 0.8798871898430554,
+     "ece": 0.2253124815531379
+    }
+   },
+   "T=0.08": {
+    "libres": {
+     "n": 71,
+     "acierto": 0.4084507042253521,
+     "logLoss": 2.3028970188750946,
+     "ece": 0.23589010317772616
+    },
+    "entrenamientoLOO": {
+     "n": 558,
+     "acierto": 0.7885304659498208,
+     "logLoss": 1.323502716704363,
+     "ece": 0.45236697224343014
+    }
+   }
+  },
+  "combinadoLibres": {
+   "n": 71,
+   "acierto": 0.15492957746478872,
+   "equivocadas": 0.15492957746478872,
+   "preguntaDeNuevo": 0.6901408450704225
+  }
+ },
+ "regresion": {
+  "validacionCruzada": {
+   "l2=0.0001,épocas=150": 0.8835125448028673,
+   "l2=0.0001,épocas=400": 0.8817204301075269,
+   "l2=0.001,épocas=150": 0.7974910394265233,
+   "l2=0.001,épocas=400": 0.7974910394265233,
+   "l2=0.01,épocas=150": 0.35663082437275984,
+   "l2=0.01,épocas=400": 0.3602150537634409
+  },
+  "elegido": {
+   "l2": 0.0001,
+   "epocas": 150,
+   "temperatura": 0.5,
+   "aciertoVC": 0.8835125448028673
+  },
+  "libres": {
+   "n": 71,
+   "acierto": 0.4084507042253521,
+   "logLoss": 2.045957270953036,
+   "ece": 0.26342215271623054
+  },
+  "combinadoLibres": {
+   "n": 71,
+   "acierto": 0.38028169014084506,
+   "equivocadas": 0.39436619718309857,
+   "preguntaDeNuevo": 0.22535211267605634
+  }
+ },
+ "modelo": {
+  "nombre": "onnx-community/embeddinggemma-300m-ONNX",
+  "dtype": "q4",
+  "msPorFrase": 3.853736089030207,
+  "cargaSegundos": 0.525
+ }
+}
