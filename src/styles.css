@@ -706,6 +706,24 @@ button.card--playable:hover, button.card--playable:focus-visible { transform: tr
 .menu-card--3 { left: 440px; top: 190px; transform: rotate(14deg); }
 .menu-quote { position: absolute; left: 230px; top: 430px; width: 360px; text-align: center; font-family: var(--font-display); font-style: italic; font-size: 20px; color: rgba(247, 241, 227, 0.75); }
 
+/* Menú responsive: no usa el lienzo escalado. Ocupa la ventana, se acomoda al ancho y scrollea
+   si el contenido no entra (antes el botón «Repartir» quedaba cortado fuera del lienzo 1440×900). */
+.canvas[data-screen='menu'] {
+  left: 0; top: 0; width: 100% !important; height: 100% !important;
+  transform: none !important; overflow-x: hidden; overflow-y: auto;
+  -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+}
+.canvas[data-screen='menu'] > * { position: relative; }
+.canvas[data-screen='menu'] .menu {
+  left: auto; top: auto; width: 100%; height: auto; min-height: 100%; overflow: visible;
+  display: flex; align-items: center; justify-content: center; gap: 56px; padding: 40px 24px;
+}
+.canvas[data-screen='menu'] .menu-form { position: relative; left: auto; top: auto; width: min(560px, 100%); flex: 0 1 560px; }
+.canvas[data-screen='menu'] .menu-art { position: relative; left: auto; top: auto; flex: none; width: 820px; height: 680px; zoom: 0.72; }
+.canvas[data-screen='menu'] .menu--portrait { display: block; max-width: 520px; margin: 0 auto; padding: 24px 20px 40px; }
+.canvas[data-screen='menu'] .menu--portrait .menu-form { width: 100%; }
+@media (max-width: 1180px) { .canvas[data-screen='menu'] .menu-art { display: none; } }
+
 /* ─── Celular acostado ─────────────────────────────────── */
 
 .rotate-layer:empty { display: none; }
