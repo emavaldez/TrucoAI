@@ -6,6 +6,9 @@ import { getActor } from '../engine/index.js';
 import type { Action } from '../engine/index.js';
 import type { Difficulty } from '../ai/policy.js';
 import { loadNetModels } from '../ai/rl/netPolicy.js';
+import { INTENT_TEXT } from '../ai/talk/intents.js';
+import { loadSemantic, semanticReady } from '../ai/talk/semantic.js';
+import { interpret } from '../ai/talk/understand.js';
 import type { Instruction, SignKind } from '../ai/signs.js';
 import {
   FAST_TIMING,
@@ -48,6 +51,43 @@ function loadSettings(): MatchSettings {
 }
 
 const ADVICE_KEY = 'truco-consejos';
+/** alto reservado abajo para la barra de la mesa (px de pantalla) */
+const TALKBAR_H = 62;
+const FREE_TALK_KEY = 'truco-frases-libres';
+
+function loadFlag(key: string): boolean {
+  try {
+    return window.localStorage.getItem(key) === 'on';
+  } catch {
+    return false;
+  }
+}
+
+function saveFlag(key: string, on: boolean): void {
+  try {
+    window.localStorage.setItem(key, on ? 'on' : 'off');
+  } catch {
+    // sin almacenamiento: vale solo para esta sesión
+  }
+}
+
+/** Reconocimiento de voz del navegador (Chrome: webkitSpeechRecognition). */
+interface Recognition {
+  lang: string;
+  interimResults: boolean;
+  maxAlternatives: number;
+  continuous: boolean;
+  onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+  onend: (() => void) | null;
+  onerror: ((event: { error: string }) => void) | null;
+  start(): void;
+  stop(): void;
+}
+
+function speechRecognition(): (new () => Recognition) | null {
+  const w = window as unknown as { SpeechRecognition?: new () => Recognition; webkitSpeechRecognition?: new () => Recognition };
+  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
+}
 
 function loadAdvice(): boolean {
   try {
@@ -106,6 +146,15 @@ export class TrucoApp {
   private signsOpen = false;
   /** modo consejo: en tu turno, el % con que la red jugaría cada opción */
   private advice = loadAdvice();
+  /** entender frases libres con EmbeddingGemma (se baja al activarlo) */
+  private freeTalk = loadFlag(FREE_TALK_KEY);
+  /** barra para hablarle a la mesa (fuera del canvas: no se redibuja con cada cambio) */
+  private readonly talkbar: HTMLFormElement;
+  private lastSpeechId = 0;
+  private listening = false;
+  /** en el celular la barra va plegada (un botón) para no achicar la mesa; se abre al tocarlo */
+  private talkOpen = false;
+  private readonly talkToggle: HTMLButtonElement;
 
   constructor(root: HTMLElement, config: UrlConfig) {
     this.root = root;
@@ -129,10 +178,20 @@ export class TrucoApp {
 
     root.innerHTML =
       '<div class="stage"><div class="canvas" id="truco-canvas"></div><div class="rotate-layer"></div></div>' +
+      '<form class="talkbar" data-testid="talkbar" hidden autocomplete="off">' +
+      '<button type="button" class="talk-mic" data-testid="talk-mic" aria-label="Hablar (mantené apretado o tocá y hablá)" title="Hablar">🎤</button>' +
+      '<input class="talk-input" data-testid="talk-input" type="text" enterkeyhint="send" placeholder="Hablale a la mesa: «truco», «¿tenés envido?», «tiro el ancho»…" aria-label="Hablale a la mesa">' +
+      '<button type="submit" class="talk-send" data-testid="talk-send">Decir</button>' +
+      '</form>' +
+      '<button type="button" class="talk-toggle" data-testid="talk-toggle" hidden aria-label="Hablarle a la mesa">💬</button>' +
       '<div class="sr-only" aria-live="polite" id="truco-live"></div>';
     this.stage = root.querySelector('.stage') as HTMLElement;
     this.canvas = root.querySelector('#truco-canvas') as HTMLElement;
     this.live = root.querySelector('#truco-live') as HTMLElement;
+    this.talkbar = root.querySelector('.talkbar') as HTMLFormElement;
+    this.talkToggle = root.querySelector('.talk-toggle') as HTMLButtonElement;
+    this.setupTalkbar();
+    if (this.freeTalk) void loadSemantic();
 
     // Las redes del nivel Experta (~3 MB): se bajan en segundo plano; hasta que llegan juega la difícil.
     void loadNetModels().then(() => this.onModelsLoaded());
@@ -156,15 +215,17 @@ export class TrucoApp {
 
   private fit(): void {
     const w = window.innerWidth;
-    const h = window.innerHeight;
-    const mode = chooseLayout(w, h);
+    // La barra para hablarle a la mesa ocupa el borde de abajo: la mesa se achica para no taparla.
+    const reserve = this.talkbar && !this.talkbar.hidden ? TALKBAR_H : 0;
+    const h = window.innerHeight - reserve;
+    const mode = chooseLayout(w, window.innerHeight);
     const changed = mode !== this.mode;
     this.mode = mode;
     const size = CANVAS[mode];
     const scale = canvasScale(mode, w, h);
     this.canvas.style.width = `${size.w}px`;
     this.canvas.style.height = `${size.h}px`;
-    this.canvas.style.transform = `translate(-50%, -50%) scale(${scale})`;
+    this.canvas.style.transform = `translate(-50%, calc(-50% - ${reserve / 2}px)) scale(${scale})`;
     this.canvas.dataset.layout = mode;
     const rotate = this.stage.querySelector('.rotate-layer') as HTMLElement;
     rotate.innerHTML = tooShortLandscape(w, h) ? renderRotateHint() : '';
@@ -175,6 +236,7 @@ export class TrucoApp {
 
   private startMatch(): void {
     saveSettings(this.settings);
+    this.lastSpeechId = 0;
     this.paused = false;
     this.signsOpen = false;
     this.log.reset();
@@ -198,6 +260,20 @@ export class TrucoApp {
     this.snapshot = snap;
     const now = Date.now();
     this.log.ingest(snap.events, snap.state, now);
+    // Lo que se dijo en voz alta desde la última vez: globo, feed y voz (las IA hablan con su voz).
+    let delay = 0;
+    for (const line of snap.speech) {
+      if (line.id <= this.lastSpeechId) continue;
+      this.lastSpeechId = line.id;
+      this.log.speak(snap.state, line.playerId, line.text, now, delay);
+      if (line.playerId !== 'p0') {
+        const seat = snap.state.seats.find((s) => s.id === line.playerId)?.seat ?? 1;
+        const text = line.text;
+        if (delay === 0) this.sound.say(text, seat);
+        else setTimeout(() => this.sound.say(text, seat), delay);
+        delay += 700;
+      }
+    }
     this.sound.play(snap.events, snap.state, this.timing.sayingGap);
     if (this.log.announcement) this.live.textContent = this.log.announcement;
     this.render();
@@ -219,8 +295,17 @@ export class TrucoApp {
 
   private render(): void {
     const focusKey = this.focusKey();
+    const over = this.snapshot?.state.phase === 'MATCH_OVER';
+    const noTalk = this.screen !== 'game' || this.paused || !this.controller || over;
+    const compact = this.mode === 'portrait';
+    const hideBar = noTalk || (compact && !this.talkOpen);
+    this.talkToggle.hidden = noTalk || !compact || this.talkOpen;
+    if (this.talkbar.hidden !== hideBar) {
+      this.talkbar.hidden = hideBar;
+      this.fit();
+    }
     if (this.screen === 'menu' || !this.controller || !this.snapshot) {
-      this.canvas.innerHTML = renderMenu(this.settings, this.mode, this.sound.enabled, this.advice);
+      this.canvas.innerHTML = renderMenu(this.settings, this.mode, this.sound.enabled, this.advice, this.freeTalk);
       this.canvas.dataset.screen = 'menu';
       this.restoreFocus(focusKey, 'menu');
       return;
@@ -434,6 +519,12 @@ export class TrucoApp {
       this.sound.setEnabled(input.checked);
       this.render();
       return;
+    } else if (ui === 'freetalk') {
+      this.freeTalk = input.checked;
+      saveFlag(FREE_TALK_KEY, input.checked);
+      if (input.checked) void this.loadFreeTalk();
+      this.render();
+      return;
     } else if (ui === 'advice') {
       this.advice = input.checked;
       saveAdvice(input.checked);
@@ -448,6 +539,8 @@ export class TrucoApp {
 
   private onKey(event: KeyboardEvent): void {
     if (event.altKey || event.ctrlKey || event.metaKey) return;
+    // Escribiendo en la barra de la mesa: las teclas son texto, no atajos.
+    if (event.target instanceof HTMLInputElement && event.target.type === 'text') return;
     const snap = this.snapshot;
     if (this.screen !== 'game' || !snap || !this.controller) {
       if (event.key === 'Enter' && this.screen === 'menu' && !(document.activeElement instanceof HTMLButtonElement)) this.startMatch();
@@ -490,6 +583,108 @@ export class TrucoApp {
 
   // ---------- hooks de test ----------
 
+  // ---------- hablarle a la mesa ----------
+
+  private setupTalkbar(): void {
+    const input = this.talkbar.querySelector('.talk-input') as HTMLInputElement;
+    const mic = this.talkbar.querySelector('.talk-mic') as HTMLButtonElement;
+    this.talkbar.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const text = input.value;
+      input.value = '';
+      void this.submitTalk(text);
+      if (this.mode === 'portrait') this.setTalkOpen(false);
+    });
+    this.talkToggle.addEventListener('click', () => {
+      this.setTalkOpen(true);
+      input.focus();
+    });
+    input.addEventListener('blur', () => {
+      // En el celular, al salir de la barra sin escribir nada vuelve a plegarse.
+      setTimeout(() => {
+        if (this.mode === 'portrait' && !input.value && !this.listening && !this.talkbar.contains(document.activeElement)) this.setTalkOpen(false);
+      }, 150);
+    });
+    if (!speechRecognition()) {
+      mic.hidden = true;
+      return;
+    }
+    mic.addEventListener('click', () => this.listen(input, mic));
+  }
+
+  /** Micrófono (Chrome): escucha una frase en español rioplatense y la manda como si la hubieras escrito. */
+  private listen(input: HTMLInputElement, mic: HTMLButtonElement): void {
+    const Ctor = speechRecognition();
+    if (!Ctor || this.listening) return;
+    const recognition = new Ctor();
+    recognition.lang = 'es-AR';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 3;
+    recognition.continuous = false;
+    this.listening = true;
+    mic.classList.add('talk-mic--on');
+    input.placeholder = 'Te escucho…';
+    recognition.onresult = (event) => {
+      const alternatives = Array.from(event.results[0] ?? []).map((alt) => alt.transcript);
+      const text = alternatives[0] ?? '';
+      if (text) void this.submitTalk(text, alternatives);
+    };
+    const reset = (): void => {
+      this.listening = false;
+      mic.classList.remove('talk-mic--on');
+      input.placeholder = 'Hablale a la mesa: «truco», «¿tenés envido?», «tiro el ancho»…';
+    };
+    recognition.onend = reset;
+    recognition.onerror = (event) => {
+      reset();
+      if (event.error === 'not-allowed') this.tell('Para hablar, dale permiso al micrófono.');
+    };
+    recognition.start();
+  }
+
+  /** Lo que dijiste (escrito o hablado) va a la mesa: se entiende y se actúa. */
+  private async submitTalk(text: string, alternatives: string[] = []): Promise<void> {
+    if (!this.controller || !text.trim()) return;
+    // Si el reconocimiento de voz dudó, se prueba cada alternativa con las reglas antes que el modelo.
+    let chosen = text;
+    let result = await interpret(text, this.freeTalk);
+    for (const alt of alternatives.slice(1)) {
+      if (result.understood) break;
+      const other = await interpret(alt, false);
+      if (other.understood) {
+        chosen = alt;
+        result = other;
+      }
+    }
+    const said = this.controller.humanSays(chosen, result.understood);
+    if (said.note) {
+      const guess = !said.understood && result.guess ? ` ¿Quisiste ${INTENT_TEXT[result.guess.label]}? Decilo más claro.` : '';
+      this.tell(said.note + guess);
+    }
+  }
+
+  private setTalkOpen(open: boolean): void {
+    if (this.talkOpen === open) return;
+    this.talkOpen = open;
+    this.render();
+  }
+
+  private tell(text: string): void {
+    this.log.tell(text, Date.now());
+    this.live.textContent = text;
+    this.render();
+  }
+
+  private async loadFreeTalk(): Promise<void> {
+    if (semanticReady()) return;
+    const ok = await loadSemantic((fraction) => {
+      const label = this.canvas.querySelector('[data-testid="freetalk-status"]');
+      if (label) label.textContent = `bajando el modelo… ${Math.round(fraction * 100)}%`;
+    });
+    const label = this.canvas.querySelector('[data-testid="freetalk-status"]');
+    if (label) label.textContent = ok ? 'listo' : 'no se pudo bajar';
+  }
+
   private exposeTestHooks(): void {
     (window as unknown as { __truco: unknown }).__truco = {
       state: () => this.controller?.getState() ?? null,
@@ -498,6 +693,8 @@ export class TrucoApp {
       summaryVisible: () => this.snapshot?.summaryVisible ?? false,
       signals: () => this.snapshot?.signals ?? [],
       instructions: () => this.snapshot?.instructions ?? [],
+      speech: () => this.snapshot?.speech ?? [],
+      say: (text: string) => this.submitTalk(text),
       humanIsPie: () => this.snapshot?.humanIsPie ?? false,
     };
   }

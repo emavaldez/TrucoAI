@@ -167,3 +167,20 @@ Detalle en `results/r3.md`. Sin cortes, 1000 iteraciones.
   flor o pica-pica. Modo **consejos de la red** (% por opción en tu turno). Detalle en `PLAN.md` (fase 5).
 - Próximo (idea de Emmanuel): hablarle o escribirle a la IA (compañero o rival) y que actúe en consecuencia.
 
+## 2026-09-28 — Hablarle a la mesa (texto y voz)
+
+Idea de Emmanuel: hablarle o escribirle a la IA (compañero o rival) y que actúe en consecuencia.
+
+- Se evaluó **Jev** (TypeSafe, "System One Model": texto → la opción más probable de una lista cerrada, con
+  probabilidades calibradas). Es una API cerrada, en la nube y en acceso anticipado, sin español declarado: no
+  sirve para un juego web sin servidor. Queda como posible punto de comparación.
+- Se eligió **EmbeddingGemma** (Google, abierto, 308 M parámetros, < 200 MB cuantizado, 100+ idiomas, corre en el
+  navegador con Transformers.js) como clasificador de lista cerrada: vecino más parecido del corpus + softmax.
+- Decisiones de Emmanuel: **todo lo que se dice es público**; voz con el reconocimiento de Chrome primero
+  (Whisper local, después).
+- Diseño: 20 intenciones (`src/ai/talk/intents.ts`); primero **reglas** (instantáneas, testeadas), después el
+  modelo si está activo; si el modelo da < 50%, no actúa y pregunta. Las respuestas de los compañeros son
+  verdaderas y en términos de seña, así la red (que no ve lenguaje) sigue siendo consistente con lo que aprendió.
+- Corpus etiquetado: 146 frases de referencia (las reglas aciertan 146/146) y 62 libres (las reglas entienden
+  4/62: es lo que tiene que cubrir el modelo). La medición del modelo corre en la Mac (`training/lang/eval-intents.ts`).
+

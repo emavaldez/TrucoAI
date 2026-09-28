@@ -159,3 +159,33 @@ test('nivel Experta con consejos: la red juega y en tu turno ves el % de cada op
   expect(settings.difficulty).toBe('expert');
   expect(errors).toEqual([]);
 });
+
+test('hablarle a la mesa: «truco» lo canta, «¿tenés envido?» lo contesta el compañero, lo que no se entiende avisa', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto(gameUrl({ players: 4, seed: 3, fast: false, aiDelay: 60000 }));
+  const input = page.getByTestId('talk-input');
+  await expect(input).toBeVisible();
+  await input.fill('¿tenés envido?');
+  await input.press('Enter');
+  await expect(page.getByTestId('bubble-p2')).toBeVisible();
+  const speech = await page.evaluate(() => (window as unknown as { __truco: { speech: () => { playerId: string; text: string }[] } }).__truco.speech());
+  expect(speech.map((line) => line.playerId)).toEqual(['p0', 'p2']);
+  // Escribir no dispara los atajos de teclado (1/2/3 juegan cartas).
+  const before = await version(page);
+  await input.fill('123');
+  await expect(input).toHaveValue('123');
+  expect(await version(page)).toBe(before);
+  await input.fill('blablá');
+  await input.press('Enter');
+  await expect(page.getByTestId('center-notice')).toContainText('No te entendí');
+  expect(errors).toEqual([]);
+});
+
+test('hablarle a la mesa en 2 jugadores: en tu turno, «truco» se canta', async ({ page }) => {
+  await page.goto(gameUrl({ players: 2, seed: 4, fast: false, aiDelay: 4000 }));
+  await waitHumanPlays(page);
+  if ((await page.locator('[data-act="truco"]').count()) === 0) test.skip(true, 'sin truco disponible en esta semilla');
+  await page.getByTestId('talk-input').fill('¡Truco!');
+  await page.getByTestId('talk-send').click();
+  await page.waitForFunction(() => (window as unknown as { __truco: { state: () => { phase: string } } }).__truco.state().phase === 'AWAITING_TRUCO');
+});

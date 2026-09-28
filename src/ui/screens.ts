@@ -25,7 +25,7 @@ const PLAYER_TEXT: Record<2 | 4 | 6, string> = { 2: 'Mano a mano', 4: 'Dos contr
 
 // ---------- menú ----------
 
-export function renderMenu(settings: MatchSettings, mode: LayoutMode, sound = true, advice = false): string {
+export function renderMenu(settings: MatchSettings, mode: LayoutMode, sound = true, advice = false, freeTalk = false): string {
   const players = ([2, 4, 6] as const)
     .map(
       (n) =>
@@ -52,6 +52,7 @@ export function renderMenu(settings: MatchSettings, mode: LayoutMode, sound = tr
     `<label class="toggle${picaDisabled ? ' toggle--off' : ''}"><span>Pica Pica <em>· solo con 6</em></span><input type="checkbox" data-ui="picapica" data-testid="menu-picapica"${settings.picaPica ? ' checked' : ''}${picaDisabled ? ' disabled' : ''}></label>` +
     `<label class="toggle"><span>Sonido <em>· voces de los cantos</em></span><input type="checkbox" data-ui="sound" data-testid="menu-sound"${sound ? ' checked' : ''}></label>` +
     `<label class="toggle"><span>Consejos de la red <em>· qué jugaría la Experta</em></span><input type="checkbox" data-ui="advice" data-testid="menu-advice"${advice ? ' checked' : ''}></label>` +
+    `<label class="toggle"><span>Entender frases libres <em>· modelo de Google, ~200 MB · <span data-testid="freetalk-status">${freeTalk ? 'activo' : 'apagado'}</span></em></span><input type="checkbox" data-ui="freetalk" data-testid="menu-freetalk"${freeTalk ? ' checked' : ''}></label>` +
     `</fieldset>` +
     `<button type="button" class="go-btn" data-ui="start" data-testid="menu-start">Repartir</button>` +
     `</div>`;

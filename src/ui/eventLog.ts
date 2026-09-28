@@ -124,13 +124,26 @@ export class EventLog {
     return times.length === 0 ? null : Math.min(...times);
   }
 
-  private bubble(playerId: PlayerId, text: string, now: number, delay = 0): void {
+  /** Algo que alguien dijo en voz alta (charla de la mesa): globo, feed y anuncio para lectores de pantalla. */
+  speak(state: MatchState, playerId: PlayerId, text: string, now: number, delay = 0): void {
+    this.bubble(playerId, text, now, delay, BUBBLE_MS + Math.min(2500, text.length * 45));
+    this.line(`${who(state, playerId)}: «${escape(text)}»`);
+    this.announcement = `${playerName(state, playerId)}: ${text}`;
+  }
+
+  /** Aviso para el humano en el centro del paño (por ejemplo, "No te entendí"). */
+  tell(text: string, now: number): void {
+    this.notice = { text, from: now, until: now + NOTICE_MS + 1500 };
+    this.announcement = text;
+  }
+
+  private bubble(playerId: PlayerId, text: string, now: number, delay = 0, duration = BUBBLE_MS): void {
     const from = now + delay;
     // El globo nuevo corta al anterior del mismo jugador (si no, se superpondrían).
     this.bubbles = this.bubbles
       .map((bubble) => (bubble.playerId === playerId && bubble.until > from ? { ...bubble, until: from } : bubble))
       .filter((bubble) => bubble.until > bubble.from);
-    this.bubbles.push({ playerId, text, from, until: from + BUBBLE_MS });
+    this.bubbles.push({ playerId, text, from, until: from + duration });
   }
 
   private line(html: string): void {

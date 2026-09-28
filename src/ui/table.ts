@@ -303,11 +303,13 @@ function renderBubbles(ctx: GameViewContext, geo: TableGeometry): string {
     .join('');
 }
 
-function renderFeed(ctx: GameViewContext): string {
+function renderFeed(ctx: GameViewContext, low: boolean): string {
   if (ctx.mode === 'portrait' || ctx.log.feed.length === 0) return '';
+  // Con señas en pantalla (4 y 6), el feed baja debajo de ellas y muestra solo lo último, sin título.
+  const lines = low ? ctx.log.feed.slice(-2) : ctx.log.feed;
   return (
-    `<div class="feed" data-testid="feed"><div class="feed-title">En esta mano</div>` +
-    ctx.log.feed.map((line) => `<div class="feed-line">${line.html}</div>`).join('') +
+    `<div class="feed${low ? ' feed--low' : ''}" data-testid="feed">${low ? '' : '<div class="feed-title">En esta mano</div>'}` +
+    lines.map((line) => `<div class="feed-line">${line.html}</div>`).join('') +
     `</div>`
   );
 }
@@ -556,6 +558,7 @@ function renderResponsePanel(ctx: GameViewContext): string {
 export function renderGame(ctx: GameViewContext): string {
   const geo = tableGeometry(ctx.mode, ctx.state.rules.playerCount);
   const panel = responsePanelOpen(ctx);
+  const signControl = ctx.mode === 'desktop' ? renderSignControl(ctx.state, ctx.talk ?? NO_TALK, 'desktop') : '';
   return (
     renderTopBar(ctx) +
     `<div class="rail" style="left:${geo.rail.x}px;top:${geo.rail.y}px;width:${geo.rail.w}px;height:${geo.rail.h}px;border-radius:${geo.rail.radius}"></div>` +
@@ -566,9 +569,9 @@ export function renderGame(ctx: GameViewContext): string {
     (panel && ctx.mode === 'portrait' ? '' : renderStatus(ctx, geo)) +
     (panel && ctx.mode === 'portrait' ? '' : renderHand(ctx, geo, panel)) +
     (panel ? renderResponsePanel(ctx) : renderActions(ctx, geo)) +
-    renderFeed(ctx) +
+    renderFeed(ctx, signControl !== '') +
     renderPartnerSigns(ctx.state, (ctx.talk ?? NO_TALK).humanIsPie ? (ctx.talk ?? NO_TALK).signals : [], ctx.mode, geo) +
-    (ctx.mode === 'desktop' ? renderSignControl(ctx.state, ctx.talk ?? NO_TALK, 'desktop') : '') +
+    signControl +
     renderEnvidoShow(ctx, geo) +
     renderBubbles(ctx, geo) +
     (ctx.talk?.open && !panel ? renderSignPicker(ctx.talk, ctx.mode) : '')

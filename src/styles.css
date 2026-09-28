@@ -466,6 +466,7 @@ button.card--playable:hover, button.card--playable:focus-visible { transform: tr
   border-radius: 14px; background: var(--surface); border: 1px solid var(--surface-border);
   display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--text-2);
 }
+.feed--low { top: 832px; padding: 8px 14px; gap: 4px; }
 .feed-title { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); }
 .feed-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .feed-line b { color: var(--paper); }
@@ -790,4 +791,34 @@ button.card--playable:hover, button.card--playable:focus-visible { transform: tr
 }
 [data-advice-top] { outline: 3px solid #e9c46a; outline-offset: 3px; border-radius: 14px; }
 .card[data-advice-top] { border-radius: 10px; }
+
+/* ---------- hablarle a la mesa (fuera del canvas) ---------- */
+.talkbar {
+  position: fixed; left: 50%; bottom: 10px; transform: translateX(-50%); z-index: 40;
+  display: flex; gap: 8px; align-items: center;
+  width: min(620px, calc(100vw - 32px)); padding: 6px;
+  background: rgba(12, 20, 16, 0.86); border: 1px solid rgba(233, 196, 106, 0.35); border-radius: 999px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4); backdrop-filter: blur(6px);
+}
+.talkbar[hidden] { display: none; }
+.talk-input {
+  flex: 1; min-width: 0; height: 40px; padding: 0 14px; border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12); background: rgba(255, 255, 255, 0.06); color: #f4efe2;
+  font: 500 15px/1 Figtree, system-ui, sans-serif;
+}
+.talk-input::placeholder { color: rgba(244, 239, 226, 0.5); }
+.talk-mic, .talk-send {
+  height: 40px; min-width: 44px; border-radius: 999px; border: 0; cursor: pointer;
+  font: 700 15px/1 Figtree, system-ui, sans-serif;
+}
+.talk-mic { background: rgba(255, 255, 255, 0.1); font-size: 18px; }
+.talk-mic--on { background: #c0392b; animation: talk-pulse 1s ease-in-out infinite; }
+.talk-send { padding: 0 16px; background: #e9c46a; color: #1b1408; }
+@keyframes talk-pulse { 50% { box-shadow: 0 0 0 6px rgba(192, 57, 43, 0.35); } }
+@media (prefers-reduced-motion: reduce) { .talk-mic--on { animation: none; } }
+.talk-toggle {
+  position: fixed; left: 8px; top: 8px; z-index: 40; width: 44px; height: 44px; border-radius: 50%;
+  border: 1px solid rgba(233, 196, 106, 0.45); background: rgba(12, 20, 16, 0.86); font-size: 20px; cursor: pointer;
+}
+.talk-toggle[hidden] { display: none; }
 

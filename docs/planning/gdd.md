@@ -336,6 +336,15 @@ en la línea de los papers de `Papers/` y del plan para AI and Games Conference.
   asiento y el botón "Indicar"; si no, el botón "Señas" para hacérselas a tu pie y lo que tu pie te indica.
 - **Consejos de la red [DECISIÓN 2026-09-28]:** opción del menú y de la pausa. En tu turno, cada carta y cada botón
   muestra el % con que la red Experta lo jugaría, y la opción preferida queda marcada. No cambia el juego.
+- **Hablarle a la mesa [DECISIÓN 2026-09-28]:** una barra abajo para escribir o hablar (micrófono con el
+  reconocimiento de voz de Chrome, es-AR). **Todo lo que se dice es público.** Una lista cerrada de intenciones
+  (`src/ai/talk/intents.ts`) se reconoce con reglas (truco, quiero, «tiro el ancho», «¿tenés envido?», «matá»…) y,
+  opcionalmente, con EmbeddingGemma (Google, abierto, ~200 MB, en el navegador) para frases libres; si el modelo
+  no está seguro (< 50%), no actúa y pregunta. Qué hace cada intención: cantos, respuestas, cartas y mazo se
+  juegan si son legales; las indicaciones valen si sos pie; las preguntas al compañero ("¿tenés envido?",
+  "¿tenés para el truco?", "¿qué hago?") las contesta en voz alta y con la verdad, en términos de seña (nunca
+  cartas exactas); "tengo…" / "no tengo nada", si es cierto y todavía podés hacer señas, le llega a tu pie como
+  seña; la charla la contesta un rival. Las IA hablan con globos y con la voz del navegador.
 - **Responsive:** jugable en 390×844 (móvil) y 1280×800, en 2, 4 y 6 jugadores, sin jugadores cortados;
   botones táctiles ≥ 44 px. Jugable con teclado.
 

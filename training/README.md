@@ -74,6 +74,19 @@ python training/learner/run.py duel --a runs/r2/policies/best --b runs/r1/polici
 
 Y cada paso con su porqué va en `results/BITACORA.md`.
 
+## Lenguaje: hablarle a la mesa (para la tesis)
+
+El juego entiende frases con reglas y, opcionalmente, con EmbeddingGemma (`src/ai/talk/`). Para medir cuánto
+entiende cada método sobre el corpus etiquetado (`src/ai/talk/corpus.ts`), en la Mac (baja el modelo la
+primera vez):
+
+```bash
+node --import tsx training/lang/eval-intents.ts     # → training/results/intents-eval.json
+```
+
+Da el acierto de las reglas (frases de referencia y libres), el del modelo dejando cada frase afuera de los
+ejemplos (con log-loss y calibración, ECE, para varias temperaturas) y el de la combinación que usa el juego.
+
 ## Reglas de la carpeta
 
 - **El motor del juego es uno solo** (`src/engine`, TypeScript). Acá no se reescriben reglas:

@@ -10,6 +10,17 @@ import { applyAction, createMatch, createRng, getActor, getLegalActions, getObse
 import type { Action, GameEvent, MatchState, PlayerId, Rng, RuleSet } from '../engine/index.js';
 import { createPolicy, type Difficulty, type Policy } from '../ai/policy.js';
 import { NetPolicy, netAdvice, type NetAdvice } from '../ai/rl/netPolicy.js';
+import { parseRules } from '../ai/talk/parse.js';
+import type { Understanding } from '../ai/talk/intents.js';
+import {
+  partnerEnvidoAnswer,
+  partnerTrucoAnswer,
+  partnersOf,
+  pieWhatToDo,
+  resolveCard,
+  rivalBanter,
+  rivalsOf,
+} from '../ai/talk/respond.js';
 import { availableSigns, INSTRUCTIONS, type GivenInstruction, type Instruction, type Signal, type SignKind } from '../ai/signs.js';
 import {
   EMPTY_TALK,
@@ -99,6 +110,24 @@ export interface ControllerSnapshot {
   instructions: GivenInstruction[];
   /** el humano es el pie de su equipo en esta mano (y hay señas) */
   humanIsPie: boolean;
+  /** lo que se dijo en voz alta en la partida (lo último primero no: en orden), para globos y voz */
+  speech: Utterance[];
+}
+
+/** Algo que alguien dijo en la mesa (público). */
+export interface Utterance {
+  id: number;
+  playerId: PlayerId;
+  text: string;
+}
+
+/** Resultado de hablarle a la mesa: qué se entendió, si hizo algo y, si no, por qué. */
+export interface SayResult {
+  understood: Understanding | null;
+  /** hizo algo en el juego (jugó, cantó, indicó) o alguien contestó */
+  ok: boolean;
+  /** aviso para el humano ("Ahora no podés cantar truco", "No te entendí") */
+  note?: string;
 }
 
 export type Listener = (snapshot: ControllerSnapshot) => void;
@@ -124,6 +153,9 @@ export class GameController {
   private matchCount = 0;
   /** señas e indicaciones de la mano en curso (src/ai/tableTalk.ts) */
   private talk: TableTalk = EMPTY_TALK;
+  /** lo dicho en voz alta (las últimas frases) */
+  private speech: Utterance[] = [];
+  private speechId = 0;
 
   constructor(opts: ControllerOptions) {
     this.scheduler = opts.scheduler;
@@ -156,6 +188,7 @@ export class GameController {
         : this.talk.signals.filter((signal) => signal.from === HUMAN_ID),
       instructions: this.talk.instructions.filter((given) => this.teamOf(given.from) === this.teamOf(HUMAN_ID)),
       humanIsPie: this.humanIsPie(),
+      speech: this.speech,
     };
   }
 
@@ -212,6 +245,118 @@ export class GameController {
   }
 
   // ---------- comandos ----------
+
+  /**
+   * El humano habla o escribe en la mesa (todo es público). Se entiende con las reglas (o con lo que
+   * ya entendió el modelo, `understood`) y se actúa: jugar o cantar si es legal, indicar si es pie,
+   * preguntarle al compañero (contesta la verdad, en términos de seña), afirmar lo que tiene (si es
+   * cierto y todavía puede hacer señas, le llega al pie como seña) o charlar (contesta un rival).
+   */
+  humanSays(text: string, understood?: Understanding | null): SayResult {
+    const clean = text.trim();
+    if (!clean) return { understood: null, ok: false };
+    this.say(HUMAN_ID, clean);
+    const u = understood === undefined ? parseRules(clean) : understood;
+    const done = (result: SayResult): SayResult => {
+      this.lastEvents = [];
+      this.notify();
+      return result;
+    };
+    if (!u) return done({ understood: null, ok: false, note: 'No te entendí. Probá con «truco», «quiero», «tiro el ancho», «¿tenés envido?» o «matá».' });
+
+    const legal = this.humanLegalActions();
+    const play = (predicate: (action: Action) => boolean, what: string): SayResult => {
+      const action = legal.find(predicate);
+      if (!action) return done({ understood: u, ok: false, note: `Ahora no podés ${what}.` });
+      const result = this.dispatchHuman(action);
+      return { understood: u, ok: result.ok, note: result.ok ? undefined : `Ahora no podés ${what}.` };
+    };
+    const partners = partnersOf(this.state, HUMAN_ID);
+    const rivals = rivalsOf(this.state, HUMAN_ID);
+    const aiPie = partners.find((id) => this.isPieNow(id));
+
+    switch (u.label) {
+      case 'CANTA_TRUCO':
+        return play((a) => a.type === 'CALL_TRUCO', 'cantar truco');
+      case 'ENVIDO':
+        return play((a) => a.type === 'CALL_ENVIDO' && a.call === 'E', 'cantar envido');
+      case 'REAL_ENVIDO':
+        return play((a) => a.type === 'CALL_ENVIDO' && a.call === 'R', 'cantar real envido');
+      case 'FALTA_ENVIDO':
+        return play((a) => a.type === 'CALL_ENVIDO' && a.call === 'F', 'cantar falta envido');
+      case 'QUIERO':
+        return play((a) => (a.type === 'ANSWER_TRUCO' || a.type === 'ANSWER_ENVIDO') && a.answer === 'QUIERO', 'querer: nadie cantó nada');
+      case 'NO_QUIERO':
+        return play((a) => (a.type === 'ANSWER_TRUCO' || a.type === 'ANSWER_ENVIDO') && a.answer === 'NO_QUIERO', 'decir «no quiero»: nadie cantó nada');
+      case 'MAZO':
+        return play((a) => a.type === 'MAZO', 'irte al mazo');
+      case 'JUGAR_CARTA': {
+        const card = u.card ? resolveCard(this.state.hand.hands[HUMAN_ID] ?? [], u.card) : null;
+        if (!card) return done({ understood: u, ok: false, note: 'No tenés esa carta (o no sé cuál de las tuyas es).' });
+        return play((a) => a.type === 'PLAY_CARD' && a.cardId === card.id, 'jugar una carta');
+      }
+      case 'IND_MATA':
+      case 'IND_PASA':
+      case 'IND_PARDA':
+      case 'IND_TRANQUILO':
+      case 'IND_CANTA_TRUCO':
+      case 'IND_ESPERA': {
+        const kind = u.label.slice(4) as Instruction;
+        if (!this.humanIsPie()) return done({ understood: u, ok: false, note: this.signalsAllowed() ? 'Las indicaciones las da el pie de tu equipo.' : 'Las indicaciones son para jugar en equipo (4 o 6).' });
+        const ok = this.sendHumanInstruction(kind);
+        return { understood: u, ok, note: ok ? undefined : 'Esa indicación ya no se puede dar en esta mano.' };
+      }
+      case 'PREG_ENVIDO':
+      case 'PREG_TRUCO': {
+        if (partners.length === 0) {
+          this.say(rivals[0], rivalBanter(this.rng, true));
+          return done({ understood: u, ok: true });
+        }
+        for (const partner of partners) {
+          const hand = this.state.hand;
+          this.say(partner, u.label === 'PREG_ENVIDO' ? partnerEnvidoAnswer(hand.dealt[partner] ?? []) : partnerTrucoAnswer(hand.hands[partner] ?? []));
+        }
+        return done({ understood: u, ok: true });
+      }
+      case 'PREG_QUE_HAGO': {
+        if (partners.length === 0) this.say(rivals[0], rivalBanter(this.rng, true));
+        else if (aiPie) this.say(aiPie, pieWhatToDo(instructionsFor(this.state, this.talk, HUMAN_ID)));
+        else this.say(partners[0], 'Vos sos el pie: decime vos.');
+        return done({ understood: u, ok: true });
+      }
+      case 'TENGO':
+      case 'NO_TENGO': {
+        // Si todavía puede hacerle señas al pie y lo que dice es cierto, al pie le llega como seña.
+        const options = this.humanSignalOptions();
+        const hand = this.state.hand.hands[HUMAN_ID] ?? [];
+        const told: SignKind[] = [];
+        if (u.label === 'NO_TENGO' && options.includes('NADA')) told.push('NADA');
+        if (u.label === 'TENGO') {
+          const named = u.card ? resolveCard(hand, u.card) : null;
+          const all = availableSigns(hand, this.state.hand.dealt[HUMAN_ID] ?? [], this.state.rules.flor);
+          if (named) {
+            const sign = all.find((option) => option.cardId === named.id);
+            if (sign && options.includes(sign.kind)) told.push(sign.kind);
+          }
+          if (u.about === 'envido' && options.includes('ENVIDO')) told.push('ENVIDO');
+        }
+        for (const kind of told) this.sendHumanSignal(kind);
+        if (aiPie) this.say(aiPie, 'Dale.');
+        return done({ understood: u, ok: true });
+      }
+      case 'CHARLA':
+        if (rivals.length > 0) this.say(rivals[Math.floor(this.rng.next() * rivals.length)], rivalBanter(this.rng));
+        return done({ understood: u, ok: true });
+    }
+    return done({ understood: u, ok: false });
+  }
+
+  /** Alguien dice algo en voz alta (queda en `speech` para los globos y la voz). */
+  private say(playerId: PlayerId | undefined, text: string): void {
+    if (!playerId) return;
+    this.speechId += 1;
+    this.speech = [...this.speech.slice(-19), { id: this.speechId, playerId, text }];
+  }
 
   /** Arranca la primera decisión (después de suscribirse la UI). */
   start(): void {

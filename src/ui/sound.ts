@@ -140,6 +140,12 @@ export class SoundBoard {
     source.start();
   }
 
+  /** Dice una frase de la charla de la mesa con la voz de ese asiento. */
+  say(text: string, seat: number): void {
+    if (!this.enabled) return;
+    this.speak(text, seat);
+  }
+
   private speak(text: string, seat: number): void {
     try {
       if (!('speechSynthesis' in window)) return;
