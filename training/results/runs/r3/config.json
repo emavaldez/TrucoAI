@@ -1,0 +1,95 @@
+{
+  "players": 4,
+  "seed": 3,
+  "workers": 16,
+  "wtable": {
+    "matches": 8000
+  },
+  "bc": {
+    "matches": 30000,
+    "teacher": "hard",
+    "opponents": [
+      {
+        "kind": "heur",
+        "difficulty": "hard",
+        "weight": 0.5
+      },
+      {
+        "kind": "heur",
+        "difficulty": "normal",
+        "weight": 0.3
+      },
+      {
+        "kind": "heur",
+        "difficulty": "easy",
+        "weight": 0.2
+      }
+    ],
+    "epochs": 4,
+    "batch": 8192,
+    "lr": 0.0003,
+    "evalPairs": 500,
+    "playerMix": {
+      "4": 0.5,
+      "6": 0.5
+    }
+  },
+  "ppo": {
+    "iterations": 1000,
+    "matchesPerIter": 2048,
+    "epochs": 4,
+    "minibatch": 16384,
+    "lr": 0.0003,
+    "criticLr": 0.001,
+    "clip": 0.2,
+    "gaeLambda": 0.95,
+    "entropy": 0.01,
+    "klBc": 0.02,
+    "klBcFinal": 0.005,
+    "klBcDecayIters": 1000,
+    "maxGradNorm": 1.0,
+    "snapshotEvery": 10,
+    "leagueSize": 40,
+    "opponents": {
+      "self": 0.5,
+      "league": 0.3,
+      "hard": 0.1,
+      "normal": 0.05,
+      "easy": 0.05
+    },
+    "obeyBonus": {
+      "start": 0.02,
+      "floor": 0.005,
+      "decayIters": 500
+    },
+    "playerMix": {
+      "2": 0.2,
+      "4": 0.4,
+      "6": 0.4
+    }
+  },
+  "eval": {
+    "every": 20,
+    "pairs": 300,
+    "opponent": "hard",
+    "players": [
+      2,
+      4,
+      6
+    ],
+    "select": [
+      4,
+      6
+    ]
+  },
+  "checkpoint": {
+    "keepLast": 5,
+    "keepBest": 3,
+    "backupDir": null
+  },
+  "_comment": "r3: equipos (4 y 6 jugadores, sin flor ni pica-pica). Arranca de los pesos de r2 (iteraci\u00f3n 2000) con 7 salidas nuevas: las indicaciones del pie. Imita a la dif\u00edcil en 4 y 6 (jugadas e indicaciones del pie) y despu\u00e9s PPO con 20% de partidas de 2, 40% de 4 y 40% de 6. Los compa\u00f1eros reciben un premio por obedecer al pie que baja de 0,02 a 0,005 en 500 iteraciones. La mejor red se elige por el promedio contra equipos de dif\u00edciles en 4 y 6.",
+  "init": {
+    "fromCkpt": "runs/r2/ckpt/iter_002000.pt",
+    "wtableFrom": "r2"
+  }
+}

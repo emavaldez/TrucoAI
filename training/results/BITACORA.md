@@ -148,3 +148,13 @@ baja a un mínimo; señas fijas y verdaderas; 4 y 6 jugadores sin pica-pica (y 2
   difícil en 2, 4 y 6.
 - Probado de punta a punta en la nube con una corrida mínima.
 
+
+## 2026-09-27 21:22 → 2026-09-28 04:06 — r3 (equipos, commit `f3b7968`)
+
+Detalle en `results/r3.md`. Sin cortes, 1000 iteraciones.
+
+- La imitación en 4 y 6 (desde r2) arrancó en 41% contra equipos de difíciles; en 20 iteraciones de PPO
+  pasó la meta de 55%, y la mejor (560) llegó a **74,7% en 4 y 82,2% en 6**. Desde la ~120 queda plana.
+- El pie indica "¡matá!" ~40%, "tranquilo" ~37%, "pasá" ~24% y nunca "pardá"; de truco casi nunca pide
+  cantar (1–3%). Los compañeros obedecen ~95% aun con el premio en su mínimo.
+- En 2 jugadores bajó de 82–86% (r2) a 73–80%: la imitación en 4 y 6 le hizo olvidar parte de lo de 2.
