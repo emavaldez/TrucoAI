@@ -36,14 +36,19 @@ describe('intérprete por reglas', () => {
     expect(parseCard('va la sota')).toEqual({ number: 10 });
   });
 
-  it('distingue lo que le dice al compañero de lo que canta: «cantá truco» no es «truco»', () => {
-    expect(parseRules('cantá truco')?.label).toBe('IND_CANTA_TRUCO');
+  it('decir la palabra es cantar: se pregunta por el «tanto» y se indica con «cantá» / «jugá callado»', () => {
     expect(parseRules('truco')?.label).toBe('CANTA_TRUCO');
-    expect(parseRules('¿tenés para el truco?')?.label).toBe('PREG_TRUCO');
-    expect(parseRules('tengo para el truco')?.label).toBe('TENGO');
+    expect(parseRules('cantá truco')?.label).toBe('CANTA_TRUCO');
+    expect(parseRules('¿tenés para el truco?')?.label).toBe('CANTA_TRUCO');
+    expect(parseRules('¿tenés envido?')?.label).toBe('ENVIDO');
+    expect(parseRules('¿tenés tanto?')?.label).toBe('PREG_TANTO');
+    expect(parseRules('¿canto tanto?')?.label).toBe('PREG_CANTO_TANTO');
+    expect(parseRules('cantá')?.label).toBe('IND_CANTA_TRUCO');
+    expect(parseRules('jugá callado')?.label).toBe('IND_ESPERA');
+    expect(parseRules('cantá el tanto')?.label).toBe('IND_CANTA_TANTO');
     expect(parseRules('tirá la más baja')?.label).toBe('IND_PASA');
     expect(parseRules('tiro la más baja')?.label).toBe('JUGAR_CARTA');
-    expect(parseRules('tengo 30')).toMatchObject({ label: 'TENGO', about: 'envido', score: 30 });
+    expect(parseRules('tengo 30')).toMatchObject({ label: 'TENGO', about: 'tanto', score: 30 });
   });
 
   it('lo que no reconoce queda sin entender (para el modelo o para preguntar)', () => {
@@ -100,7 +105,7 @@ describe('lo que hace cada frase en el juego', () => {
     untilHumanTurn(c, scheduler);
     const result = c.humanSays('quiero');
     expect(result.ok).toBe(false);
-    expect(result.note).toMatch(/nadie cantó/);
+    expect(result.note).toMatch(/cantó nada/);
   });
 
   it('«tiro la más baja» juega tu carta más baja', () => {
@@ -114,11 +119,11 @@ describe('lo que hace cada frase en el juego', () => {
 
   it('con 4, preguntarle al compañero: contesta en voz alta (público)', () => {
     const { c } = controller({ playerCount: 4 });
-    const result = c.humanSays('¿tenés envido?');
+    const result = c.humanSays('¿tenés tanto?');
     expect(result.ok).toBe(true);
     const last = c.snapshot().speech.at(-1);
     expect(last?.playerId).toBe('p2');
-    expect(last?.text).toMatch(/tengo|poco/i);
+    expect(last?.text).toMatch(/tengo|poco|nada/i);
   });
 
   it('indicar solo si sos el pie; si no, avisa', () => {

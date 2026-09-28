@@ -100,7 +100,9 @@ async function fetchHead(): Promise<IntentHead | null> {
     const res = await fetch(`${base}models/intent-head.json`);
     if (!res.ok) return null;
     const head = (await res.json()) as IntentHead;
-    return head.format === 'trucoai-intent-head-v1' && head.model === SEMANTIC_MODEL ? head : null;
+    // Un clasificador entrenado con otra lista de intenciones (de una versión vieja) no sirve: se usa el vecino.
+    const sameLabels = head.labels?.length === INTENT_LABELS.length && INTENT_LABELS.every((label) => head.labels.includes(label));
+    return head.format === 'trucoai-intent-head-v1' && head.model === SEMANTIC_MODEL && sameLabels ? head : null;
   } catch {
     return null;
   }

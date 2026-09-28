@@ -208,3 +208,27 @@ Cambios (v2):
   en las libres, así que las libres pasan a ser conjunto de *desarrollo*; la prueba final tiene que ser con frases
   reales de jugadores.
 
+
+## 2026-09-28 — Mesa en equipo: consultas, engaño y esperar y subir (juego, sin reentrenar)
+
+Pedido de Emmanuel después de probar el juego: en 4 y 6 se consulta al pie y se decide en equipo; decir
+«envido» o «truco» ya es cantarlo (al compañero se le pregunta «¿tenés tanto?» y se le dice «cantá» / «jugá
+callado»); el pie siempre pregunta si canta el tanto; y la jugada de **esperar y subir**: si el pie sabe (por la
+seña) que el equipo tiene mucho tanto y al pie rival le falta jugar, no canta, el compañero dice en voz alta que no
+tiene nada, el rival se anima a cantar y el pie le sube (2 tantos seguros si no quiere, 4 o más si quiere, contra 1
+si el pie cantaba directo).
+
+Decisiones de Emmanuel: desde la 2da baza cualquiera indica y cualquiera contesta; los rivales de la IA escuchan;
+los compañeros de la IA también mienten; el pie de la IA hace la jugada; consultas con botones rápidos y voz (si no
+contestás, decide solo).
+
+- Vocabulario nuevo (25 intenciones): `PREG_TANTO`, `PREG_CANTO_TANTO`, `IND_CANTA_TANTO`, `IND_CALLADO_TANTO`,
+  `SUBILE`; «cantá» (`IND_CANTA_TRUCO`) y «jugá callado» (`IND_ESPERA`) sin nombrar el canto son del truco. El corpus
+  se reetiquetó; hay que volver a entrenar el clasificador (`training/lang/eval-intents.ts`).
+- Mesa abierta: regla del juego (`RuleSet.openTable`), no del entrenamiento; las redes r2/r3 no cambian.
+- Los rivales heurísticos creen lo que se dice (75%); los compañeros de la IA mienten con 27+ de tanto cuando el
+  pie rival todavía puede cantar (70%). En una prueba con el pie rival con 26 de tanto, canta envido 297/300 veces
+  si oyó «no tenemos nada» y 38/300 si oyó «tenemos muchos» (206/300 sin oír nada).
+- Limitación para la tesis: la red Experta **no escucha lenguaje**. En Experta, consultas, engaño y esperar y subir
+  son reglas encima de la red (`tacticalDecision`). Propuesta r4: sumar a la observación lo dicho en voz alta
+  (dichos públicos de cada jugador sobre tanto y cartas) y dejar que la red aprenda a creer, desconfiar y mentir.

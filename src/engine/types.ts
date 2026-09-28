@@ -34,6 +34,12 @@ export interface RuleSet {
   flor: boolean;
   /** default true si playerCount === 6, ignorado si no */
   picaPica: boolean;
+  /**
+   * Mesa abierta (4 y 6, decisión de Emmanuel 2026-09-28): desde la 2da baza cualquiera del equipo contesta
+   * los cantos del rival. Como hay un solo turno, contesta la persona si está en ese equipo; si no, el pie.
+   * Default false (el entrenamiento juega sin esto).
+   */
+  openTable?: boolean;
 }
 
 /** Aleatoriedad inyectada. `next()` en [0, 1). */

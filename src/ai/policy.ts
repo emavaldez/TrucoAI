@@ -8,6 +8,7 @@ import type { Action, Card, EnvidoCall, Observation, Rng } from '../engine/index
 import { chooseCard, lowest, trickLeader } from './cardPlay.js';
 import { envidoWinProbability, handWinProbability, publicConstraints } from './estimate.js';
 import { signalKnowledge, signaledTopRank, type Instruction, type Signal, type SignalKnowledge } from './signs.js';
+import { claimTest, type PublicClaim } from './talk/team.js';
 import { nextToPlay, participantsOf, playsThisHand, teamMap } from './table.js';
 import { NetPolicy } from './rl/netPolicy.js';
 
@@ -21,8 +22,11 @@ export interface Policy {
    * `signals` = señas que me hicieron mis compañeros en esta mano (solo las recibe el pie).
    * `instructions` = lo que me indicó el pie de mi equipo (si no soy el pie).
    */
-  decide(obs: Observation, rng: Rng, signals?: readonly Signal[], instructions?: readonly Instruction[]): Action;
+  decide(obs: Observation, rng: Rng, signals?: readonly Signal[], instructions?: readonly Instruction[], heard?: readonly PublicClaim[]): Action;
 }
+
+/** Cuánto le cree la heurística a lo que el rival dice en voz alta (puede ser un engaño). */
+export const TRUST_PUBLIC_CLAIMS = 0.75;
 
 export interface DifficultyProfile {
   /** fracción de decisiones que son una acción legal al azar */
@@ -139,13 +143,20 @@ export class HeuristicPolicy implements Policy {
 
   constructor(private readonly profile: DifficultyProfile) {}
 
-  decide(obs: Observation, rng: Rng, signals: readonly Signal[] = [], instructions: readonly Instruction[] = []): Action {
+  decide(obs: Observation, rng: Rng, signals: readonly Signal[] = [], instructions: readonly Instruction[] = [], heard: readonly PublicClaim[] = []): Action {
     this.instructions = obs.picaPica === null ? instructions : [];
     // En pica-pica no hay señas; y solo cuentan las de compañeros (de mi equipo, no mías).
     const team = new Map(obs.seats.map((seat) => [seat.id, seat.team]));
     this.signals =
       obs.picaPica === null ? signals.filter((signal) => signal.from !== obs.selfId && team.get(signal.from) === obs.selfTeam) : [];
     this.knowledge = this.signals.length > 0 ? signalKnowledge(obs.selfId, this.signals, obs.unseenCards) : undefined;
+    // Lo que dijeron los rivales en voz alta: a veces se lo cree (y se puede comer un engaño).
+    const rivals = heard.filter((claim) => team.get(claim.from) !== undefined && team.get(claim.from) !== obs.selfTeam);
+    for (const claim of rivals) {
+      if (rng.next() >= TRUST_PUBLIC_CLAIMS) continue;
+      this.knowledge ??= { forced: new Map(), tests: new Map() };
+      this.knowledge.tests.set(claim.from, [...(this.knowledge.tests.get(claim.from) ?? []), claimTest(claim)]);
+    }
     const legal = obs.legalActions;
     if (legal.length === 0) throw new Error('NO_LEGAL_ACTIONS');
     if (legal.length === 1) return legal[0];

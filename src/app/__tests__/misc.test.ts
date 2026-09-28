@@ -131,7 +131,7 @@ describe('GameController — caminos especiales', () => {
     controller.newMatch({ playerCount: 6, difficulty: 'easy', flor: true, picaPica: false }, 99);
     const state = controller.getState();
     expect(state.seats).toHaveLength(6);
-    expect(state.rules).toEqual({ playerCount: 6, targetScore: 30, flor: true, picaPica: false });
+    expect(state.rules).toEqual({ playerCount: 6, targetScore: 30, flor: true, picaPica: false, openTable: true });
     expect(state.seed).toBe(99);
     expect(createDeck()).toHaveLength(40);
   });

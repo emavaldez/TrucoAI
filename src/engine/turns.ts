@@ -38,5 +38,11 @@ export function isPie(state: MatchState, playerId: PlayerId): boolean {
  */
 export function responderFor(state: MatchState, callerId: PlayerId): PlayerId {
   const callerTeam = teamOf(state, callerId);
-  return pieOf(state, callerTeam === 0 ? 1 : 0);
+  const team: TeamId = callerTeam === 0 ? 1 : 0;
+  // Mesa abierta: desde la 2da baza contesta cualquiera del equipo; si hay una persona, ella.
+  if (state.rules.openTable && state.hand.tricks.length >= 1 && state.hand.picaPica === null) {
+    const human = state.seats.find((seat) => seat.isHuman && seat.team === team && state.hand.participants.includes(seat.id));
+    if (human) return human.id;
+  }
+  return pieOf(state, team);
 }

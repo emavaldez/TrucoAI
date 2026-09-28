@@ -164,12 +164,12 @@ button.card--playable:hover, button.card--playable:focus-visible { transform: tr
   box-sizing: border-box;
 }
 
-.card-frame {
-  position: absolute;
-  inset: calc(var(--cframe) * 1px);
-  border: 1.5px solid transparent;
-  border-radius: calc(var(--cr2) * 1px);
-}
+.card-art { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.card-frame-line { stroke-width: 1.4; stroke-linecap: butt; }
+.suit-oro .card-frame-line { stroke: var(--suit-oro); }
+.suit-copa .card-frame-line { stroke: var(--suit-copa); }
+.suit-espada .card-frame-line { stroke: var(--suit-espada); }
+.suit-basto .card-frame-line { stroke: var(--suit-basto); }
 
 .card-corner {
   position: absolute;
@@ -180,6 +180,8 @@ button.card--playable:hover, button.card--playable:focus-visible { transform: tr
   font-family: var(--font-display);
   font-weight: 700;
   font-size: calc(var(--cnum) * 1px);
+  /* halo de papel: si un palo pasa por debajo, el número se sigue leyendo */
+  text-shadow: 0 0 2px var(--paper), 0 0 4px var(--paper), 0 0 6px var(--paper);
 }
 .card-corner--tl { left: calc(var(--cpad) * 1px); top: calc(var(--cpadt) * 1px); }
 .card-corner--br {
@@ -187,33 +189,29 @@ button.card--playable:hover, button.card--playable:focus-visible { transform: tr
   bottom: calc(var(--cpadt) * 1px);
   transform: rotate(180deg);
 }
-.card-figure {
-  margin-top: 2px;
-  font-size: calc(var(--cfig) * 1px);
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.card-pip {
-  position: absolute;
-  left: 50%;
-  top: 54%;
-  transform: translate(-50%, -50%);
-  width: calc(var(--cpip) * 1px);
-  height: calc(var(--cpip) * 1px);
-}
-.card-pip svg { width: 100%; height: 100%; display: block; }
-
 /* Tintas por palo (tokens; mismo valor que los literales de Card.dc.html) */
-.suit-oro .card-number, .suit-oro .card-figure, .suit-oro .card-corner--br { color: var(--suit-oro); }
-.suit-copa .card-number, .suit-copa .card-figure, .suit-copa .card-corner--br { color: var(--suit-copa); }
-.suit-espada .card-number, .suit-espada .card-figure, .suit-espada .card-corner--br { color: var(--suit-espada); }
-.suit-basto .card-number, .suit-basto .card-figure, .suit-basto .card-corner--br { color: var(--suit-basto); }
-.suit-oro .card-frame { border-color: var(--suit-oro-soft); }
-.suit-copa .card-frame { border-color: var(--suit-copa-soft); }
-.suit-espada .card-frame { border-color: var(--suit-espada-soft); }
-.suit-basto .card-frame { border-color: var(--suit-basto-soft); }
+.suit-oro .card-number, .suit-oro .card-corner--br { color: var(--suit-oro); }
+.suit-copa .card-number, .suit-copa .card-corner--br { color: var(--suit-copa); }
+.suit-espada .card-number, .suit-espada .card-corner--br { color: var(--suit-espada); }
+.suit-basto .card-number, .suit-basto .card-corner--br { color: var(--suit-basto); }
+
+/* Figuras (sota, caballo, rey): la ropa lleva el color del palo */
+.fig-skin { fill: #F0CBA2; stroke: #8A5A34; stroke-width: 1.2; }
+.fig-eye { fill: #3A2614; }
+.fig-hair { fill: #4A2E17; }
+.fig-beard { fill: #6B4526; }
+.fig-crown { fill: var(--pip-oro-1); stroke: var(--suit-oro); stroke-width: 1.2; stroke-linejoin: round; }
+.fig-trim { fill: var(--pip-oro-1); }
+.fig-legs { fill: #E9DCC0; stroke: #8A7550; stroke-width: 1; }
+.fig-hoof { fill: #3A2614; }
+.fig-horse { fill: #EFE4CC; stroke: #6E5634; stroke-width: 1.6; stroke-linejoin: round; }
+.fig-mane { fill: #6E5634; }
+.fig-cloth { stroke: rgba(0, 0, 0, 0.35); stroke-width: 1.2; stroke-linejoin: round; }
+.fig-cloth--oro { fill: #C8902B; }
+.fig-cloth--copa { fill: #B8413A; }
+.fig-cloth--espada { fill: #35668F; }
+.fig-cloth--basto { fill: #4F8A3E; }
+.fig-cape { fill: #6A3276; }
 
 .pip-oro-a { fill: var(--pip-oro-1); stroke: var(--suit-oro); }
 .pip-oro-b { stroke: var(--suit-oro); }
@@ -822,3 +820,25 @@ button.card--playable:hover, button.card--playable:focus-visible { transform: tr
 }
 .talk-toggle[hidden] { display: none; }
 
+/* respuestas rápidas (consulta del compañero) y preguntas sugeridas: arriba de la barra */
+.talk-quick {
+  position: fixed; left: 50%; bottom: 66px; transform: translateX(-50%); z-index: 41;
+  display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px;
+  width: max-content; max-width: calc(100vw - 32px); box-sizing: border-box; padding: 6px 8px;
+  background: rgba(12, 20, 16, 0.92); border: 1px solid rgba(233, 196, 106, 0.35); border-radius: 16px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+.talk-quick[hidden] { display: none; }
+.talk-quick--low { bottom: 10px; }
+.talk-quick-title { width: 100%; text-align: center; color: #f4efe2; font: 600 14px/1.3 Figtree, system-ui, sans-serif; }
+.talk-quick-btn {
+  min-height: 44px; padding: 0 14px; border-radius: 999px; border: 0; cursor: pointer;
+  background: #e9c46a; color: #1b1408; font: 700 15px/1 Figtree, system-ui, sans-serif;
+}
+.talk-quick { border-color: #e9c46a; }
+.talk-suggest { display: contents; }
+.talk-suggest-btn {
+  height: 40px; padding: 0 12px; border-radius: 999px; cursor: pointer; white-space: nowrap;
+  border: 1px solid rgba(233, 196, 106, 0.5); background: rgba(233, 196, 106, 0.14); color: #f4efe2;
+  font: 600 14px/1 Figtree, system-ui, sans-serif;
+}

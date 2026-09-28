@@ -22,6 +22,8 @@ import {
 import { createTimerScheduler } from '../app/scheduler.js';
 import type { UrlConfig } from '../app/urlConfig.js';
 import { EventLog } from './eventLog.js';
+import { escapeHtml } from './escape.js';
+import { playerName } from './text.js';
 import { SoundBoard } from './sound.js';
 import { CANVAS, canvasScale, chooseLayout, tooShortLandscape, type LayoutMode } from './layout.js';
 import { decodeAction, encodeAction } from './pieces.js';
@@ -53,6 +55,7 @@ function loadSettings(): MatchSettings {
 const ADVICE_KEY = 'truco-consejos';
 /** alto reservado abajo para la barra de la mesa (px de pantalla) */
 const TALKBAR_H = 62;
+const TALK_PLACEHOLDER = 'Hablale a la mesa: «truco», «¿tenés tanto?», «cantá», «tiro el ancho»…';
 const FREE_TALK_KEY = 'truco-frases-libres';
 
 function loadFlag(key: string): boolean {
@@ -155,6 +158,10 @@ export class TrucoApp {
   /** en el celular la barra va plegada (un botón) para no achicar la mesa; se abre al tocarlo */
   private talkOpen = false;
   private readonly talkToggle: HTMLButtonElement;
+  /** respuestas rápidas cuando un compañero te consulta, y preguntas sugeridas (fuera del canvas) */
+  private readonly talkQuick: HTMLElement;
+  private readonly talkSuggest: HTMLElement;
+  private quickKey = '';
 
   constructor(root: HTMLElement, config: UrlConfig) {
     this.root = root;
@@ -180,16 +187,20 @@ export class TrucoApp {
       '<div class="stage"><div class="canvas" id="truco-canvas"></div><div class="rotate-layer"></div></div>' +
       '<form class="talkbar" data-testid="talkbar" hidden autocomplete="off">' +
       '<button type="button" class="talk-mic" data-testid="talk-mic" aria-label="Hablar (mantené apretado o tocá y hablá)" title="Hablar">🎤</button>' +
-      '<input class="talk-input" data-testid="talk-input" type="text" enterkeyhint="send" placeholder="Hablale a la mesa: «truco», «¿tenés envido?», «tiro el ancho»…" aria-label="Hablale a la mesa">' +
+      `<input class="talk-input" data-testid="talk-input" type="text" enterkeyhint="send" placeholder="${TALK_PLACEHOLDER}" aria-label="Hablale a la mesa">` +
+      '<span class="talk-suggest" data-testid="talk-suggest"></span>' +
       '<button type="submit" class="talk-send" data-testid="talk-send">Decir</button>' +
       '</form>' +
       '<button type="button" class="talk-toggle" data-testid="talk-toggle" hidden aria-label="Hablarle a la mesa">💬</button>' +
+      '<div class="talk-quick" data-testid="talk-quick" role="group" aria-label="Respuestas rápidas" hidden></div>' +
       '<div class="sr-only" aria-live="polite" id="truco-live"></div>';
     this.stage = root.querySelector('.stage') as HTMLElement;
     this.canvas = root.querySelector('#truco-canvas') as HTMLElement;
     this.live = root.querySelector('#truco-live') as HTMLElement;
     this.talkbar = root.querySelector('.talkbar') as HTMLFormElement;
     this.talkToggle = root.querySelector('.talk-toggle') as HTMLButtonElement;
+    this.talkQuick = root.querySelector('.talk-quick') as HTMLElement;
+    this.talkSuggest = root.querySelector('.talk-suggest') as HTMLElement;
     this.setupTalkbar();
     if (this.freeTalk) void loadSemantic();
 
@@ -311,6 +322,7 @@ export class TrucoApp {
       return;
     }
     const snap = this.snapshot;
+    this.renderQuick(noTalk, hideBar);
     const state = snap.state;
     const now = Date.now();
     this.log.prune(now);
@@ -319,7 +331,9 @@ export class TrucoApp {
     const signOptions = this.paused ? [] : this.controller.humanSignalOptions();
     const instructionOptions = this.paused ? [] : this.controller.humanInstructionOptions();
     const humanIsPie = snap.humanIsPie;
-    const canTalk = humanIsPie ? instructionOptions.length > 0 : signOptions.length > 0;
+    // Sin ser pie: señas antes de jugar tu primera carta; indicaciones desde la 2da baza (mesa abierta).
+    const instructing = !humanIsPie && signOptions.length === 0 && instructionOptions.length > 0;
+    const canTalk = humanIsPie || instructing ? instructionOptions.length > 0 : signOptions.length > 0;
     if (!canTalk || responsePanelOpen({ state, actor, legal })) this.signsOpen = false;
     let html = renderGame({
       state,
@@ -335,6 +349,7 @@ export class TrucoApp {
         instructions: snap.instructions,
         instructionOptions,
         humanIsPie,
+        instructing,
         open: this.signsOpen,
       },
     });
@@ -595,6 +610,12 @@ export class TrucoApp {
       void this.submitTalk(text);
       if (this.mode === 'portrait') this.setTalkOpen(false);
     });
+    const quick = (event: Event): void => {
+      const button = (event.target as HTMLElement).closest<HTMLElement>('[data-say]');
+      if (button?.dataset.say) void this.submitTalk(button.dataset.say);
+    };
+    this.talkQuick.addEventListener('click', quick);
+    this.talkSuggest.addEventListener('click', quick);
     this.talkToggle.addEventListener('click', () => {
       this.setTalkOpen(true);
       input.focus();
@@ -632,7 +653,7 @@ export class TrucoApp {
     const reset = (): void => {
       this.listening = false;
       mic.classList.remove('talk-mic--on');
-      input.placeholder = 'Hablale a la mesa: «truco», «¿tenés envido?», «tiro el ancho»…';
+      input.placeholder = TALK_PLACEHOLDER;
     };
     recognition.onend = reset;
     recognition.onerror = (event) => {
@@ -661,6 +682,28 @@ export class TrucoApp {
       const guess = !said.understood && result.guess ? ` ¿Quisiste ${INTENT_TEXT[result.guess.label]}? Decilo más claro.` : '';
       this.tell(said.note + guess);
     }
+  }
+
+  /**
+   * Botones rápidos: si un compañero te consulta ("¿Canto tanto?", "¿Qué hacemos?"), sus respuestas; si no,
+   * las preguntas que te conviene hacer. Tocar uno es como decirlo. Si no contestás a tiempo, decide solo.
+   */
+  private renderQuick(noTalk: boolean, barHidden: boolean): void {
+    const snap = this.snapshot;
+    const consult = !noTalk && snap ? snap.consult : null;
+    const suggestions = !consult && !noTalk && snap && !barHidden ? snap.suggestions : [];
+    const title = consult ? `${playerName(snap!.state, consult.askerId)}: «${consult.question}»` : '';
+    const key = `${title}|${consult?.options.join('|') ?? ''}|${suggestions.join('|')}|${barHidden}`;
+    if (key === this.quickKey) return;
+    this.quickKey = key;
+    const button = (text: string, cls: string): string => `<button type="button" class="${cls}" data-say="${escapeHtml(text)}">${escapeHtml(text)}</button>`;
+    // La consulta va arriba de la barra (es corta: decide solo si no contestás); las sugerencias, dentro.
+    this.talkQuick.hidden = !consult;
+    this.talkQuick.classList.toggle('talk-quick--low', barHidden);
+    this.talkQuick.innerHTML = consult
+      ? `<span class="talk-quick-title">${escapeHtml(title)}</span>` + consult.options.map((text) => button(text, 'talk-quick-btn')).join('')
+      : '';
+    this.talkSuggest.innerHTML = suggestions.map((text) => button(text, 'talk-suggest-btn')).join('');
   }
 
   private setTalkOpen(open: boolean): void {

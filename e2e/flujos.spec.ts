@@ -160,12 +160,12 @@ test('nivel Experta con consejos: la red juega y en tu turno ves el % de cada op
   expect(errors).toEqual([]);
 });
 
-test('hablarle a la mesa: «truco» lo canta, «¿tenés envido?» lo contesta el compañero, lo que no se entiende avisa', async ({ page }) => {
+test('hablarle a la mesa: «¿tenés tanto?» lo contesta el compañero, lo que no se entiende avisa', async ({ page }) => {
   const errors = collectErrors(page);
   await page.goto(gameUrl({ players: 4, seed: 3, fast: false, aiDelay: 60000 }));
   const input = page.getByTestId('talk-input');
   await expect(input).toBeVisible();
-  await input.fill('¿tenés envido?');
+  await input.fill('¿tenés tanto?');
   await input.press('Enter');
   await expect(page.getByTestId('bubble-p2')).toBeVisible();
   const speech = await page.evaluate(() => (window as unknown as { __truco: { speech: () => { playerId: string; text: string }[] } }).__truco.speech());
@@ -188,4 +188,22 @@ test('hablarle a la mesa en 2 jugadores: en tu turno, «truco» se canta', async
   await page.getByTestId('talk-input').fill('¡Truco!');
   await page.getByTestId('talk-send').click();
   await page.waitForFunction(() => (window as unknown as { __truco: { state: () => { phase: string } } }).__truco.state().phase === 'AWAITING_TRUCO');
+});
+
+test('en equipo, el pie te consulta «¿Canto tanto?»: con el botón «Cantá el tanto» canta envido', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto(gameUrl({ players: 4, seed: 2, fast: false, aiDelay: 300 }));
+  await waitHumanPlays(page);
+  await page.locator('#truco-canvas [data-act^="play:"]').first().click();
+  const quick = page.getByTestId('talk-quick');
+  await expect(quick).toBeVisible({ timeout: 10_000 });
+  await expect(quick).toContainText('¿Canto tanto?');
+  await quick.getByRole('button', { name: 'Cantá el tanto' }).click();
+  await page.waitForFunction(
+    () =>
+      (window as unknown as { __truco: { state: () => { hand: { envido: { chain: { by: string }[] } } } } }).__truco.state().hand.envido.chain[0]?.by ===
+      'p2',
+  );
+  await expect(quick).toBeHidden();
+  expect(errors).toEqual([]);
 });

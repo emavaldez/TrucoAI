@@ -43,6 +43,7 @@ function completeRules(rules: Partial<RuleSet> & Pick<RuleSet, 'playerCount'>): 
     targetScore: rules.targetScore ?? 30,
     flor: rules.flor ?? false,
     picaPica: rules.picaPica ?? (rules.playerCount === 6),
+    ...(rules.openTable ? { openTable: true } : {}),
   };
 }
 

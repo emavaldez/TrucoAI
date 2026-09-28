@@ -4,7 +4,8 @@
 // funcionen exactamente igual.
 // - Solo con 4 y 6 jugadores, nunca en una mano de pica-pica.
 // - Cada jugador que no es pie le hace sus señas a su pie al empezar la mano; solo el pie las ve.
-// - El pie da indicaciones a sus compañeros: una de cartas y una de truco como mucho a la vez.
+// - El pie da indicaciones a sus compañeros: una de cartas y una de truco como mucho a la vez (en el juego,
+//   con mesa abierta, después de la 1ra baza indica cualquiera: RuleSet.openTable).
 
 import { pieOf } from '../engine/index.js';
 import type { Card, MatchState, PlayerId, TeamId } from '../engine/index.js';
@@ -42,10 +43,14 @@ export function signalsFor(state: MatchState, talk: TableTalk, playerId: PlayerI
   return talk.signals.filter((signal) => signal.from !== playerId && teamOfPlayer(state, signal.from) === team);
 }
 
-/** Lo que el pie le indicó a `playerId` (nada si él mismo es el pie). */
+/**
+ * Lo que los compañeros le indicaron a `playerId` (no lo que indicó él). En el entrenamiento solo indica
+ * el pie; en el juego con mesa abierta, después de la 1ra baza puede indicar cualquiera (también al pie).
+ */
 export function instructionsFor(state: MatchState, talk: TableTalk, playerId: PlayerId): Instruction[] {
-  if (!talkAllowed(state) || isPieNow(state, playerId)) return [];
-  return teamInstructions(state, talk, playerId);
+  if (!talkAllowed(state)) return [];
+  const team = teamOfPlayer(state, playerId);
+  return talk.instructions.filter((given) => given.from !== playerId && teamOfPlayer(state, given.from) === team).map((given) => given.kind);
 }
 
 /** Las indicaciones vigentes del pie del equipo de `playerId` (el pie también sabe lo que dijo). */

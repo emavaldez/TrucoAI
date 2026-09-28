@@ -140,6 +140,8 @@ export interface TeamTalk {
   instructions: readonly GivenInstruction[];
   instructionOptions: readonly Instruction[];
   humanIsPie: boolean;
+  /** el humano no es el pie pero puede indicar (mesa abierta, desde la 2da baza) */
+  instructing?: boolean;
   open: boolean;
 }
 
@@ -166,9 +168,10 @@ function instructionChips(given: readonly GivenInstruction[]): string {
  */
 export function renderSignControl(state: MatchState, talk: TeamTalk, mode: LayoutMode): string {
   const given = visibleInstructions(state, talk);
+  const instructing = talk.humanIsPie || !!talk.instructing;
   const sent = talk.humanIsPie ? [] : mySignals(state, talk.signals);
-  const options = talk.humanIsPie ? talk.instructionOptions : talk.signOptions;
-  const label = talk.humanIsPie ? 'Indicar' : 'Señas';
+  const options = instructing ? talk.instructionOptions : talk.signOptions;
+  const label = instructing ? 'Indicar' : 'Señas';
   const button =
     options.length > 0
       ? `<button type="button" class="signs-btn${talk.open ? ' signs-btn--open' : ''}" data-ui="signs" data-testid="signs-button" aria-expanded="${talk.open}">${label}</button>`
@@ -180,7 +183,7 @@ export function renderSignControl(state: MatchState, talk: TeamTalk, mode: Layou
     .join('');
   const parts = [button];
   if (sent.length > 0) parts.push(`<span class="signs-sent-label">Le hiciste a tu pie:</span>${sentChips}`);
-  if (given.length > 0) parts.push(`<span class="signs-sent-label">${talk.humanIsPie ? 'Les dijiste:' : 'Tu pie te dice:'}</span>${instructionChips(given)}`);
+  if (given.length > 0) parts.push(`<span class="signs-sent-label">${talk.humanIsPie ? 'Les dijiste:' : talk.instructing ? 'Indicaciones:' : 'Tu pie te dice:'}</span>${instructionChips(given)}`);
   return `<div class="signs-control" data-testid="signs-control">${parts.join('')}</div>`;
 }
 
@@ -194,7 +197,7 @@ export function pieChip(state: MatchState, talk: TeamTalk): string {
 
 /** Lista para elegir: señas (si no sos el pie) o indicaciones (si sos el pie). */
 export function renderSignPicker(talk: TeamTalk, mode: LayoutMode): string {
-  if (talk.humanIsPie) return renderInstructionPicker(talk, mode);
+  if (talk.humanIsPie || talk.instructing) return renderInstructionPicker(talk, mode);
   const options = talk.signOptions;
   if (options.length === 0) return '';
   const rows = options
@@ -232,9 +235,13 @@ function renderInstructionPicker(talk: TeamTalk, mode: LayoutMode): string {
   };
   return (
     `<div class="sign-picker sign-picker--${mode}" role="dialog" aria-modal="false" aria-labelledby="sign-picker-title" data-testid="sign-picker" data-anim="sign-picker">` +
-    `<div class="sign-picker-head"><div id="sign-picker-title" class="sign-picker-title">Sos el pie: indicales</div>` +
+    `<div class="sign-picker-head"><div id="sign-picker-title" class="sign-picker-title">${talk.humanIsPie ? 'Sos el pie: indicales' : 'Indicale a tu equipo'}</div>` +
     `<button type="button" class="sign-picker-close" data-ui="signs" aria-label="Cerrar">×</button></div>` +
-    `<div class="sign-picker-note">Tus compañeros te hacen las señas a vos (las ves al lado de sus asientos). Lo que indiques lo siguen.</div>` +
+    `<div class="sign-picker-note">${
+      talk.humanIsPie
+        ? 'Tus compañeros te hacen las señas a vos (las ves al lado de sus asientos). Lo que indiques lo siguen.'
+        : 'Desde la 2da baza cualquiera puede indicar: tu pie y tus compañeros lo tienen en cuenta.'
+    }</div>` +
     group('cartas', 'Para la baza') +
     group('truco', 'Truco') +
     `</div>`

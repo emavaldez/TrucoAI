@@ -217,8 +217,8 @@ export const INSTRUCTIONS: InstructionInfo[] = [
   { kind: 'PASA', group: 'cartas', label: 'Pasá, la mato yo', meaning: 'Jugá la más baja' },
   { kind: 'PARDA', group: 'cartas', label: 'Pardá', meaning: 'Empardá si podés' },
   { kind: 'TRANQUILO', group: 'cartas', label: 'Jugá tranquilo', meaning: 'Lo que quieras' },
-  { kind: 'CANTA_TRUCO', group: 'truco', label: 'Cantá truco', meaning: 'Tenemos con qué' },
-  { kind: 'ESPERA', group: 'truco', label: 'Esperá', meaning: 'No cantes truco' },
+  { kind: 'CANTA_TRUCO', group: 'truco', label: 'Cantá', meaning: 'Tenemos con qué: cantá truco' },
+  { kind: 'ESPERA', group: 'truco', label: 'Jugá callado', meaning: 'No cantes truco' },
 ];
 
 export function instructionInfo(kind: Instruction): InstructionInfo {

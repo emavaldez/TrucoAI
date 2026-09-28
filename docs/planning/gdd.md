@@ -85,17 +85,49 @@ Con 4 y 6 jugadores (fuera de pica-pica):
   | Pasá, la mato yo | Jugá la más baja |
   | Pardá | Empardá si podés |
   | Jugá tranquilo | Lo que quieras |
-  | Cantá truco | Tenemos con qué |
-  | Esperá | No cantes truco |
+  | Cantá | Tenemos con qué: cantá truco |
+  | Jugá callado | No cantes truco |
 
   Vale una de cartas y una de truco a la vez; una nueva reemplaza a la anterior del mismo tipo. La IA pie indica al
-  empezar la mano y en cada baza; el humano pie, cuando quiere (botón "Indicar").
+  empezar la mano y en cada baza; el humano pie, cuando quiere (botón "Indicar"). «Cantá» y «jugá callado» sin
+  decir nada más son del truco; para el tanto se dice «cantá el tanto» / «callado el tanto» [DECISIÓN 2026-09-28].
 - **Responde los cantos** del equipo rival (truco, envido y flor).
 - **Es el único de su equipo que puede cantar envido** (también "el envido está primero").
+
+### 2.3 Mesa abierta: se decide en equipo [DECISIÓN 2026-09-28, solo en el juego]
+
+Con 4 y 6 jugadores (fuera de pica-pica). Es una regla del juego (`RuleSet.openTable`), no del entrenamiento: las
+redes se entrenaron con la mesa cerrada de §2.2.
+
+- **Decir la palabra es cantar.** «Truco», «envido», «¿tenés envido?», «¿tenés para el truco?» ya son cantos. Al
+  compañero se le pregunta por el **tanto** («¿tenés tanto?», «¿cuánto tenés?») y se le indica «cantá» / «jugá
+  callado» (del truco, si no se nombra el tanto).
+- **En la 1ra baza** manda el pie, como en §2.2: el pie, en su turno, **siempre pregunta «¿canto tanto?»** y sus
+  compañeros le contestan; el que contesta un canto pregunta «¿qué hacemos?».
+- **Desde la 2da baza cualquiera indica y cualquiera contesta:** cualquier compañero puede dar indicaciones
+  (también al pie) y un canto del rival lo contesta el humano si es de ese equipo (si no, el pie).
+- **Todo es en voz alta:** los rivales escuchan. Las IA rivales **le creen** a lo que se dice (75% de las veces:
+  lo usan al estimar las cartas del otro equipo). Los compañeros de la IA **pueden mentir** para engañar al rival.
+- **Esperar y subir.** Si el pie sabe que el equipo tiene mucho tanto (sus 30+ o la seña de 27+ de un compañero) y
+  al pie rival todavía le falta jugar, no canta: espera que el rival cante envido y **le sube** (real envido). Si el
+  rival no quiere, son 2 tantos en vez de 1; si quiere, 4 o más. Para que el rival se anime, el compañero que tiene
+  el tanto dice en voz alta «no, nada» cuando el pie pregunta (ya se lo dijo con la seña). Lo hacen las IA (pie y
+  compañeros) y lo puede hacer el humano.
+- **Consultas al humano:** cuando un compañero de la IA consulta, aparecen respuestas rápidas («Cantá el tanto»,
+  «Jugá callado», «Tengo tanto», «No tengo nada»; «Quiero», «No quiero», «Subile») y se puede contestar hablando. Si
+  no contestás en unos segundos, decide solo.
+- **La red no escucha lenguaje:** en Experta, las consultas, el engaño y el esperar y subir son una capa de reglas
+  encima de la red (`tacticalDecision` en `src/ai/talk/team.ts`). Para que la red aprenda a escuchar y a mentir
+  hace falta entrenarla con lo que se dice en voz alta (propuesta r4).
 
 ## 3. Cartas
 
 Baraja española de 40 (sin 8 ni 9). Palos: espada, basto, oro, copa.
+
+**Dibujo [DECISIÓN 2026-09-28]:** como la baraja española: el número en las esquinas, el marco con las **pintas**
+(cortes en la línea de arriba y de abajo: oros ninguno, copas uno, espadas dos, bastos tres), los palos repartidos
+según el número (espadas y bastos cruzados) y figuras para la sota, el caballo y el rey. Dibujo propio y
+simplificado (`src/ui/cardView.ts`); en los tamaños chicos, un solo palo grande.
 
 **Jerarquía para el truco (de mayor a menor):**
 
@@ -338,13 +370,15 @@ en la línea de los papers de `Papers/` y del plan para AI and Games Conference.
   muestra el % con que la red Experta lo jugaría, y la opción preferida queda marcada. No cambia el juego.
 - **Hablarle a la mesa [DECISIÓN 2026-09-28]:** una barra abajo para escribir o hablar (micrófono con el
   reconocimiento de voz de Chrome, es-AR). **Todo lo que se dice es público.** Una lista cerrada de intenciones
-  (`src/ai/talk/intents.ts`) se reconoce con reglas (truco, quiero, «tiro el ancho», «¿tenés envido?», «matá»…) y,
+  (`src/ai/talk/intents.ts`) se reconoce con reglas (truco, quiero, «tiro el ancho», «¿tenés tanto?», «matá»…) y,
   opcionalmente, con EmbeddingGemma (Google, abierto, ~200 MB, en el navegador) para frases libres; si el modelo
   no está seguro (< 50%), no actúa y pregunta. Qué hace cada intención: cantos, respuestas, cartas y mazo se
-  juegan si son legales; las indicaciones valen si sos pie; las preguntas al compañero ("¿tenés envido?",
-  "¿tenés para el truco?", "¿qué hago?") las contesta en voz alta y con la verdad, en términos de seña (nunca
-  cartas exactas); "tengo…" / "no tengo nada", si es cierto y todavía podés hacer señas, le llega a tu pie como
-  seña; la charla la contesta un rival. Las IA hablan con globos y con la voz del navegador.
+  juegan si son legales (decir la palabra es cantar, §2.3); las indicaciones valen si sos pie o desde la 2da baza;
+  las preguntas al compañero ("¿tenés tanto?", "¿cómo venís?", "¿canto?", "¿qué hacemos?") las contesta en voz
+  alta, en términos de seña (nunca cartas exactas), y puede mentir para engañar al rival (§2.3); "tengo…" / "no
+  tengo nada", si es cierto y todavía podés hacer señas, le llega a tu pie como seña; la charla la contesta un
+  rival. Las IA hablan con globos y con la voz del navegador. Arriba de la barra, las respuestas rápidas cuando un
+  compañero te consulta; en la barra, la pregunta que te conviene hacer («¿Canto tanto?», «¿Qué hacemos?»).
 - **Responsive:** jugable en 390×844 (móvil) y 1280×800, en 2, 4 y 6 jugadores, sin jugadores cortados;
   botones táctiles ≥ 44 px. Jugable con teclado.
 
