@@ -295,13 +295,16 @@ Lo único que recibe aparte son las **señas de sus compañeros** (§2.1), igual
 
 ### 11.2 Dificultades
 
-Los rivales usan la dificultad elegida; los **compañeros del humano juegan siempre en "normal"**.
+Los rivales usan la dificultad elegida; los **compañeros del humano juegan en "normal"**, salvo en
+**"Experta"**, donde también son la red (así coordinan con su pie y le hacen caso al humano si es pie)
+[DECISIÓN 2026-09-28].
 
 | Dificultad | Comportamiento |
 |---|---|
 | **Fácil** | Juega bien las cartas obvias pero ~45% de las decisiones son una acción legal al azar. Umbrales de canto gruesos, nunca farolea, ignora al compañero. |
 | **Normal** | Reglas firmes: abre bajo, gana con la mínima que alcanza, no le gana a su compañero, juega la más alta cuando tiene que ganar sí o sí, empardar cuando conviene. Canta y acepta truco/envido según fuerza de mano, bazas ganadas y posición (mano/pie). Poco ruido (~5%). |
 | **Difícil** | Todo lo de normal más: presión de marcador (falta envido cuando el rival está cerca de 30, más conservador en las buenas), farol a una tasa controlada, lectura de lo público (envido revelado → cartas probables), y opcionalmente muestreo Monte Carlo de manos rivales **solo desde las cartas no vistas**. |
+| **Experta** [2026-09-28] | La red entrenada por refuerzo (`training/`, `src/ai/rl`): r2 en 2 jugadores y r3 en 4 y 6 (con indicaciones del pie). Ve lo mismo que la heurística (la misma `Observation`, más señas e indicaciones). Le gana a la difícil ~83% en 2, ~75% en 4 y ~82% en 6. Sin flor ni pica-pica: con esas reglas juega la difícil. Los pesos (~3 MB) se bajan en segundo plano; hasta que llegan, juega la difícil. |
 
 **Criterio de aceptación medible:** en 1.000 partidas con semilla por enfrentamiento, en 2 y 4 jugadores:
 difícil le gana a normal ≥ 60% y normal le gana a fácil ≥ 60%.
@@ -317,7 +320,7 @@ en la línea de los papers de `Papers/` y del plan para AI and Games Conference.
 
 ## 12. Interfaz
 
-- **Menú:** cantidad de jugadores (2/4/6), dificultad, "Jugar con flor", "Pica-pica" (solo 6), Jugar.
+- **Menú:** cantidad de jugadores (2/4/6), dificultad (fácil, normal, difícil, experta), "Jugar con flor", "Pica-pica" (solo 6), sonido, consejos de la red, Jugar.
 - **Mesa:** marcador (Nosotros/Ellos, malas/buenas), asientos con nombre, equipo, repartidor, mano y turno;
   cartas jugadas por baza; mis cartas (solo clickeables cuando jugar es legal).
 - **Acciones:** solo se muestran las acciones legales en ese momento (derivadas de `getLegalActions`):
@@ -331,6 +334,8 @@ en la línea de los papers de `Papers/` y del plan para AI and Games Conference.
   "Son buenas"…) con un "tin" corto; golpecito al jugar carta. Se apaga desde el menú o la pausa.
 - **Señas e indicaciones (4 y 6 jugadores, §2.1–2.2):** si sos el pie, las señas de tus compañeros al lado de su
   asiento y el botón "Indicar"; si no, el botón "Señas" para hacérselas a tu pie y lo que tu pie te indica.
+- **Consejos de la red [DECISIÓN 2026-09-28]:** opción del menú y de la pausa. En tu turno, cada carta y cada botón
+  muestra el % con que la red Experta lo jugaría, y la opción preferida queda marcada. No cambia el juego.
 - **Responsive:** jugable en 390×844 (móvil) y 1280×800, en 2, 4 y 6 jugadores, sin jugadores cortados;
   botones táctiles ≥ 44 px. Jugable con teclado.
 

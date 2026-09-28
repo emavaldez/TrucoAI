@@ -12,8 +12,8 @@ import {
   instructionIndex,
   instructionMask,
   instructionOf,
-} from '../actions.js';
-import { encodeObs, layoutHash, obsLayout, talkExtras } from '../encode.js';
+} from '../../../src/ai/rl/actions.js';
+import { encodeObs, layoutHash, obsLayout, talkExtras } from '../../../src/ai/rl/encode.js';
 import { compliance } from '../obey.js';
 
 function card(id: string): Card {

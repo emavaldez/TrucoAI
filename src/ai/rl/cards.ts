@@ -1,7 +1,7 @@
 // Índices fijos de cartas para la codificación (mismo orden que `createDeck()`).
 
-import { cardRank, createDeck, envidoValue } from '../../src/engine/index.js';
-import type { Card, Suit } from '../../src/engine/index.js';
+import { cardRank, createDeck, envidoValue } from '../../engine/index.js';
+import type { Card, Suit } from '../../engine/index.js';
 
 export const DECK: Card[] = createDeck();
 export const SUITS: Suit[] = ['espada', 'basto', 'oro', 'copa'];

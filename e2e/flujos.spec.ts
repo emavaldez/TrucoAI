@@ -139,3 +139,23 @@ test('con 2 jugadores no hay señas', async ({ page }) => {
   await expect(page.getByTestId('signs-button')).toHaveCount(0);
   await expect(page.locator('[data-testid^="signs-p"]')).toHaveCount(0);
 });
+
+test('nivel Experta con consejos: la red juega y en tu turno ves el % de cada opción', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto('/?test=1&fast=1');
+  await page.getByTestId('menu-players-4').click();
+  await page.getByTestId('menu-difficulty-expert').click();
+  await expect(page.getByTestId('menu')).toContainText('Tus compañeros también son la red');
+  await page.getByTestId('menu-advice').check();
+  await page.getByTestId('menu-start').click();
+  await waitHumanPlays(page);
+  const badges = page.locator('#truco-canvas [data-advice]');
+  await expect(badges.first()).toBeVisible({ timeout: 10_000 });
+  const values = await badges.evaluateAll((els) => els.map((el) => Number((el as HTMLElement).dataset.advice?.replace('%', ''))));
+  // Porcentajes redondeados de una distribución: suman ~100 y hay una opción marcada como la preferida.
+  expect(Math.abs(values.reduce((a, b) => a + b, 0) - 100)).toBeLessThanOrEqual(values.length);
+  await expect(page.locator('#truco-canvas [data-advice-top]')).toHaveCount(1);
+  const settings = await page.evaluate(() => (window as unknown as { __truco: { settings: () => { difficulty: string } } }).__truco.settings());
+  expect(settings.difficulty).toBe('expert');
+  expect(errors).toEqual([]);
+});

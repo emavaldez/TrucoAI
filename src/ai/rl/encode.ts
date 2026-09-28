@@ -4,10 +4,10 @@
 // - `encodePriv`: lo que solo ve el crítico durante el entrenamiento (las manos ajenas).
 // Todo relativo al que decide: asiento relativo 0 = yo, 1 = el siguiente en el orden de juego, etc.
 
-import { envidoScore } from '../../src/engine/index.js';
-import type { MatchState, Observation, PlayerId } from '../../src/engine/index.js';
-import type { Signal, SignKind } from '../../src/ai/signs.js';
-import { signalsFor, teamInstructions, type TableTalk } from '../../src/ai/tableTalk.js';
+import { envidoScore } from '../../engine/index.js';
+import type { MatchState, Observation, PlayerId } from '../../engine/index.js';
+import type { Signal, SignKind } from '../signs.js';
+import { signalsFor, teamInstructions, type TableTalk } from '../tableTalk.js';
 import { cardIndex, cardRank, envidoValue, sortedHand, suitIndex } from './cards.js';
 
 export const MAX_SEATS = 6;

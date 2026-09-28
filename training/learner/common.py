@@ -51,7 +51,7 @@ def obs_layout(players: int = 2) -> dict:
 # ---------- redes ----------
 
 class PolicyNet(nn.Module):
-    """MLP con ReLU; la misma forma que training/env/mlp.ts."""
+    """MLP con ReLU; la misma forma que src/ai/rl/mlp.ts."""
 
     def __init__(self, obs_dim: int, n_actions: int, hidden: tuple[int, ...] = (256, 256, 128)):
         super().__init__()
@@ -111,7 +111,7 @@ def masked_logits(logits: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
 
 
 def export_policy(policy: PolicyNet, base: Path, layout_hash: str, tag: str) -> None:
-    """Escribe <base>.json + <base>.bin para training/env/mlp.ts (escritura atómica)."""
+    """Escribe <base>.json + <base>.bin para src/ai/rl/mlp.ts (escritura atómica)."""
     base.parent.mkdir(parents=True, exist_ok=True)
     chunks = []
     layers = []

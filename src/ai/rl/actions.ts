@@ -4,8 +4,8 @@
 // acciones del motor: el pie las decide al empezar la mano (cartas y truco) y después de cada baza
 // (cartas). Las redes viejas (12 salidas) siguen sirviendo para 2 jugadores.
 
-import type { Action, Observation } from '../../src/engine/index.js';
-import type { Instruction } from '../../src/ai/signs.js';
+import type { Action, Observation } from '../../engine/index.js';
+import type { Instruction } from '../signs.js';
 import { sortedHand } from './cards.js';
 
 export const ACTION_NAMES = [

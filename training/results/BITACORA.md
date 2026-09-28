@@ -158,3 +158,12 @@ Detalle en `results/r3.md`. Sin cortes, 1000 iteraciones.
 - El pie indica "¡matá!" ~40%, "tranquilo" ~37%, "pasá" ~24% y nunca "pardá"; de truco casi nunca pide
   cantar (1–3%). Los compañeros obedecen ~95% aun con el premio en su mínimo.
 - En 2 jugadores bajó de 82–86% (r2) a 73–80%: la imitación en 4 y 6 le hizo olvidar parte de lo de 2.
+
+## 2026-09-28 — Duelo r3 vs r2 en 2 jugadores y fase 5 (la red en el juego)
+
+- Duelo en 2 jugadores, 1000 pares: r3 le gana a r2 el **48,2%** (IC90 46,4–50,0). La caída de r3 contra la
+  difícil en 2 jugadores exageraba: pierde apenas contra r2. En el juego, 2 jugadores usa r2.
+- Nivel **Experta** en el juego: r2 en 2 jugadores, r3 en 4 y 6 (compañeros incluidos), difícil de respaldo con
+  flor o pica-pica. Modo **consejos de la red** (% por opción en tu turno). Detalle en `PLAN.md` (fase 5).
+- Próximo (idea de Emmanuel): hablarle o escribirle a la IA (compañero o rival) y que actúe en consecuencia.
+

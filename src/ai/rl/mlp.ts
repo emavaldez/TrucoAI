@@ -1,8 +1,9 @@
-// Red de la política (MLP con ReLU) en TypeScript puro: la misma inferencia sirve para los
-// actores del entrenamiento y para el juego. Pesos: un JSON con la forma y un binario float32
-// (por capa: W [out×in] por filas, después b [out]), exportados por training/learner/model.py.
+// Red de la política (MLP con ReLU) en TypeScript puro: la misma inferencia sirve para los actores
+// del entrenamiento (training/, en Node) y para el juego (en el navegador). Pesos: un JSON con la
+// forma y un binario float32 (por capa: W [out×in] por filas, después b [out]), exportados por
+// training/learner (export_policy).
 
-import type { Rng } from '../../src/engine/index.js';
+import type { Rng } from '../../engine/index.js';
 
 export interface MlpMeta {
   format: 'trucoai-mlp-v1';
@@ -100,11 +101,7 @@ export class Mlp {
   }
 }
 
-/** Carga pesos desde disco (Node). */
-export async function loadMlp(basePath: string): Promise<Mlp> {
-  const { readFile } = await import('node:fs/promises');
-  const meta = JSON.parse(await readFile(`${basePath}.json`, 'utf8')) as MlpMeta;
-  const raw = await readFile(`${basePath}.bin`);
-  const data = new Float32Array(raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength));
-  return new Mlp(meta, data);
+/** Arma la red desde el JSON de metadatos y el binario de pesos (float32, little endian). */
+export function mlpFromBuffers(meta: MlpMeta, bin: ArrayBuffer): Mlp {
+  return new Mlp(meta, new Float32Array(bin));
 }

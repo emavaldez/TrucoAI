@@ -91,7 +91,8 @@ Y cada paso con su porqué va en `results/BITACORA.md`.
 training/
   PLAN.md              plan y decisiones
   config/              configuraciones de cada corrida (JSON)
-  env/                 TS: codificación, acciones, red (inferencia), tabla W
+  env/                 TS solo del entrenamiento: tabla W, premio por obedecer, carga de redes desde disco
+                       (la codificación, las acciones y la red están en src/ai/rl/: las comparte el juego)
   actors/rollout.ts    TS: juega partidas con el motor (imitación, PPO, evaluación, tabla W)
   learner/             Python/PyTorch: run.py (todo el entrenamiento), common.py, parity_check.py
   setup.sh, train.sh   preparar la Mac y lanzar/retomar

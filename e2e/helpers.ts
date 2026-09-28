@@ -9,7 +9,7 @@ export interface StartOptions {
   fast?: boolean;
   flor?: boolean;
   picaPica?: boolean;
-  difficulty?: 'easy' | 'normal' | 'hard';
+  difficulty?: 'easy' | 'normal' | 'hard' | 'expert';
   aiDelay?: number;
 }
 

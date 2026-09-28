@@ -5,9 +5,9 @@ import { describe, expect, it } from 'vitest';
 import { applyAction, createMatch, createRng, getActor, getObservation, startNextHand } from '../../../src/engine/index.js';
 import type { MatchState } from '../../../src/engine/index.js';
 import { randomPolicy } from '../../../src/ai/policy.js';
-import { actionIndex, legalMask, N_ACTIONS } from '../actions.js';
-import { encodeObs, encodePriv, layoutHash, obsLayout, PRIV_DIM } from '../encode.js';
-import { Mlp } from '../mlp.js';
+import { actionIndex, legalMask, N_ACTIONS } from '../../../src/ai/rl/actions.js';
+import { encodeObs, encodePriv, layoutHash, obsLayout, PRIV_DIM } from '../../../src/ai/rl/encode.js';
+import { Mlp } from '../../../src/ai/rl/mlp.js';
 import { computeWTable, wValue } from '../wtable.js';
 
 function states(players: 2 | 4 | 6, count: number, seed: number): MatchState[] {

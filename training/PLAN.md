@@ -136,6 +136,17 @@ para que no se olvide).
   4 y 6 (jugadas e indicaciones) y sigue con PPO (20% de 2, 40% de 4, 40% de 6). La mejor red se elige por
   el promedio contra equipos de difíciles en 4 y 6. Meta: ≥ 55% en las dos.
 
+## Fase 5: al juego (2026-09-28)
+
+- La codificación, las acciones y la inferencia se mudaron a `src/ai/rl/` (el juego no puede importar
+  `training/`, que no se publica); el entrenamiento las importa de ahí. Paridad PyTorch ↔ TS sin cambios.
+- Nivel **Experta** (`NetPolicy`): r2 (iteración 2000) en 2 jugadores y r3 (560) en 4 y 6, con la difícil de
+  respaldo para flor, pica-pica o si los pesos no cargaron. Sus compañeros también son la red. El pie de la red
+  indica con la red, viendo lo mismo que en el entrenamiento.
+- Pesos en `public/models/red-2.*` y `red-equipos.*` (float32, 1,4 MB cada uno).
+- **Consejos de la red**: en tu turno, el % con que la red jugaría cada carta o canto.
+- Duelo r3 vs r2 en 2 jugadores: 48,2% (IC90 46,4–50,0): por eso en 2 juega r2.
+
 ## Riesgos
 
 - **Varianza:** se necesitan miles de partidas duplicadas para ver diferencias de 2–3 puntos.

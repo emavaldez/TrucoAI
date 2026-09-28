@@ -9,8 +9,12 @@ import { chooseCard, lowest, trickLeader } from './cardPlay.js';
 import { envidoWinProbability, handWinProbability, publicConstraints } from './estimate.js';
 import { signalKnowledge, signaledTopRank, type Instruction, type Signal, type SignalKnowledge } from './signs.js';
 import { nextToPlay, participantsOf, playsThisHand, teamMap } from './table.js';
+import { NetPolicy } from './rl/netPolicy.js';
 
-export type Difficulty = 'easy' | 'normal' | 'hard';
+/** Niveles de la heurística. */
+export type HeuristicDifficulty = 'easy' | 'normal' | 'hard';
+/** Niveles del juego: los de la heurística y "experta", la red entrenada por refuerzo (src/ai/rl). */
+export type Difficulty = HeuristicDifficulty | 'expert';
 
 export interface Policy {
   /**
@@ -41,7 +45,7 @@ export interface DifficultyProfile {
   envidoFalta: number;
 }
 
-export const PROFILES: Record<Difficulty, DifficultyProfile> = {
+export const PROFILES: Record<HeuristicDifficulty, DifficultyProfile> = {
   easy: {
     randomActionRate: 0.45,
     samples: 24,
@@ -336,6 +340,8 @@ export class HeuristicPolicy implements Policy {
 }
 
 export function createPolicy(difficulty: Difficulty): Policy {
+  // La red, con la difícil de respaldo para lo que no sabe (flor, pica-pica) o si no cargó.
+  if (difficulty === 'expert') return new NetPolicy(new HeuristicPolicy(PROFILES.hard));
   return new HeuristicPolicy(PROFILES[difficulty]);
 }
 

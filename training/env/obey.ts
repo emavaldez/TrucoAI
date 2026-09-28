@@ -9,7 +9,7 @@
 
 import type { Observation, TeamId } from '../../src/engine/index.js';
 import type { Instruction } from '../../src/ai/signs.js';
-import { cardRank, sortedHand } from './cards.js';
+import { cardRank, sortedHand } from '../../src/ai/rl/cards.js';
 
 export function compliance(obs: Observation, instructions: readonly Instruction[], action: number, mask: Uint8Array): number {
   let score = 0;

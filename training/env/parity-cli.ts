@@ -1,6 +1,6 @@
 // Para training/learner/parity_check.py: logits de la red TS para observaciones dadas.
 import { readFile } from 'node:fs/promises';
-import { loadMlp } from './mlp.js';
+import { loadMlp } from './loadMlp.js';
 
 const [base, obsFile, dimText] = process.argv.slice(2);
 const mlp = await loadMlp(base);

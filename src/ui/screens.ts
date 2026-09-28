@@ -15,13 +15,17 @@ const DIFFICULTY_TEXT: Record<Difficulty, { name: string; desc: string }> = {
   easy: { name: 'Fácil', desc: 'Juega las cartas obvias, pero muchas veces decide al azar. Nunca farolea.' },
   normal: { name: 'Normal', desc: 'Reglas firmes: abre bajo, gana con la mínima, canta según sus cartas.' },
   hard: { name: 'Difícil', desc: 'Además mira el marcador, lee lo que se mostró y farolea de vez en cuando.' },
+  expert: {
+    name: 'Experta',
+    desc: 'Una red neuronal que aprendió jugando millones de partidas contra sí misma. Sin flor ni pica-pica (con esas reglas juega la difícil).',
+  },
 };
 
 const PLAYER_TEXT: Record<2 | 4 | 6, string> = { 2: 'Mano a mano', 4: 'Dos contra dos', 6: 'Tres contra tres' };
 
 // ---------- menú ----------
 
-export function renderMenu(settings: MatchSettings, mode: LayoutMode, sound = true): string {
+export function renderMenu(settings: MatchSettings, mode: LayoutMode, sound = true, advice = false): string {
   const players = ([2, 4, 6] as const)
     .map(
       (n) =>
@@ -29,7 +33,7 @@ export function renderMenu(settings: MatchSettings, mode: LayoutMode, sound = tr
         `<span class="opt-num">${n}</span><span class="opt-desc">${PLAYER_TEXT[n]}</span></button>`,
     )
     .join('');
-  const levels = (['easy', 'normal', 'hard'] as const)
+  const levels = (['easy', 'normal', 'hard', 'expert'] as const)
     .map(
       (level) =>
         `<button type="button" class="opt opt--level${settings.difficulty === level ? ' opt--on' : ''}" data-ui="difficulty:${level}" aria-pressed="${settings.difficulty === level}" data-testid="menu-difficulty-${level}">${DIFFICULTY_TEXT[level].name}</button>`,
@@ -41,12 +45,13 @@ export function renderMenu(settings: MatchSettings, mode: LayoutMode, sound = tr
     `<div class="menu-brand"><div class="menu-logo"><span class="menu-truco">Truco</span><span class="menu-ai">AI</span></div>` +
     `<p class="menu-tagline">Truco argentino contra la computadora. A 30 puntos, en malas y buenas.</p></div>` +
     `<fieldset class="menu-group"><legend>Jugadores</legend><div class="opt-grid">${players}</div></fieldset>` +
-    `<fieldset class="menu-group"><legend>Dificultad</legend><div class="opt-grid">${levels}</div>` +
-    `<p class="menu-hint">${escapeHtml(DIFFICULTY_TEXT[settings.difficulty].desc)}${settings.playerCount > 2 ? ' Tus compañeros juegan siempre en normal.' : ''}</p></fieldset>` +
+    `<fieldset class="menu-group"><legend>Dificultad</legend><div class="opt-grid opt-grid--levels">${levels}</div>` +
+    `<p class="menu-hint">${escapeHtml(DIFFICULTY_TEXT[settings.difficulty].desc)}${settings.playerCount > 2 ? (settings.difficulty === 'expert' ? ' Tus compañeros también son la red: si sos pie, te hacen caso.' : ' Tus compañeros juegan siempre en normal.') : ''}</p></fieldset>` +
     `<fieldset class="menu-group"><legend>Reglas</legend>` +
     `<label class="toggle"><span>Jugar con flor</span><input type="checkbox" data-ui="flor" data-testid="menu-flor"${settings.flor ? ' checked' : ''}></label>` +
     `<label class="toggle${picaDisabled ? ' toggle--off' : ''}"><span>Pica Pica <em>· solo con 6</em></span><input type="checkbox" data-ui="picapica" data-testid="menu-picapica"${settings.picaPica ? ' checked' : ''}${picaDisabled ? ' disabled' : ''}></label>` +
     `<label class="toggle"><span>Sonido <em>· voces de los cantos</em></span><input type="checkbox" data-ui="sound" data-testid="menu-sound"${sound ? ' checked' : ''}></label>` +
+    `<label class="toggle"><span>Consejos de la red <em>· qué jugaría la Experta</em></span><input type="checkbox" data-ui="advice" data-testid="menu-advice"${advice ? ' checked' : ''}></label>` +
     `</fieldset>` +
     `<button type="button" class="go-btn" data-ui="start" data-testid="menu-start">Repartir</button>` +
     `</div>`;
@@ -329,12 +334,13 @@ export function renderGameOver(state: MatchState, settings: MatchSettings, log: 
 
 // ---------- pausa ----------
 
-export function renderPause(autoAck: boolean, sound = true): string {
+export function renderPause(autoAck: boolean, sound = true, advice = false): string {
   return (
     `<div class="scrim" data-testid="pause"><div class="paper-panel paper-panel--pause" data-anim="pause" role="dialog" aria-modal="true" aria-labelledby="pause-title">` +
     `<div id="pause-title" class="sum-title">Partida en pausa</div>` +
     `<label class="check"><input type="checkbox" data-ui="autoack"${autoAck ? ' checked' : ''}>Pasar solo a la próxima mano</label>` +
     `<label class="check"><input type="checkbox" data-ui="sound" data-testid="pause-sound"${sound ? ' checked' : ''}>Sonido (voces de los cantos)</label>` +
+    `<label class="check"><input type="checkbox" data-ui="advice" data-testid="pause-advice"${advice ? ' checked' : ''}>Consejos de la red (qué jugaría la Experta)</label>` +
     `<div class="pause-actions"><button type="button" class="paper-btn paper-btn--go" data-ui="resume" data-testid="resume" data-autofocus>Seguir jugando</button>` +
     `<button type="button" class="paper-btn paper-btn--outline" data-ui="restart" data-testid="restart">Nueva partida</button>` +
     `<button type="button" class="paper-btn paper-btn--outline" data-ui="menu" data-testid="to-menu">Volver al menú</button></div>` +

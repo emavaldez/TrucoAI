@@ -1,0 +1,1 @@
+{"format": "trucoai-mlp-v1", "obsDim": 1006, "nActions": 19, "layers": [{"in": 1006, "out": 256}, {"in": 256, "out": 256}, {"in": 256, "out": 128}, {"in": 128, "out": 19}], "layoutHash": "78d8b04c", "tag": "r3/iter560"}

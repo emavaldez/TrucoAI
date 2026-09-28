@@ -9,6 +9,7 @@
 import { applyAction, createMatch, createRng, getActor, getLegalActions, getObservation, startNextHand } from '../engine/index.js';
 import type { Action, GameEvent, MatchState, PlayerId, Rng, RuleSet } from '../engine/index.js';
 import { createPolicy, type Difficulty, type Policy } from '../ai/policy.js';
+import { NetPolicy, netAdvice, type NetAdvice } from '../ai/rl/netPolicy.js';
 import { availableSigns, INSTRUCTIONS, type GivenInstruction, type Instruction, type Signal, type SignKind } from '../ai/signs.js';
 import {
   EMPTY_TALK,
@@ -18,6 +19,7 @@ import {
   refreshHeuristicInstructions,
   signalsFor,
   talkAllowed,
+  teamInstructions,
   teamOfPlayer,
   withInstruction,
   type TableTalk,
@@ -294,8 +296,10 @@ export class GameController {
     this.policies = new Map();
     for (const seat of this.state.seats) {
       if (seat.isHuman) continue;
-      // Los compañeros del humano juegan siempre en "normal" (GDD §11.2).
-      const difficulty: Difficulty = seat.team === 0 ? 'normal' : this.settings.difficulty;
+      // Los compañeros del humano juegan en "normal" (GDD §11.2), salvo en "experta": ahí también son la
+      // red, que aprendió a coordinar con su pie (y a hacerle caso si el pie es el humano).
+      const expert = this.settings.difficulty === 'expert';
+      const difficulty: Difficulty = seat.team === 0 && !expert ? 'normal' : this.settings.difficulty;
       this.policies.set(seat.id, createPolicy(difficulty));
     }
   }
@@ -331,9 +335,39 @@ export class GameController {
     this.talk = withInstruction(this.state, this.talk, given);
   }
 
-  /** Los pies de la IA indican según su mano y las señas recibidas (al empezar la mano y en cada baza). */
+  /**
+   * Los pies de la IA indican según su mano y las señas recibidas (al empezar la mano y en cada baza).
+   * Un pie de la red decide con la red (igual que en el entrenamiento); los demás, con la heurística.
+   */
   private refreshAiInstructions(withTruco: boolean): void {
-    this.talk = refreshHeuristicInstructions(this.state, this.talk, withTruco, (pieId) => pieId !== HUMAN_ID);
+    if (!talkAllowed(this.state)) return;
+    const netPie = (pieId: PlayerId): NetPolicy | null => {
+      const policy = pieId === HUMAN_ID ? undefined : this.policies.get(pieId);
+      return policy instanceof NetPolicy && policy.canInstruct(getObservation(this.state, pieId)) ? policy : null;
+    };
+    this.talk = refreshHeuristicInstructions(this.state, this.talk, withTruco, (pieId) => pieId !== HUMAN_ID && !netPie(pieId));
+    for (const seat of this.state.seats) {
+      const policy = isPieNow(this.state, seat.id) ? netPie(seat.id) : null;
+      if (!policy) continue;
+      const kinds = withTruco && this.state.hand.truco.level === 0 ? (['cartas', 'truco'] as const) : (['cartas'] as const);
+      const given = policy.instruct(
+        getObservation(this.state, seat.id),
+        this.rng,
+        this.signalsFor(seat.id),
+        teamInstructions(this.state, this.talk, seat.id),
+        kinds,
+      );
+      for (const kind of given) this.setInstruction({ from: seat.id, kind });
+    }
+  }
+
+  /**
+   * Modo consejo: qué haría la red en el lugar del humano (acciones legales con su probabilidad).
+   * Vacío si no es su turno o si la red no juega esta partida (flor, pica-pica, pesos sin cargar).
+   */
+  humanAdvice(): NetAdvice[] {
+    if (getActor(this.state) !== HUMAN_ID || getLegalActions(this.state, HUMAN_ID).length < 2) return [];
+    return netAdvice(getObservation(this.state, HUMAN_ID), this.signalsFor(HUMAN_ID), teamInstructions(this.state, this.talk, HUMAN_ID));
   }
 
   private apply(playerId: PlayerId, action: Action): { ok: boolean; error?: string } {
@@ -421,7 +455,9 @@ export class GameController {
     let action = legal[0];
     if (policy) {
       try {
-        action = policy.decide(getObservation(this.state, actor), this.rng, this.signalsFor(actor), this.instructionsFor(actor));
+        // La red ve también lo que indicó ella misma si es pie (así se entrenó); la heurística, solo lo que le indicaron.
+        const told = policy instanceof NetPolicy ? teamInstructions(this.state, this.talk, actor) : this.instructionsFor(actor);
+        action = policy.decide(getObservation(this.state, actor), this.rng, this.signalsFor(actor), told);
       } catch (error) {
         console.warn('[truco] la IA falló al decidir; juega la primera acción legal', error);
       }

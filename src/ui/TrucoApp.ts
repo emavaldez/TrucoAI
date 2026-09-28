@@ -5,6 +5,7 @@
 import { getActor } from '../engine/index.js';
 import type { Action } from '../engine/index.js';
 import type { Difficulty } from '../ai/policy.js';
+import { loadNetModels } from '../ai/rl/netPolicy.js';
 import type { Instruction, SignKind } from '../ai/signs.js';
 import {
   FAST_TIMING,
@@ -20,7 +21,7 @@ import type { UrlConfig } from '../app/urlConfig.js';
 import { EventLog } from './eventLog.js';
 import { SoundBoard } from './sound.js';
 import { CANVAS, canvasScale, chooseLayout, tooShortLandscape, type LayoutMode } from './layout.js';
-import { decodeAction } from './pieces.js';
+import { decodeAction, encodeAction } from './pieces.js';
 import { renderGameOver, renderHandSummary, renderMenu, renderPause, renderRotateHint } from './screens.js';
 import { renderGame, responsePanelOpen } from './table.js';
 
@@ -37,12 +38,30 @@ function loadSettings(): MatchSettings {
     const parsed = JSON.parse(raw) as Partial<MatchSettings>;
     return {
       playerCount: parsed.playerCount === 2 || parsed.playerCount === 4 || parsed.playerCount === 6 ? parsed.playerCount : 2,
-      difficulty: parsed.difficulty === 'easy' || parsed.difficulty === 'hard' ? parsed.difficulty : 'normal',
+      difficulty: parsed.difficulty === 'easy' || parsed.difficulty === 'hard' || parsed.difficulty === 'expert' ? parsed.difficulty : 'normal',
       flor: parsed.flor === true,
       picaPica: parsed.picaPica !== false,
     };
   } catch {
     return { ...DEFAULT_SETTINGS };
+  }
+}
+
+const ADVICE_KEY = 'truco-consejos';
+
+function loadAdvice(): boolean {
+  try {
+    return window.localStorage.getItem(ADVICE_KEY) === 'on';
+  } catch {
+    return false;
+  }
+}
+
+function saveAdvice(on: boolean): void {
+  try {
+    window.localStorage.setItem(ADVICE_KEY, on ? 'on' : 'off');
+  } catch {
+    // sin almacenamiento: vale solo para esta sesión
   }
 }
 
@@ -85,6 +104,8 @@ export class TrucoApp {
   private matchSeed: number | null;
   /** la lista de señas está abierta */
   private signsOpen = false;
+  /** modo consejo: en tu turno, el % con que la red jugaría cada opción */
+  private advice = loadAdvice();
 
   constructor(root: HTMLElement, config: UrlConfig) {
     this.root = root;
@@ -113,6 +134,8 @@ export class TrucoApp {
     this.canvas = root.querySelector('#truco-canvas') as HTMLElement;
     this.live = root.querySelector('#truco-live') as HTMLElement;
 
+    // Las redes del nivel Experta (~3 MB): se bajan en segundo plano; hasta que llegan juega la difícil.
+    void loadNetModels().then(() => this.onModelsLoaded());
     root.addEventListener('click', (event) => this.onClick(event));
     root.addEventListener('change', (event) => this.onChange(event));
     window.addEventListener('keydown', (event) => this.onKey(event));
@@ -122,6 +145,11 @@ export class TrucoApp {
     if (config.test) this.exposeTestHooks();
     if (config.autostart) this.startMatch();
     else this.render();
+  }
+
+  /** Llegaron las redes: si hay algo en pantalla que las usa (consejos), se vuelve a dibujar. */
+  private onModelsLoaded(): void {
+    if (this.screen === 'game') this.render();
   }
 
   // ---------- escalado ----------
@@ -192,7 +220,7 @@ export class TrucoApp {
   private render(): void {
     const focusKey = this.focusKey();
     if (this.screen === 'menu' || !this.controller || !this.snapshot) {
-      this.canvas.innerHTML = renderMenu(this.settings, this.mode, this.sound.enabled);
+      this.canvas.innerHTML = renderMenu(this.settings, this.mode, this.sound.enabled, this.advice);
       this.canvas.dataset.screen = 'menu';
       this.restoreFocus(focusKey, 'menu');
       return;
@@ -233,7 +261,7 @@ export class TrucoApp {
       html += renderHandSummary(state, this.log, this.autoAck, this.mode);
       dialog = `summary-${state.hand.number}`;
     } else if (this.paused) {
-      html += renderPause(this.autoAck, this.sound.enabled);
+      html += renderPause(this.autoAck, this.sound.enabled, this.advice);
       dialog = 'pause';
     } else if (responsePanelOpen({ state, actor, legal })) {
       dialog = `resp-${state.version}`;
@@ -241,6 +269,7 @@ export class TrucoApp {
       dialog = 'signs';
     }
     this.canvas.innerHTML = html;
+    if (this.advice && !this.paused) this.showAdvice();
     this.canvas.dataset.screen = 'game';
     this.canvas.dataset.phase = state.phase;
     this.canvas.dataset.actor = actor ?? '';
@@ -248,6 +277,23 @@ export class TrucoApp {
     this.markEntrances();
     this.restoreFocus(focusKey, dialog);
     this.scheduleExpiry();
+  }
+
+  /**
+   * Modo consejo: a cada carta y botón de tu turno le pone el % con que la red lo jugaría, y marca
+   * la opción que más le gusta. No cambia nada del juego.
+   */
+  private showAdvice(): void {
+    const advice = this.controller?.humanAdvice() ?? [];
+    if (advice.length === 0) return;
+    const byCode = new Map(advice.map((entry) => [encodeAction(entry.action), entry.prob]));
+    const top = encodeAction(advice[0].action);
+    for (const el of this.canvas.querySelectorAll<HTMLElement>('[data-act]')) {
+      const prob = byCode.get(el.dataset.act as string);
+      if (prob === undefined) continue;
+      el.dataset.advice = `${Math.round(prob * 100)}%`;
+      if (el.dataset.act === top) el.dataset.adviceTop = '';
+    }
   }
 
   /** Anima solo lo que recién aparece (re-renderizar no repite la animación). */
@@ -386,6 +432,11 @@ export class TrucoApp {
     else if (ui === 'picapica') this.settings = { ...this.settings, picaPica: input.checked };
     else if (ui === 'sound') {
       this.sound.setEnabled(input.checked);
+      this.render();
+      return;
+    } else if (ui === 'advice') {
+      this.advice = input.checked;
+      saveAdvice(input.checked);
       this.render();
       return;
     } else if (ui === 'autoack') {

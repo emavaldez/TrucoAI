@@ -35,10 +35,11 @@ import {
   instructionOf,
   legalMask,
   type InstructionDecision,
-} from '../env/actions.js';
-import { encodeObs, encodePriv, layoutHash, obsLayout, PRIV_DIM, talkExtras } from '../env/encode.js';
+} from '../../src/ai/rl/actions.js';
+import { encodeObs, encodePriv, layoutHash, obsLayout, PRIV_DIM, talkExtras } from '../../src/ai/rl/encode.js';
 import { compliance } from '../env/obey.js';
-import { Mlp, loadMlp } from '../env/mlp.js';
+import type { Mlp } from '../../src/ai/rl/mlp.js';
+import { loadMlp } from '../env/loadMlp.js';
 import { computeWTable, wValue, type HandDistribution, type WTable } from '../env/wtable.js';
 
 type AgentSpec = { kind: 'mlp'; path: string; greedy?: boolean } | { kind: 'heur'; difficulty: Difficulty } | { kind: 'self' };

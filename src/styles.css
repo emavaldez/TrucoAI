@@ -673,6 +673,8 @@ button.card--playable:hover, button.card--playable:focus-visible { transform: tr
 .menu-group { border: 0; display: flex; flex-direction: column; gap: 10px; }
 .menu-group legend { margin-bottom: 10px; font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); }
 .opt-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.opt-grid--levels { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 480px) { .opt-grid--levels { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .opt { border-radius: 16px; border: 2px solid var(--line-soft); background: var(--surface); color: var(--text); transition: background 0.12s ease, border-color 0.12s ease; }
 .opt:hover { border-color: var(--line-mid); }
 .opt--on { border-color: var(--gold); background: var(--gold-tint); }
@@ -775,3 +777,17 @@ button.card--playable:hover, button.card--playable:focus-visible { transform: tr
 .chip--pie { background: var(--gold-tint); border-color: var(--gold-line); color: var(--gold); max-width: 170px; overflow: hidden; text-overflow: ellipsis; }
 .sign-picker-group { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--paper-ink-mid); margin-top: 2px; }
 .sign-option--on { border-color: var(--go); box-shadow: inset 0 0 0 1px var(--go); }
+
+/* ---------- modo consejo: % con que la red jugaría cada opción ---------- */
+[data-advice] { position: relative; }
+.card[data-advice] { position: relative; }
+[data-advice]::after {
+  content: attr(data-advice);
+  position: absolute; top: -10px; right: -8px; z-index: 5; pointer-events: none;
+  padding: 3px 6px; border-radius: 999px;
+  font: 700 12px/1 Figtree, system-ui, sans-serif; letter-spacing: 0.02em;
+  color: #1b1408; background: #e9c46a; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+[data-advice-top] { outline: 3px solid #e9c46a; outline-offset: 3px; border-radius: 14px; }
+.card[data-advice-top] { border-radius: 10px; }
+
