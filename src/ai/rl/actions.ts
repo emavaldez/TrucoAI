@@ -3,6 +3,9 @@
 // 0–11: acciones del motor. 12–18: indicaciones del pie a sus compañeros (4 y 6 jugadores), que no son
 // acciones del motor: el pie las decide al empezar la mano (cartas y truco) y después de cada baza
 // (cartas). Las redes viejas (12 salidas) siguen sirviendo para 2 jugadores.
+// 19–26: lo que se dice en voz alta (r4, charla pública): sobre el tanto (mucho, algo, nada o callarse) y sobre
+// las cartas (mucho, algo, nada o callarse). Son decisiones aparte, en momentos fijos (src/ai/talk/claims.ts).
+// Las redes de r3 (19 salidas) se callan siempre.
 
 import type { Action, Observation } from '../../engine/index.js';
 import type { Instruction } from '../signs.js';
@@ -28,6 +31,14 @@ export const ACTION_NAMES = [
   'INDICA_CANTA_TRUCO',
   'INDICA_ESPERA',
   'INDICA_NADA_TRUCO',
+  'DICE_TANTO_MUCHO',
+  'DICE_TANTO_ALGO',
+  'DICE_TANTO_NADA',
+  'CALLA_TANTO',
+  'DICE_CARTAS_MUCHO',
+  'DICE_CARTAS_ALGO',
+  'DICE_CARTAS_NADA',
+  'CALLA_CARTAS',
 ] as const;
 
 export const N_ACTIONS = ACTION_NAMES.length;
@@ -42,6 +53,34 @@ export const FIRST_CARD_INSTRUCTION = 12;
 export const FIRST_TRUCO_INSTRUCTION = 16;
 
 export type InstructionDecision = 'cartas' | 'truco';
+
+/** Primera salida de lo que se dice (redes con charla: más de 19 salidas). */
+export const FIRST_TALK_ACTION = 19;
+export type TalkTopic = 'tanto' | 'cartas';
+export type TalkLevel = 'mucho' | 'algo' | 'nada' | 'calla';
+export const TALK_LEVELS: TalkLevel[] = ['mucho', 'algo', 'nada', 'calla'];
+
+function talkBase(topic: TalkTopic): number {
+  return FIRST_TALK_ACTION + (topic === 'tanto' ? 0 : TALK_LEVELS.length);
+}
+
+/** Máscara de una decisión de qué decir sobre un tema (las cuatro opciones de ese tema). */
+export function talkMask(topic: TalkTopic): Uint8Array {
+  const mask = new Uint8Array(N_ACTIONS);
+  for (let i = 0; i < TALK_LEVELS.length; i++) mask[talkBase(topic) + i] = 1;
+  return mask;
+}
+
+export function talkIndex(topic: TalkTopic, level: TalkLevel): number {
+  return talkBase(topic) + TALK_LEVELS.indexOf(level);
+}
+
+/** Qué se dijo con una salida 19–26. */
+export function talkOf(index: number): { topic: TalkTopic; level: TalkLevel } {
+  const offset = index - FIRST_TALK_ACTION;
+  if (offset < 0 || offset >= 2 * TALK_LEVELS.length) throw new Error(`no es algo dicho: ${index}`);
+  return { topic: offset < TALK_LEVELS.length ? 'tanto' : 'cartas', level: TALK_LEVELS[offset % TALK_LEVELS.length] };
+}
 
 /** Máscara de una decisión de indicación del pie: solo las indicaciones de ese grupo. */
 export function instructionMask(kind: InstructionDecision): Uint8Array {

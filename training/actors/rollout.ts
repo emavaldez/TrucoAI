@@ -22,7 +22,15 @@ import {
   withInstruction,
   type TableTalk,
 } from '../../src/ai/tableTalk.js';
+import { claimMoments, trueLevel } from '../../src/ai/talk/claims.js';
+import { aiCardsAnswer, aiTantoAnswer, rivalPieStillToAct, tacticalDecision, type PublicClaim } from '../../src/ai/talk/team.js';
 import {
+  FIRST_TALK_ACTION,
+  TALK_LEVELS,
+  talkIndex,
+  talkMask,
+  talkOf,
+  type TalkTopic,
   CARD_INSTRUCTIONS,
   FIRST_CARD_INSTRUCTION,
   FIRST_TRUCO_INSTRUCTION,
@@ -42,7 +50,12 @@ import type { Mlp } from '../../src/ai/rl/mlp.js';
 import { loadMlp } from '../env/loadMlp.js';
 import { computeWTable, wValue, type HandDistribution, type WTable } from '../env/wtable.js';
 
-type AgentSpec = { kind: 'mlp'; path: string; greedy?: boolean } | { kind: 'heur'; difficulty: Difficulty } | { kind: 'self' };
+/**
+ * `mute`: se calla siempre (lo que dice queda como "calla"); `deaf`: no escucha (no ve lo dicho, y si es heurística
+ * no le cree a nadie). Sirven para medir cuánto vale hablar y escuchar (r4).
+ */
+type TalkFlags = { mute?: boolean; deaf?: boolean };
+type AgentSpec = ({ kind: 'mlp'; path: string; greedy?: boolean } | { kind: 'heur'; difficulty: Difficulty } | { kind: 'self' }) & TalkFlags;
 
 interface Job {
   mode: 'bc' | 'ppo' | 'eval' | 'wtable' | 'wtable-from-dist';
@@ -64,6 +77,8 @@ interface Job {
   b?: AgentSpec;
   /** ppo: premio por cumplir cada indicación del pie (se suma a la recompensa de esa decisión) */
   obeyBonus?: number;
+  /** r4: se habla en voz alta en la mesa (de qué temas); sin esto, nadie dice nada (como hasta r3) */
+  talk?: { topics: TalkTopic[] };
 }
 
 // ---------- agentes ----------
@@ -73,25 +88,41 @@ interface Agent {
   mlp?: Mlp;
   greedy?: boolean;
   policy?: Policy;
+  /** la red ve lo dicho (se entrenó con el tramo `claims`) */
+  hears?: boolean;
+  mute?: boolean;
+  deaf?: boolean;
+}
+
+/** Huellas de la observación: sin lo dicho (hasta r3) y con lo dicho (r4). */
+interface Hashes {
+  base: string;
+  claims: string;
 }
 
 const mlpCache = new Map<string, Mlp>();
 
-async function makeAgent(spec: AgentSpec, learner: Agent | null, name: string, expectedHash: string): Promise<Agent> {
+async function makeAgent(spec: AgentSpec, learner: Agent | null, name: string, hashes: Hashes): Promise<Agent> {
+  const flags = { mute: spec.mute, deaf: spec.deaf };
   if (spec.kind === 'self') {
     if (!learner) throw new Error('"self" sin red que aprende');
-    return learner;
+    return spec.mute || spec.deaf ? { ...learner, ...flags, name } : learner;
   }
-  if (spec.kind === 'heur') return { name, policy: createPolicy(spec.difficulty) };
+  if (spec.kind === 'heur') return { name, policy: createPolicy(spec.difficulty), ...flags };
   let mlp = mlpCache.get(spec.path);
   if (!mlp) {
     mlp = await loadMlp(spec.path);
-    if (mlp.meta.layoutHash !== expectedHash) {
-      throw new Error(`la red ${spec.path} se entrenó con otra observación (${mlp.meta.layoutHash} ≠ ${expectedHash})`);
+    if (mlp.meta.layoutHash !== hashes.base && mlp.meta.layoutHash !== hashes.claims) {
+      throw new Error(`la red ${spec.path} se entrenó con otra observación (${mlp.meta.layoutHash} ≠ ${hashes.base} / ${hashes.claims})`);
     }
     mlpCache.set(spec.path, mlp);
   }
-  return { name, mlp, greedy: spec.greedy };
+  return { name, mlp, greedy: spec.greedy, hears: mlp.meta.layoutHash === hashes.claims, ...flags };
+}
+
+/** ¿Esta red sabe hablar? (tiene las salidas 19–26) */
+function netTalks(agent: Agent): boolean {
+  return !!agent.mlp && agent.mlp.meta.nActions > FIRST_TALK_ACTION;
 }
 
 // ---------- buffers que crecen ----------
@@ -231,6 +262,34 @@ function emptyTalkStats(): TalkStats {
   return { cartas: CARD_INSTRUCTIONS.map(() => 0), truco: TRUCO_INSTRUCTIONS.map(() => 0), obey: { decisions: 0, ok: 0, bad: 0 } };
 }
 
+/**
+ * Lo que dice en voz alta la red que aprende (r4) y cómo escucha:
+ * - `tanto` / `cartas`: [lo que tiene de verdad (mucho, algo, nada)][lo que dijo (mucho, algo, nada, calla)].
+ *   El tanto se separa en `engano` (el pie rival todavía podía cantar: mentir podía convenir) y `resto`.
+ * - `escucha`: cuando la red es pie y puede abrir el envido en la 1ra baza, según lo que dijo del tanto el otro
+ *   equipo ("nada", "tiene" o nada dicho): [oportunidades, veces que cantó].
+ * - `engano`: manos en que el equipo de la red dijo "nada" de tanto teniendo 28 o más: en cuántas cantó el rival
+ *   y los puntos de envido netos.
+ */
+interface ClaimStats {
+  tanto: { engano: number[][]; resto: number[][] };
+  cartas: number[][];
+  escucha: Record<'nada' | 'tiene' | 'nada_dicho', [number, number]>;
+  engano: { hands: number; rivalSang: number; points: number };
+}
+
+function emptyClaimStats(): ClaimStats {
+  const grid = () => [0, 1, 2].map(() => [0, 0, 0, 0]);
+  return {
+    tanto: { engano: grid(), resto: grid() },
+    cartas: grid(),
+    escucha: { nada: [0, 0], tiene: [0, 0], nada_dicho: [0, 0] },
+    engano: { hands: 0, rivalSang: 0, points: 0 },
+  };
+}
+
+const TRUTH = ['mucho', 'algo', 'nada'] as const;
+
 /** ¿Este agente decide las indicaciones del pie con la red? (las redes de 2 jugadores no saben: heurística) */
 function netInstructs(agent: Agent): boolean {
   return !!agent.mlp && agent.mlp.meta.nActions > N_ENGINE_ACTIONS;
@@ -257,6 +316,7 @@ function playMatch(
   wtable: WTable | null,
   envido: EnvidoStats | null = null,
   talkStats: TalkStats | null = null,
+  claimStats: ClaimStats | null = null,
 ): MatchResult {
   let state = createMatch({ rules: { playerCount: job.players, flor: false, picaPica: false }, seed: matchSeed });
   const seatIndex = new Map(state.seats.map((seat) => [seat.id, seat.seat]));
@@ -265,6 +325,48 @@ function playMatch(
   const sang = new Map<PlayerId, keyof EnvidoStats>();
   const obeyBonus = job.obeyBonus ?? 0;
   let talk: TableTalk = EMPTY_TALK;
+  // Charla pública (r4): lo dicho en esta mano, qué momentos ya se hablaron, quién espera para subir el envido.
+  const withClaims = !!job.talk;
+  let claims: PublicClaim[] = [];
+  let said = new Set<string>();
+  let slowPlay = new Set<TeamId>();
+  const baitTeams = new Set<TeamId>();
+
+  /** La observación codificada para este agente: las redes de r4 ven lo dicho; las demás, no. */
+  const encodeFor = (agent: Agent, obs: ReturnType<typeof getObservation>, extras: ReturnType<typeof talkExtras>): Float32Array => {
+    const hears = agent.mlp ? agent.hears : withClaims;
+    return encodeObs(obs, hears ? { ...extras, claims: agent.deaf ? [] : claims } : extras);
+  };
+
+  /** Alguien dice algo en voz alta (o se calla) en un momento de la charla. */
+  const speak = (speaker: PlayerId, topic: TalkTopic, key: string): void => {
+    const seat = seatIndex.get(speaker) as number;
+    const agent = seatAgents[seat];
+    let level: PublicClaim['level'] = 'calla';
+    if (agent.mute) level = 'calla';
+    else if (netTalks(agent)) {
+      const x = encodeFor(agent, getObservation(state, speaker), talkExtras(state, talk, speaker));
+      const mask = talkMask(topic);
+      const choice = (agent.mlp as Mlp).act(x, mask, rng, agent.greedy);
+      level = talkOf(choice.action).level;
+      if (record(seat) && recorder) pushStep(speaker, { obs: x, priv: encodePriv(state, speaker), mask, act: choice.action, logp: choice.logp });
+    } else if (agent.policy) {
+      // La heurística contesta como en el juego: la verdad, salvo el engaño del envido (src/ai/talk/team.ts).
+      level = topic === 'tanto' ? aiTantoAnswer(state, speaker, rng).claim.level : aiCardsAnswer(state, speaker).claim.level;
+      if (record(seat) && recorder) {
+        const x = encodeFor(agent, getObservation(state, speaker), talkExtras(state, talk, speaker));
+        pushStep(speaker, { obs: x, priv: null, mask: talkMask(topic), act: talkIndex(topic, level), logp: 0 });
+      }
+    }
+    if (claimStats && record(seat) && agent.mlp) {
+      const truth = TRUTH.indexOf(trueLevel(topic, state.hand.dealt[speaker] ?? [], state.hand.hands[speaker] ?? []));
+      const grid = topic === 'cartas' ? claimStats.cartas : rivalPieStillToAct(state, speaker) ? claimStats.tanto.engano : claimStats.tanto.resto;
+      grid[truth][TALK_LEVELS.indexOf(level)] += 1;
+      if (topic === 'tanto' && level === 'nada' && truth === 0) baitTeams.add(teamOf(state, speaker));
+    }
+    said.add(key);
+    claims.push({ from: speaker, about: topic, level });
+  };
 
   const pushStep = (playerId: PlayerId, step: Step): void => {
     const steps = pending.get(playerId) ?? [];
@@ -288,7 +390,7 @@ function playMatch(
       if (netInstructs(agent)) {
         for (const kind of kinds) {
           const obs = getObservation(state, pie);
-          const x = encodeObs(obs, talkExtras(state, talk, pie));
+          const x = encodeFor(agent, obs, talkExtras(state, talk, pie));
           const mask = instructionMask(kind);
           const choice = (agent.mlp as Mlp).act(x, mask, rng, agent.greedy);
           const instruction = instructionOf(choice.action);
@@ -307,7 +409,7 @@ function playMatch(
           for (const kind of kinds) {
             const obs = getObservation(state, pie);
             const act = instructionIndex(kind, given.map((g) => g.kind));
-            pushStep(pie, { obs: encodeObs(obs, talkExtras(state, talk, pie)), priv: null, mask: instructionMask(kind), act, logp: 0 });
+            pushStep(pie, { obs: encodeFor(agent, obs, talkExtras(state, talk, pie)), priv: null, mask: instructionMask(kind), act, logp: 0 });
           }
         }
         for (const instruction of given) talk = withInstruction(state, talk, instruction);
@@ -316,6 +418,10 @@ function playMatch(
   };
 
   const startHand = (): void => {
+    claims = [];
+    said = new Set();
+    slowPlay = new Set();
+    baitTeams.clear();
     talk = dealTalk(state, () => true);
     pieTalk(true);
   };
@@ -355,6 +461,14 @@ function playMatch(
         g.dW += rewardFor(team);
       }
     }
+    if (claimStats) {
+      for (const team of baitTeams) {
+        claimStats.engano.hands += 1;
+        const first = state.hand.envido.chain[0];
+        if (first && first.team !== team) claimStats.engano.rivalSang += 1;
+        if (result) claimStats.engano.points += result.winnerTeam === team ? result.points : -result.points;
+      }
+    }
     pending.clear();
     sang.clear();
     talk = EMPTY_TALK;
@@ -371,15 +485,24 @@ function playMatch(
     const actor = getActor(state) as PlayerId;
     const seat = seatIndex.get(actor) as number;
     const agent = seatAgents[seat];
+    // Antes de que decida, hablan los que tienen que hablar ("¿canto tanto?", "¿qué hacemos?").
+    if (job.talk) for (const moment of claimMoments(state, actor, said, job.talk.topics)) speak(moment.speaker, moment.topic, moment.key);
     const obs = getObservation(state, actor);
     let action = obs.legalActions[0];
     decisions += 1;
     const extras = talkExtras(state, talk, actor);
     if (agent.mlp) {
-      const x = encodeObs(obs, extras);
+      const x = encodeFor(agent, obs, extras);
       const { mask, actions } = legalMask(obs);
       const choice = agent.mlp.act(x, mask, rng, agent.greedy);
       action = actions[choice.action] ?? action;
+      if (claimStats && record(seat) && obs.phase === 'PLAYING' && obs.tricks.length === 0 && mask[6]) {
+        // Escuchar: ¿canta envido distinto según lo que dijo del tanto el otro equipo?
+        const rivals = claims.filter((c) => c.about === 'tanto' && c.level !== 'calla' && teamOf(state, c.from) !== teamOf(state, actor));
+        const bucket = rivals.length === 0 ? 'nada_dicho' : rivals.some((c) => c.level !== 'nada') ? 'tiene' : 'nada';
+        claimStats.escucha[bucket][0] += 1;
+        if (ENVIDO_CALLS.has(choice.action)) claimStats.escucha[bucket][1] += 1;
+      }
       if (record(seat) && ENVIDO_CALLS.has(choice.action) && !sang.has(actor)) {
         sang.set(actor, envidoScore(state.hand.dealt[actor] ?? []) <= 23 ? 'farol' : 'tantos');
       }
@@ -395,11 +518,22 @@ function playMatch(
         if (recorder) pushStep(actor, { obs: x, priv: encodePriv(state, actor), mask, act: choice.action, logp: choice.logp, bonus: obeyBonus * obeyed });
       }
     } else if (agent.policy) {
-      action = agent.policy.decide(obs, rng, signalsFor(state, talk, actor), instructionsFor(state, talk, actor));
+      const signals = signalsFor(state, talk, actor);
+      // Con charla, la heurística escucha (le cree a lo dicho) y hace la jugada de esperar y subir, como en el juego.
+      const team = teamOf(state, actor);
+      const tactic = job.talk ? tacticalDecision({ state, actor, signals, advice: {}, slowPlaying: slowPlay.has(team) }) : null;
+      if (tactic?.slowPlay) slowPlay.add(team);
+      if (tactic?.action) action = tactic.action;
+      else {
+        const exclude = tactic?.exclude;
+        const view = exclude ? { ...obs, legalActions: obs.legalActions.filter((a) => !exclude(a)) } : obs;
+        const heard = job.talk && !agent.deaf ? claims : [];
+        action = agent.policy.decide(view, rng, signals, instructionsFor(state, talk, actor), heard);
+      }
       if (record(seat) && recorder && obs.legalActions.length > 1) {
         // Imitación: solo decisiones con opciones (con una sola legal no hay nada que aprender).
         const { mask } = legalMask(obs);
-        pushStep(actor, { obs: encodeObs(obs, extras), priv: null, mask, act: actionIndex(action, obs), logp: 0 });
+        pushStep(actor, { obs: encodeFor(agent, obs, extras), priv: null, mask, act: actionIndex(action, obs), logp: 0 });
       }
     }
     const result = applyAction(state, actor, action);
@@ -428,8 +562,9 @@ async function main(): Promise<void> {
   const job = JSON.parse(await readFile(process.argv[2], 'utf8')) as Job;
   const rng = createRng(job.seed >>> 0);
   const sample = getObservation(createMatch({ rules: { playerCount: job.players, flor: false, picaPica: false }, seed: 1 }), 'p0');
-  const layout = obsLayout(sample);
+  const layout = obsLayout(sample, !!job.talk);
   const hash = layoutHash(layout);
+  const hashes: Hashes = { base: layoutHash(obsLayout(sample)), claims: layoutHash(obsLayout(sample, true)) };
   const obsDim = layout.reduce((sum, part) => sum + part.size, 0);
   const n = job.players;
   const started = Date.now();
@@ -467,8 +602,8 @@ async function main(): Promise<void> {
   }
 
   if (job.mode === 'eval') {
-    const a = await makeAgent(job.a as AgentSpec, null, 'A', hash);
-    const b = await makeAgent(job.b as AgentSpec, null, 'B', hash);
+    const a = await makeAgent(job.a as AgentSpec, null, 'A', hashes);
+    const b = await makeAgent(job.b as AgentSpec, null, 'B', hashes);
     let winsA = 0;
     let games = 0;
     let pointsA = 0;
@@ -500,7 +635,7 @@ async function main(): Promise<void> {
     let decisions = 0;
     for (let m = 0; m < job.matches; m++) {
       const spec = pickWeighted(opponents, rng);
-      const opponent = await makeAgent(spec, null, spec.name ?? spec.kind, hash);
+      const opponent = await makeAgent(spec, null, spec.name ?? spec.kind, hashes);
       const teacherTeam = (m % 2) as TeamId;
       const agents = Array.from({ length: n }, (_, seat) => ((seat % 2) as TeamId) === teacherTeam ? teacher : opponent);
       const result = playMatch(job, job.seed * 100003 + m, agents, rng, (seat) => seat % 2 === teacherTeam, recorder, wtable);
@@ -511,27 +646,28 @@ async function main(): Promise<void> {
   }
 
   // ppo
-  const learner = await makeAgent({ kind: 'mlp', path: job.learner as string }, null, 'learner', hash);
+  const learner = await makeAgent({ kind: 'mlp', path: job.learner as string }, null, 'learner', hashes);
   const opponents = job.opponents ?? [{ kind: 'self', weight: 1 } as const];
   const recorder = new Recorder(obsDim, true);
   const stats: Record<string, { matches: number; wins: number }> = {};
   const envido = emptyEnvidoStats();
   const talkStats = emptyTalkStats();
+  const claimStats = emptyClaimStats();
   let decisions = 0;
   for (let m = 0; m < job.matches; m++) {
     const spec = pickWeighted(opponents, rng);
     const name = spec.name ?? (spec.kind === 'heur' ? `heur-${spec.difficulty}` : spec.kind);
-    const opponent = await makeAgent(spec, learner, name, hash);
+    const opponent = await makeAgent(spec, learner, name, hashes);
     const learnerTeam = (m % 2) as TeamId;
     const selfPlay = opponent === learner;
     const agents = Array.from({ length: n }, (_, seat) => ((seat % 2) as TeamId) === learnerTeam ? learner : opponent);
-    const result = playMatch(job, job.seed * 100003 + m, agents, rng, (seat) => selfPlay || seat % 2 === learnerTeam, recorder, wtable, envido, talkStats);
+    const result = playMatch(job, job.seed * 100003 + m, agents, rng, (seat) => selfPlay || seat % 2 === learnerTeam, recorder, wtable, envido, talkStats, job.talk ? claimStats : null);
     decisions += result.decisions;
     const entry = (stats[name] ??= { matches: 0, wins: 0 });
     entry.matches += 1;
     if (result.winnerTeam === learnerTeam) entry.wins += 1;
   }
-  await recorder.write(job.out, { mode: 'ppo', layoutHash: hash, players: job.players, matches: job.matches, decisions, stats, envido, talk: talkStats, seconds: (Date.now() - started) / 1000 });
+  await recorder.write(job.out, { mode: 'ppo', layoutHash: hash, players: job.players, matches: job.matches, decisions, stats, envido, talk: talkStats, ...(job.talk ? { claims: claimStats } : {}), seconds: (Date.now() - started) / 1000 });
 }
 
 main().catch((error) => {

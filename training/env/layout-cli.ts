@@ -3,8 +3,10 @@ import { createMatch, getObservation } from '../../src/engine/index.js';
 import { ACTION_NAMES } from '../../src/ai/rl/actions.js';
 import { layoutHash, obsLayout, PRIV_DIM } from '../../src/ai/rl/encode.js';
 
+// node --import tsx training/env/layout-cli.ts <jugadores> [--claims]   (--claims: con lo dicho en voz alta, r4)
 const players = Number(process.argv[2] ?? 2) as 2 | 4 | 6;
-const layout = obsLayout(getObservation(createMatch({ rules: { playerCount: players, flor: false, picaPica: false }, seed: 1 }), 'p0'));
+const withClaims = process.argv.includes('--claims');
+const layout = obsLayout(getObservation(createMatch({ rules: { playerCount: players, flor: false, picaPica: false }, seed: 1 }), 'p0'), withClaims);
 console.log(
   JSON.stringify({
     obsDim: layout.reduce((sum, part) => sum + part.size, 0),

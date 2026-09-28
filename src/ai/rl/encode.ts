@@ -8,6 +8,9 @@ import { envidoScore } from '../../engine/index.js';
 import type { MatchState, Observation, PlayerId } from '../../engine/index.js';
 import type { Signal, SignKind } from '../signs.js';
 import { signalsFor, teamInstructions, type TableTalk } from '../tableTalk.js';
+import { latestClaims } from '../talk/claims.js';
+import type { PublicClaim } from '../talk/team.js';
+import { TALK_LEVELS } from './actions.js';
 import { cardIndex, cardRank, envidoValue, sortedHand, suitIndex } from './cards.js';
 
 export const MAX_SEATS = 6;
@@ -76,6 +79,11 @@ export interface EncodeExtras {
    * también ve las suyas: sabe lo que dijo. Salen de `teamInstructions` (src/ai/tableTalk.ts).
    */
   instructions?: readonly Instruction[];
+  /**
+   * Lo dicho en voz alta en esta mano (r4). Si viene (aunque sea vacío), la observación tiene el tramo `claims`
+   * al final: las redes de r4 lo ven; las anteriores no (su observación no cambia).
+   */
+  claims?: readonly PublicClaim[];
 }
 
 function build(obs: Observation, extras: EncodeExtras = {}): Builder {
@@ -207,6 +215,16 @@ function build(obs: Observation, extras: EncodeExtras = {}): Builder {
   for (const kind of extras.instructions ?? []) instruction(INSTRUCTIONS.indexOf(kind), 1);
 
   b.scalar('picaPica', obs.picaPica !== null ? 1 : 0);
+
+  // Lo dicho en voz alta (solo en la observación de las redes que hablan): por asiento relativo, lo último que
+  // dijo del tanto y de las cartas (mucho, algo, nada o se calló).
+  if (extras.claims !== undefined) {
+    const put = b.section('claims', MAX_SEATS * 2 * TALK_LEVELS.length);
+    for (const claim of latestClaims(extras.claims)) {
+      const topic = claim.about === 'tanto' ? 0 : 1;
+      put((rel(claim.from) * 2 + topic) * TALK_LEVELS.length + TALK_LEVELS.indexOf(claim.level), 1);
+    }
+  }
   return b;
 }
 
@@ -237,8 +255,8 @@ export function layoutHash(layout: { name: string; size: number }[]): string {
 }
 
 /** Tramos del vector (nombre y tamaño), para documentar y verificar compatibilidad. */
-export function obsLayout(sample: Observation): { name: string; size: number }[] {
-  return build(sample).layout;
+export function obsLayout(sample: Observation, withClaims = false): { name: string; size: number }[] {
+  return build(sample, withClaims ? { claims: [] } : {}).layout;
 }
 
 export const PRIV_DIM = (MAX_SEATS - 1) * 41;

@@ -241,3 +241,25 @@ truco en la 1ra baza ofrece «El envido está primero»; la espera sube a 10 s c
 estás escribiendo o hablando; los compañeros preguntan antes de jugar («¿qué juego?», «¿qué tiro?», «¿qué hago?»)
 al pie en la 1ra baza y a todos desde la 2da, con el pie primero; preguntas nuevas «¿tienen algo?», «¿qué tenés?»,
 «¿qué te queda?»; voz elegida por calidad (rioplatense y natural primero) y elegible en el menú.
+
+## 2026-09-28 — r4-piloto: la red habla y escucha (diseño)
+
+Pregunta de Emmanuel: ¿se puede entrenar a la IA reaccionando a lo que dicen los demás, con todos los asientos
+aprendiendo a la vez, para ver qué dice y cómo reacciona cada posición? Sí: hasta r3 la red no veía nada de lo que
+se decía (el engaño y el escuchar eran reglas encima de la red).
+
+Diseño del piloto (4 jugadores, solo el tanto; `config/r4-piloto.json`):
+- **Hablar es una decisión más:** salidas 19–26 (del tanto y de las cartas: mucho, algo, nada, callarse), en los
+  mismos momentos que las consultas del juego (`src/ai/talk/claims.ts`). El premio sigue siendo solo ganar: nadie le
+  enseña a mentir ni a desconfiar.
+- **Escuchar:** 48 entradas nuevas al final de la observación (lo último que dijo cada asiento). Las redes viejas
+  no las ven (su observación no cambia: huella 78d8b04c; la de r4 es 956879f1).
+- **Desde r3 sin perder lo aprendido:** entradas y salidas nuevas en cero (verificado: mismas salidas que r3). La
+  imitación es solo de lo que se dice; el resto de la red no se toca.
+- **Una sola red para todos los asientos** (self-play), con la liga y las heurísticas que escuchan y engañan, para
+  que no invente un idioma que solo entiende ella. Los dichos tienen un significado verificable (mucho = 28+).
+- **Qué se mide:** honestidad por lo que tiene y por si el engaño podía convenir, cuánto cambia su envido según lo
+  que oyó, cómo le va al engaño, y duelos contra sí misma callada y sorda (¿sirve hablar? ¿sirve escuchar?).
+- Riesgo (resultado interesante en sí): que la charla termine sin significar nada (equilibrio de "balbuceo").
+- Prueba local (2 núcleos, `--smoke`): corre de punta a punta; al empezar, igual que r3 contra la difícil (73% en
+  600 partidas) y 49% contra r3.

@@ -61,6 +61,24 @@ sigue con PPO. En la terminal, además de lo de siempre: `por jugadores` (contra
 Con `eval.gauntlet`, cada 10 iteraciones además de la difícil juega duelos contra redes fijas (versiones
 anteriores y atacantes), y la "mejor red" se elige por el promedio de esos duelos.
 
+**La red que habla y escucha (r4, piloto):** `bash training/train.sh r4-piloto` (usa `config/r4-piloto.json`).
+Necesita `runs/r3/ckpt/iter_000560.pt` y `runs/r3/policies/best`. Solo 4 jugadores y solo el tanto:
+- Arranca de r3 con 48 entradas nuevas (lo último que dijo cada asiento del tanto y de las cartas: mucho, algo,
+  nada o se calló) y 8 salidas nuevas (qué decir), todas en cero: al principio juega exactamente como r3.
+- Se habla en los mismos momentos que en el juego (`src/ai/talk/claims.ts`): cuando el pie va a decidir en la
+  1ra baza y todavía puede cantar envido, sus compañeros dicen algo del tanto (o se callan). Todo es público.
+- La imitación es solo de lo que se dice (la heurística dice la verdad, salvo el engaño del envido); el resto
+  de la red no se toca. Después, PPO contra sí misma, la liga y las heurísticas, que escuchan (le creen 75%) y
+  hacen la jugada de esperar y subir.
+- En la terminal, la línea `charla`: qué dice según lo que tiene (`dice_tanto_<verdad>_engano` cuando el pie
+  rival todavía podía cantar, `_resto` el resto), cuánto miente (`miente_nada_con_mucho`,
+  `miente_mucho_con_nada`), cuánto canta envido según lo que oyó del otro equipo (`canta_si_nada`,
+  `canta_si_tiene`, `canta_si_nada_dicho`) y cómo le va al engaño (`engano_rival_canta`, `engano_pts`).
+- Cada 20 iteraciones, además de la difícil y r3, juega contra sí misma **callada** y **sorda**: si le gana,
+  hablar (o escuchar) le sirve.
+
+Un duelo con charla: `python training/learner/run.py duel --a runs/r4-piloto/policies/best --b hard --players 4 --talk tanto`.
+
 ## Registro (para la tesis)
 
 Todo lo que se corre queda registrado en git, en `results/`:

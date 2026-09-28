@@ -14,7 +14,8 @@ import type { Signal } from '../signs.js';
 export interface PublicClaim {
   from: PlayerId;
   about: 'tanto' | 'cartas';
-  level: 'mucho' | 'algo' | 'nada';
+  /** 'calla': le tocaba hablar (le preguntaron) y no dijo nada (r4: la red también puede callarse) */
+  level: 'mucho' | 'algo' | 'nada' | 'calla';
 }
 
 /** Consejo del equipo para el que decide (el pie o el que contesta). */
@@ -28,6 +29,7 @@ export interface TeamAdvice {
 
 /** Si alguien le cree a un dicho: condición sobre sus 3 cartas repartidas. */
 export function claimTest(claim: PublicClaim): (dealt: readonly Card[]) => boolean {
+  if (claim.level === 'calla') return () => true;
   if (claim.about === 'tanto') {
     if (claim.level === 'mucho') return (dealt) => envidoScore(dealt) >= 28;
     if (claim.level === 'algo') return (dealt) => envidoScore(dealt) >= 24;

@@ -1,0 +1,38 @@
+{
+  "_comment": "r4-piloto: la red habla y escucha (charla pública), solo 4 jugadores y solo del tanto. Arranca de r3 (iteración 560, la mejor) con 48 entradas nuevas (lo dicho por cada asiento, en cero: al principio juega igual que r3) y 8 salidas nuevas (qué decir del tanto y de las cartas). Imitación solo de lo que se dice (la heurística dice la verdad salvo el engaño del envido), sin tocar el resto de la red. Después PPO contra sí misma, la liga y las heurísticas (que escuchan y hacen el engaño de esperar y subir). Se evalúa contra la difícil, contra r3 y contra sí misma callada y sorda (¿sirve hablar? ¿sirve escuchar?).",
+  "players": 4,
+  "seed": 4,
+  "workers": 16,
+  "talk": {"topics": ["tanto"]},
+  "init": {"fromCkpt": "runs/r3/ckpt/iter_000560.pt", "wtableFrom": "r3"},
+  "wtable": {"matches": 8000},
+  "bc": {
+    "matches": 4000,
+    "playerMix": {"4": 1},
+    "onlyTalk": true,
+    "epochs": 6,
+    "batch": 512,
+    "lr": 1e-3,
+    "evalPairs": 300
+  },
+  "ppo": {
+    "matchesPerIter": 1024,
+    "minibatch": 8192,
+    "iterations": 300,
+    "playerMix": {"4": 1},
+    "klBc": 0.01,
+    "klBcFinal": 0.002,
+    "klBcDecayIters": 200,
+    "obeyBonus": {"start": 0.005, "floor": 0.005, "decayIters": 1}
+  },
+  "eval": {
+    "every": 20,
+    "pairs": 300,
+    "opponent": "hard",
+    "players": [4],
+    "select": [4],
+    "gauntlet": {"pairs": 300, "opponents": ["hard", "runs/r3/policies/best"]},
+    "talkAblation": true
+  },
+  "checkpoint": {"keepLast": 5, "keepBest": 3, "backupDir": null}
+}

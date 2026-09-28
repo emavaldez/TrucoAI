@@ -44,6 +44,7 @@ from common import (  # noqa: E402
     export_policy,
     git_commit,
     load_chunks,
+    load_critic_weights,
     load_policy_weights,
     log,
     masked_logits,
@@ -133,7 +134,8 @@ class Run:
         atomic_write_bytes(cfg_path, json.dumps(config, indent=2).encode())
         self.cfg = config
         self.workers = workers or config.get("workers") or default_workers()
-        self.layout = obs_layout(config["players"])
+        # r4: con charla pública, la observación suma lo dicho en voz alta (tramo `claims`).
+        self.layout = obs_layout(config["players"], claims=bool(config.get("talk")))
         self.dev = device()
         self.log_path = self.dir / "log.jsonl"
         manifest = self.dir / "manifest.json"
@@ -175,6 +177,12 @@ class Run:
             if src and src.exists() and not self.done("wtable"):
                 shutil.copy2(src, self.dir / "wtable.json")
                 self.mark("wtable", {"from": init["wtableFrom"]})
+            # También las tablas de 4 y 6 jugadores, si la corrida de origen las tiene (r4 desde r3).
+            for n in (4, 6):
+                src_n = TRAINING / "runs" / init["wtableFrom"] / f"wtable-{n}.json" if init.get("wtableFrom") else None
+                if src_n and src_n.exists() and not self.done(f"wtable-{n}"):
+                    shutil.copy2(src_n, self.wtable_path(n))
+                    self.mark(f"wtable-{n}", {"from": init["wtableFrom"]})
             return
         parent = TRAINING / "runs" / init["fromRun"]
         ck = parent / "ckpt" / f"iter_{init['iter']:06d}.pt"
@@ -185,6 +193,10 @@ class Run:
         for phase in ("wtable", "bcdata", "bc"):
             self.mark(phase, {"from": init["fromRun"], "iter": init["iter"]})
         log(f"sigue desde {init['fromRun']} iteración {init['iter']}")
+
+    def talk_job(self) -> dict:
+        """Lo que va en los trabajos de los actores si se habla en la mesa (r4)."""
+        return {"talk": self.cfg["talk"]} if self.cfg.get("talk") else {}
 
     def done(self, phase: str) -> bool:
         return (self.dir / f"{phase}.done").exists()
@@ -284,7 +296,7 @@ class Run:
         chunks = self.jobs_by_players(c["matches"], self.mix("bc"), max(self.workers * 4, 1))
         jobs = [
             {"mode": "bc", "seed": self.seed(2, i), "matches": m, "players": n, "out": str(out / f"bc{i:04d}"),
-             "teacher": c["teacher"], "opponents": c["opponents"], "wtable": str(self.wtable_path(n))}
+             "teacher": c["teacher"], "opponents": c["opponents"], "wtable": str(self.wtable_path(n)), **self.talk_job()}
             for i, (n, m) in enumerate(chunks)
         ]
         run_actors(jobs, out / "jobs", self.workers)
@@ -302,6 +314,14 @@ class Run:
         log("fase 3/4: imitación de la heurística")
         prefixes = sorted(Path(p[: -len(".meta.json")]) for p in glob.glob(str(self.dir / "bcdata" / "bc*.meta.json")))
         data = load_chunks(prefixes)
+        only_talk = bool(c.get("onlyTalk"))
+        first_talk = self.layout["actions"].index("DICE_TANTO_MUCHO") if "DICE_TANTO_MUCHO" in self.layout["actions"] else None
+        if only_talk:
+            # r4: la red ya sabe jugar (viene de r3). Solo aprende a hablar como la heurística (la verdad, salvo el
+            # engaño del envido); el resto de la red queda igual.
+            keep = np.nonzero(data.act >= first_talk)[0]
+            data.obs, data.mask, data.act = data.obs[keep], data.mask[keep], data.act[keep]
+            log(f"imitación solo de lo que se dice: {len(keep)} decisiones")
         n = len(data.act)
         rng = np.random.default_rng(self.seed(3))
         order = rng.permutation(n)
@@ -319,8 +339,16 @@ class Run:
         if "fromCkpt" in init:
             ck = torch.load(training_path(init["fromCkpt"]), map_location="cpu", weights_only=False)
             added = load_policy_weights(policy, ck["policy"])
-            log(f"la imitación arranca de {init['fromCkpt']} (+{added} salidas nuevas: indicaciones del pie)")
-        opt = torch.optim.Adam(policy.parameters(), lr=c["lr"])
+            log(f"la imitación arranca de {init['fromCkpt']} (+{added} salidas nuevas; entradas nuevas en cero)")
+        if only_talk:
+            for layer in policy.layers[:-1]:
+                layer.requires_grad_(False)
+            keep_rows = torch.zeros(self.layout["nActions"], 1, device=self.dev)
+            keep_rows[first_talk:] = 1
+            last = policy.layers[-1]
+            last.weight.register_hook(lambda g: g * keep_rows)
+            last.bias.register_hook(lambda g: g * keep_rows.squeeze(1))
+        opt = torch.optim.Adam([q for q in policy.parameters() if q.requires_grad], lr=c["lr"])
         steps_per_epoch = math.ceil(len(train_idx) / c["batch"])
         sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=max(1, steps_per_epoch * c["epochs"]))
 
@@ -365,8 +393,13 @@ class Run:
     # ---------- evaluación ----------
 
     @staticmethod
-    def opponent_spec(opponent: str) -> dict:
-        """'hard' / 'normal' / 'easy' (heurísticas) o 'mlp:<ruta sin extensión>' (una red)."""
+    def opponent_spec(opponent: str, policy_base: Path | None = None) -> dict:
+        """
+        'hard' / 'normal' / 'easy' (heurísticas), 'mlp:<ruta sin extensión>' (una red), o 'self-mute' / 'self-deaf'
+        (la misma red que se evalúa, pero callada o sorda: cuánto vale hablar y escuchar, r4).
+        """
+        if opponent in ("self-mute", "self-deaf"):
+            return {"kind": "mlp", "path": str(policy_base), opponent[5:]: True}
         if opponent.startswith("mlp:"):
             return {"kind": "mlp", "path": opponent[4:]}
         return {"kind": "heur", "difficulty": opponent}
@@ -377,7 +410,7 @@ class Run:
         n_players = players or self.cfg["players"]
         jobs = [
             {"mode": "eval", "seed": 777_000 + i, "matches": m, "players": n_players, "out": str(tmp / f"e{i}.json"),
-             "a": {"kind": "mlp", "path": str(policy_base)}, "b": self.opponent_spec(opponent)}
+             "a": {"kind": "mlp", "path": str(policy_base)}, "b": self.opponent_spec(opponent, policy_base), **self.talk_job()}
             for i, m in enumerate(split_matches(pairs, self.workers))
         ]
         started = time.time()
@@ -447,7 +480,7 @@ class Run:
             if "fromCkpt" in init:
                 # El crítico de la corrida de origen es mejor punto de partida que uno al azar.
                 ck = torch.load(training_path(init["fromCkpt"]), map_location="cpu", weights_only=False)
-                critic.load_state_dict(ck["critic"])
+                load_critic_weights(critic, ck["critic"], self.layout["obsDim"], self.layout["privDim"])
             log("fase 4/4: PPO — arranco desde la red de imitación")
         pol_dir = self.dir / "policies"
 
@@ -463,7 +496,8 @@ class Run:
             obey_bonus = ob["floor"] + (ob["start"] - ob["floor"]) * max(0.0, 1 - it / max(1, ob["decayIters"]))
             jobs = [
                 {"mode": "ppo", "seed": self.seed(4, it, i), "matches": m, "players": n, "out": str(tmp / f"r{i:03d}"),
-                 "learner": str(current), "opponents": opponents, "wtable": str(self.wtable_path(n)), "obeyBonus": obey_bonus}
+                 "learner": str(current), "opponents": opponents, "wtable": str(self.wtable_path(n)), "obeyBonus": obey_bonus,
+                 **self.talk_job()}
                 for i, (n, m) in enumerate(self.jobs_by_players(c["matchesPerIter"], self.mix("ppo"), self.workers))
             ]
             run_actors(jobs, tmp / "jobs", self.workers)
@@ -484,6 +518,9 @@ class Run:
             talk = self.talk_metrics(data.metas, obey_bonus)
             if talk:
                 record["talk"] = talk
+            claims = self.claim_metrics(data.metas)
+            if claims:
+                record["claims"] = claims
             self.event("ppo_iter", **record)
             log(f"iter {it}: {len(data.act)} decisiones en {dt:.1f}s ({record['steps_per_s']}/s) · "
                 f"pérdida pol {metrics['loss_pi']:.3f} val {metrics['loss_v']:.4f} ent {metrics['entropy']:.3f} "
@@ -497,6 +534,8 @@ class Run:
                 log(f"   por jugadores {shown}")
             if talk:
                 log(f"   pie {talk}")
+            if claims:
+                log(f"   charla {claims}")
 
             if it % c["snapshotEvery"] == 0:
                 snap = pol_dir / f"iter_{it:06d}"
@@ -530,6 +569,11 @@ class Run:
                     self.update_best(state, it, {**result, "winrate": score}, policy)
                 else:
                     self.update_best(state, it, result, policy)
+                if e.get("talkAblation"):
+                    # ¿Sirve hablar? ¿Sirve escuchar? La red contra sí misma callada y contra sí misma sorda.
+                    mute = self.evaluate(current, e["pairs"], "self-mute", tag=f"iter{it}-vs-callada")
+                    deaf = self.evaluate(current, e["pairs"], "self-deaf", tag=f"iter{it}-vs-sorda")
+                    self.event("talk_ablation", iter=it, vsMute=mute["winrate"], vsDeaf=deaf["winrate"])
             self.save_ckpt(policy, critic, opt, state, it)
 
     def load_training(self, ck: dict, policy, critic, opt) -> None:
@@ -575,6 +619,57 @@ class Run:
         if obey[0]:
             out["obedece"] = round(float(obey[1] / obey[0]), 3)
         out["premio_obedecer"] = round(obey_bonus, 4)
+        return out
+
+    @staticmethod
+    def claim_metrics(metas: list[dict]) -> dict:
+        """
+        Lo que dice la red en voz alta (r4) y cómo escucha:
+        - dice_tanto_<verdad>: con mucho / algo / nada de tanto, qué dice (mucho, algo, nada, calla), cuando el pie
+          rival todavía podía cantar (`_engano`: mentir puede convenir) y el resto;
+        - miente_*: dijo "nada" teniendo 28 o más, o "mucho" teniendo 23 o menos;
+        - canta_si_*: siendo pie en la 1ra baza, cuánto canta envido según lo que dijo del tanto el otro equipo;
+        - engano_*: manos en que su equipo dijo "nada" con 28 o más: cuánto cantó el rival y puntos de envido netos.
+        """
+        grids = {"engano": np.zeros((3, 4)), "resto": np.zeros((3, 4))}
+        cartas = np.zeros((3, 4))
+        listen = {k: np.zeros(2) for k in ("nada", "tiene", "nada_dicho")}
+        bait = np.zeros(3)
+        found = False
+        for meta in metas:
+            cl = meta.get("claims")
+            if not cl:
+                continue
+            found = True
+            for k in grids:
+                grids[k] += np.array(cl["tanto"][k])
+            cartas += np.array(cl["cartas"])
+            for k in listen:
+                listen[k] += cl["escucha"][k]
+            bait += [cl["engano"]["hands"], cl["engano"]["rivalSang"], cl["engano"]["points"]]
+        if not found:
+            return {}
+        out: dict = {}
+        levels = ("mucho", "algo", "nada", "calla")
+        for k, g in grids.items():
+            for i, truth in enumerate(("mucho", "algo", "nada")):
+                if g[i].sum():
+                    out[f"dice_tanto_{truth}_{k}"] = {lv: round(float(v / g[i].sum()), 2) for lv, v in zip(levels, g[i])}
+        total = grids["engano"] + grids["resto"]
+        if total[0].sum():
+            out["miente_nada_con_mucho"] = round(float(total[0][2] / total[0].sum()), 3)
+        if total[2].sum():
+            out["miente_mucho_con_nada"] = round(float(total[2][0] / total[2].sum()), 3)
+        if cartas.sum():
+            out["dice_cartas"] = {truth: {lv: round(float(v / max(1, cartas[i].sum())), 2) for lv, v in zip(levels, cartas[i])}
+                                  for i, truth in enumerate(("mucho", "algo", "nada"))}
+        for k, (opp, calls) in listen.items():
+            if opp:
+                out[f"canta_si_{k}"] = round(float(calls / opp), 3)
+        if bait[0]:
+            out["engano_manos"] = int(bait[0])
+            out["engano_rival_canta"] = round(float(bait[1] / bait[0]), 3)
+            out["engano_pts"] = round(float(bait[2] / bait[0]), 2)
         return out
 
     def league_opponents(self, state: dict, c: dict) -> list[dict]:
@@ -721,12 +816,14 @@ class Run:
         resp_envido = m[:, 9]
         turno = ~resp_truco & ~resp_envido & (m[:, 3] | m[:, 6])
         # Decisiones de indicación del pie (acciones 12–18; solo en 4 y 6 jugadores).
-        indica = m[:, 12:].any(1) if m.shape[1] > 12 else np.zeros(len(m), dtype=bool)
-        cartas = ~resp_truco & ~resp_envido & ~turno & ~indica
+        indica = m[:, 12:19].any(1) if m.shape[1] > 12 else np.zeros(len(m), dtype=bool)
+        # Lo que se dice en voz alta (acciones 19–26; r4).
+        habla = m[:, 19:].any(1) if m.shape[1] > 19 else np.zeros(len(m), dtype=bool)
+        cartas = ~resp_truco & ~resp_envido & ~turno & ~indica & ~habla
         ent_np = ent.cpu().numpy()
         ent_by = {name: round(float(ent_np[sel].mean()), 3) for name, sel in
                   (("cartas", cartas), ("turno", turno), ("resp_truco", resp_truco), ("resp_envido", resp_envido),
-                   ("indica", indica)) if sel.any()}
+                   ("indica", indica), ("habla", habla)) if sel.any()}
 
         def rate(sel: np.ndarray, hit: np.ndarray) -> float | None:
             return round(float(hit[sel].mean()), 3) if sel.any() else None
@@ -929,7 +1026,8 @@ def cmd_duel(args) -> None:
     remove_tree(tmp)
     jobs = [
         {"mode": "eval", "seed": args.seed + i, "matches": m, "players": args.players, "out": str(tmp / f"e{i}.json"),
-         "a": {"kind": "mlp", "path": str(a)}, "b": b_spec}
+         "a": {"kind": "mlp", "path": str(a)}, "b": b_spec,
+         **({"talk": {"topics": args.talk.split(",")}} if args.talk else {})}
         for i, m in enumerate(split_matches(args.pairs, workers))
     ]
     started = time.time()
@@ -946,7 +1044,7 @@ def cmd_duel(args) -> None:
     record = {"date": time.strftime("%Y-%m-%d %H:%M"), "a": policy_label(args.a), "b": policy_label(args.b),
               "players": args.players, "games": games, "winrate": wins / games, "ci90": [low, high],
               "pointsPerGame": [pa / games, pb / games], "seed": args.seed, "commit": git_commit(),
-              "seconds": round(time.time() - started, 1), "note": args.note or ""}
+              "seconds": round(time.time() - started, 1), "note": args.note or "", **({"talk": args.talk} if args.talk else {})}
     RESULTS.mkdir(parents=True, exist_ok=True)
     append_jsonl(RESULTS / "duelos.jsonl", record)
     log(f"{record['a']} vs {record['b']}: {100 * wins / games:.1f}% (IC90 {100 * low:.1f}–{100 * high:.1f}) en {games} partidas"
@@ -1040,6 +1138,7 @@ def main() -> None:
     du.add_argument("--seed", type=int, default=888_000)
     du.add_argument("--workers", type=int)
     du.add_argument("--note", help="para qué se corrió (queda en el registro)")
+    du.add_argument("--talk", help="con charla pública (r4): temas separados por coma, p. ej. tanto o tanto,cartas")
     ar = sub.add_parser("archive", help="guarda el registro de una corrida (y opcionalmente una copia de respaldo)")
     ar.add_argument("--run", required=True)
     ar.add_argument("--backup", help="carpeta de respaldo fuera del repo (iCloud, disco externo)")

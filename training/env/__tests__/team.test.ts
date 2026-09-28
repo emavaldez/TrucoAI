@@ -70,8 +70,9 @@ describe('charla de la mesa (compartida con el juego)', () => {
 describe('indicaciones como acciones de la red', () => {
   it('7 acciones nuevas después de las 12 del motor', () => {
     expect(N_ENGINE_ACTIONS).toBe(12);
-    expect(N_ACTIONS).toBe(19);
-    expect(ACTION_NAMES.slice(12)).toEqual([
+    // Desde r4 hay 8 salidas más al final (lo que se dice); las de las indicaciones no se mueven.
+    expect(N_ACTIONS).toBe(27);
+    expect(ACTION_NAMES.slice(12, 19)).toEqual([
       'INDICA_MATA',
       'INDICA_PASA',
       'INDICA_PARDA',

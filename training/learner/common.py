@@ -40,9 +40,10 @@ def default_workers() -> int:
 
 # ---------- layout de la observación (lo dice el TS) ----------
 
-def obs_layout(players: int = 2) -> dict:
+def obs_layout(players: int = 2, claims: bool = False) -> dict:
+    """claims: con el tramo de lo dicho en voz alta (r4)."""
     out = subprocess.run(
-        ["node", "--import", "tsx", "training/env/layout-cli.ts", str(players)],
+        ["node", "--import", "tsx", "training/env/layout-cli.ts", str(players), *(["--claims"] if claims else [])],
         cwd=REPO, check=True, capture_output=True, text=True,
     )
     return json.loads(out.stdout)
@@ -67,18 +68,33 @@ class PolicyNet(nn.Module):
         return x
 
 
+def grow_input(src: torch.Tensor, new_in: int, at: int) -> torch.Tensor:
+    """Pesos de una capa lineal con más entradas: columnas en cero insertadas en `at` (la red las ignora al principio)."""
+    extra = new_in - src.shape[1]
+    if extra < 0:
+        raise ValueError(f"la capa tiene {src.shape[1]} entradas y la red nueva {new_in}")
+    if extra == 0:
+        return src
+    zeros = torch.zeros(src.shape[0], extra, dtype=src.dtype)
+    return torch.cat([src[:, :at], zeros, src[:, at:]], dim=1)
+
+
 def load_policy_weights(policy: PolicyNet, state_dict: dict) -> int:
     """
     Carga pesos en `policy` aunque vengan de una red con menos salidas (las de 2 jugadores tienen 12;
-    desde la fase de equipos son 19: se suman las indicaciones del pie). Las salidas nuevas arrancan en
-    cero (todas las indicaciones igual de probables). Devuelve cuántas salidas se agregaron.
+    desde la fase de equipos son 19: se suman las indicaciones del pie; desde r4, 27: lo que se dice) o con
+    menos entradas (r4 agrega al final de la observación lo dicho en voz alta). Las salidas y entradas nuevas
+    arrancan en cero: la red juega igual que antes hasta que aprende a usarlas. Devuelve cuántas salidas se agregaron.
     """
     own = policy.state_dict()
     last = f"layers.{len(policy.layers) - 1}"
     added = 0
     fixed = dict(state_dict)
+    first = "layers.0.weight"
+    if fixed[first].shape[1] != own[first].shape[1]:
+        fixed[first] = grow_input(fixed[first], own[first].shape[1], fixed[first].shape[1])
     for key in (f"{last}.weight", f"{last}.bias"):
-        src, dst = state_dict[key], own[key]
+        src, dst = fixed[key], own[key]
         if src.shape != dst.shape:
             if src.shape[0] > dst.shape[0] or src.shape[1:] != dst.shape[1:]:
                 raise ValueError(f"{key}: {tuple(src.shape)} no entra en {tuple(dst.shape)}")
@@ -104,6 +120,16 @@ class CriticNet(nn.Module):
 
     def forward(self, obs: torch.Tensor, priv: torch.Tensor) -> torch.Tensor:
         return self.net(torch.cat([obs, priv], dim=-1)).squeeze(-1)
+
+
+def load_critic_weights(critic: CriticNet, state_dict: dict, obs_dim: int, priv_dim: int) -> int:
+    """Pesos de un crítico con menos entradas de observación (r4): columnas en cero antes de las manos ajenas."""
+    fixed = dict(state_dict)
+    w = fixed["net.0.weight"]
+    old_obs = w.shape[1] - priv_dim
+    fixed["net.0.weight"] = grow_input(w, obs_dim + priv_dim, old_obs)
+    critic.load_state_dict(fixed)
+    return obs_dim - old_obs
 
 
 def masked_logits(logits: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
