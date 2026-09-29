@@ -1,0 +1,10 @@
+{
+  "run": "r4-piloto",
+  "created": "2026-09-28 16:37:40",
+  "commit": "9c7997d9951f5c1907e999f26e3e942e8c1f37ca",
+  "layoutHash": "956879f1",
+  "obsDim": 1054,
+  "machine": "macOS-26.6.2-arm64-arm-64bit",
+  "python": "3.12.13",
+  "torch": "2.14.0"
+}

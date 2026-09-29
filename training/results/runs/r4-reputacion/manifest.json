@@ -1,0 +1,10 @@
+{
+  "run": "r4-reputacion",
+  "created": "2026-09-28 19:15:11",
+  "commit": "cb2a87e2d8707d8b1f42b079ead5ebb7bac04e3c",
+  "layoutHash": "d2aaf8cd",
+  "obsDim": 1066,
+  "machine": "macOS-26.6.2-arm64-arm-64bit",
+  "python": "3.12.13",
+  "torch": "2.14.0"
+}

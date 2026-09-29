@@ -285,3 +285,16 @@ Diseño del piloto (4 jugadores, solo el tanto; `config/r4-piloto.json`):
 - Más partidas contra heurísticas que escuchan (20% difícil). Duelos contra la difícil, r3, r4-piloto y contra sí
   misma callada y sorda.
 - Prueba local (`--smoke`): corre de punta a punta.
+
+## 2026-09-28 19:15–20:34 — r4-reputación: las cartas conservan el significado; el tanto no (`results/r4-reputacion.md`)
+
+- Fuerza: igual que r4-piloto (≈50% entre ellas), 72–78% contra la difícil, contra r3 de 55% a ≈50%. Contra sí misma
+  callada o sorda, ≈50%.
+- Lo dicho de las cartas sigue informando (con buenas dice "mucho" 41%, seco 10%); lo del tanto se degrada otra
+  vez (queda poco de información). Lo pescan mintiendo 10% → 22%.
+- La reputación no cambió cómo escucha (le cree igual, o un poco más, al que ya pescó mintiendo; probablemente
+  confundido con el momento de la partida).
+- Para la tesis: la comunicación sobrevive donde los intereses del que habla y del que escucha coinciden (el
+  compañero necesita saber qué queda) y colapsa donde solo sirve para engañar (el tanto, que el compañero ya sabe).
+- Registro en `results/runs/r4-piloto/` y `results/runs/r4-reputacion/` (el `archive` ahora guarda también los
+  duelos contra sí misma callada y sorda y la última línea de charla).

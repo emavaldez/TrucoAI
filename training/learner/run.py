@@ -1099,6 +1099,9 @@ def cmd_archive(args) -> None:
         "best": json.loads((d / "policies" / "best.json").read_text()).get("tag") if (d / "policies" / "best.json").exists() else None,
         "lastStyle": iters[-1].get("style") if iters else None,
         "lastEntropyByDecision": iters[-1].get("ent_by") if iters else None,
+        # r4: duelos contra sí misma callada y sorda, y la última línea de charla.
+        "talkAblation": [{k: r[k] for k in ("iter", "vsMute", "vsDeaf")} for r in records if r["kind"] == "talk_ablation"],
+        "lastClaims": iters[-1].get("claims") if iters else None,
     }
     atomic_write_bytes(out / "summary.json", json.dumps(summary, indent=1, ensure_ascii=False).encode())
     log(f"registro de {args.run} en training/results/runs/{args.run}/ (va a git)")

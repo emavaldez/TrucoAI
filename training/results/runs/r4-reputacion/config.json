@@ -1,0 +1,108 @@
+{
+  "players": 4,
+  "seed": 5,
+  "workers": 16,
+  "wtable": {
+    "matches": 8000
+  },
+  "bc": {
+    "matches": 4000,
+    "teacher": "hard",
+    "opponents": [
+      {
+        "kind": "heur",
+        "difficulty": "hard",
+        "weight": 0.5
+      },
+      {
+        "kind": "heur",
+        "difficulty": "normal",
+        "weight": 0.3
+      },
+      {
+        "kind": "heur",
+        "difficulty": "easy",
+        "weight": 0.2
+      }
+    ],
+    "epochs": 6,
+    "batch": 512,
+    "lr": 0.001,
+    "evalPairs": 300,
+    "playerMix": {
+      "4": 1
+    },
+    "onlyTalk": true
+  },
+  "ppo": {
+    "iterations": 300,
+    "matchesPerIter": 1024,
+    "epochs": 4,
+    "minibatch": 8192,
+    "lr": 0.0003,
+    "criticLr": 0.001,
+    "clip": 0.2,
+    "gaeLambda": 0.95,
+    "entropy": 0.01,
+    "klBc": 0.01,
+    "klBcFinal": 0.002,
+    "klBcDecayIters": 200,
+    "maxGradNorm": 1.0,
+    "snapshotEvery": 10,
+    "leagueSize": 40,
+    "opponents": {
+      "self": 0.4,
+      "league": 0.3,
+      "hard": 0.2,
+      "normal": 0.05,
+      "easy": 0.05
+    },
+    "obeyBonus": {
+      "start": 0.005,
+      "floor": 0.005,
+      "decayIters": 1
+    },
+    "criticWarmup": 10,
+    "playerMix": {
+      "4": 1
+    }
+  },
+  "eval": {
+    "every": 20,
+    "pairs": 300,
+    "opponent": "hard",
+    "players": [
+      4
+    ],
+    "select": [
+      4
+    ],
+    "gauntlet": {
+      "pairs": 300,
+      "opponents": [
+        "hard",
+        "runs/r3/policies/best",
+        "runs/r4-piloto/policies/best"
+      ]
+    },
+    "talkAblation": true
+  },
+  "checkpoint": {
+    "keepLast": 5,
+    "keepBest": 3,
+    "backupDir": null
+  },
+  "_comment": "r4-reputaci\u00f3n: la red habla del tanto y de las cartas, y lo que dice se comprueba al terminar la mano (el tanto si lo cant\u00f3 o jug\u00f3 sus tres cartas; las cartas si las jug\u00f3 todas). Cada jugador arrastra en la partida cu\u00e1ntas veces dijo la verdad y cu\u00e1ntas lo pescaron mintiendo: la red lo ve (12 entradas nuevas) y la heur\u00edstica le cree seg\u00fan eso (75% de entrada, 30 puntos menos por cada mentira pescada). La trayectoria de cada jugador es la partida entera: una mentira carga con lo que cueste en las manos siguientes. Arranca de la mejor de r4-piloto (iteraci\u00f3n 240); imitaci\u00f3n solo de lo que se dice (ahora tambi\u00e9n de las cartas); las primeras 10 iteraciones solo aprende el cr\u00edtico. M\u00e1s partidas contra heur\u00edsticas que escuchan (20% dif\u00edcil).",
+  "talk": {
+    "topics": [
+      "tanto",
+      "cartas"
+    ],
+    "reputation": true,
+    "matchCredit": true
+  },
+  "init": {
+    "fromCkpt": "runs/r4-piloto/ckpt/iter_000240.pt",
+    "wtableFrom": "r4-piloto"
+  }
+}

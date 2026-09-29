@@ -1,0 +1,1050 @@
+{
+ "run": "r4-piloto",
+ "archived": "2026-09-28 19:15",
+ "starts": [
+  {
+   "t": 1790624260.362868,
+   "commit": "9c7997d9951f5c1907e999f26e3e942e8c1f37ca"
+  }
+ ],
+ "lastIter": 300,
+ "evals": [
+  {
+   "tag": "bc-4j",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.72,
+   "ci90": [
+    0.6889104545079433,
+    0.7491140367853036
+   ]
+  },
+  {
+   "tag": "iter20",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.7066666666666667,
+   "ci90": [
+    0.6752175527363605,
+    0.736259999690629
+   ]
+  },
+  {
+   "tag": "iter20-vs-hard",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.7066666666666667,
+   "ci90": [
+    0.6752175527363605,
+    0.736259999690629
+   ]
+  },
+  {
+   "tag": "iter20-vs-r3/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r3/policies/best",
+   "games": 600,
+   "winrate": 0.48833333333333334,
+   "ci90": [
+    0.4548918377616604,
+    0.5218795907303645
+   ]
+  },
+  {
+   "tag": "iter20-vs-callada",
+   "opponent": "self-mute",
+   "games": 600,
+   "winrate": 0.45166666666666666,
+   "ci90": [
+    0.41853691084531897,
+    0.4852304357644981
+   ]
+  },
+  {
+   "tag": "iter20-vs-sorda",
+   "opponent": "self-deaf",
+   "games": 600,
+   "winrate": 0.5,
+   "ci90": [
+    0.46649704298368666,
+    0.5335029570163133
+   ]
+  },
+  {
+   "tag": "iter40",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.7233333333333334,
+   "ci90": [
+    0.6923387357121263,
+    0.7523224902976852
+   ]
+  },
+  {
+   "tag": "iter40-vs-hard",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.7233333333333334,
+   "ci90": [
+    0.6923387357121263,
+    0.7523224902976852
+   ]
+  },
+  {
+   "tag": "iter40-vs-r3/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r3/policies/best",
+   "games": 600,
+   "winrate": 0.52,
+   "ci90": [
+    0.4864339397952951,
+    0.5533864685040909
+   ]
+  },
+  {
+   "tag": "iter40-vs-callada",
+   "opponent": "self-mute",
+   "games": 600,
+   "winrate": 0.48,
+   "ci90": [
+    0.44661353149590904,
+    0.5135660602047049
+   ]
+  },
+  {
+   "tag": "iter40-vs-sorda",
+   "opponent": "self-deaf",
+   "games": 600,
+   "winrate": 0.5166666666666667,
+   "ci90": [
+    0.4831074140883155,
+    0.5500762594945064
+   ]
+  },
+  {
+   "tag": "iter60",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.725,
+   "ci90": [
+    0.6940536497461554,
+    0.7539259436219381
+   ]
+  },
+  {
+   "tag": "iter60-vs-hard",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.725,
+   "ci90": [
+    0.6940536497461554,
+    0.7539259436219381
+   ]
+  },
+  {
+   "tag": "iter60-vs-r3/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r3/policies/best",
+   "games": 600,
+   "winrate": 0.5416666666666666,
+   "ci90": [
+    0.5080926432245094,
+    0.5748665407325448
+   ]
+  },
+  {
+   "tag": "iter60-vs-callada",
+   "opponent": "self-mute",
+   "games": 600,
+   "winrate": 0.4816666666666667,
+   "ci90": [
+    0.4482684503357014,
+    0.5152295087231948
+   ]
+  },
+  {
+   "tag": "iter60-vs-sorda",
+   "opponent": "self-deaf",
+   "games": 600,
+   "winrate": 0.4683333333333333,
+   "ci90": [
+    0.4350395103519174,
+    0.5019115098407214
+   ]
+  },
+  {
+   "tag": "iter80",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.75,
+   "ci90": [
+    0.7198414366621749,
+    0.7779136670801513
+   ]
+  },
+  {
+   "tag": "iter80-vs-hard",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.75,
+   "ci90": [
+    0.7198414366621749,
+    0.7779136670801513
+   ]
+  },
+  {
+   "tag": "iter80-vs-r3/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r3/policies/best",
+   "games": 600,
+   "winrate": 0.5283333333333333,
+   "ci90": [
+    0.4947567577418128,
+    0.5616554873489841
+   ]
+  },
+  {
+   "tag": "iter80-vs-callada",
+   "opponent": "self-mute",
+   "games": 600,
+   "winrate": 0.5,
+   "ci90": [
+    0.46649704298368666,
+    0.5335029570163133
+   ]
+  },
+  {
+   "tag": "iter80-vs-sorda",
+   "opponent": "self-deaf",
+   "games": 600,
+   "winrate": 0.5066666666666667,
+   "ci90": [
+    0.47313674250127324,
+    0.5401367269318554
+   ]
+  },
+  {
+   "tag": "iter100",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.7083333333333334,
+   "ci90": [
+    0.676927423541949,
+    0.737868496243323
+   ]
+  },
+  {
+   "tag": "iter100-vs-hard",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.7083333333333334,
+   "ci90": [
+    0.676927423541949,
+    0.737868496243323
+   ]
+  },
+  {
+   "tag": "iter100-vs-r3/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r3/policies/best",
+   "games": 600,
+   "winrate": 0.5,
+   "ci90": [
+    0.46649704298368666,
+    0.5335029570163133
+   ]
+  },
+  {
+   "tag": "iter100-vs-callada",
+   "opponent": "self-mute",
+   "games": 600,
+   "winrate": 0.49,
+   "ci90": [
+    0.45654861208016634,
+    0.5235411837701407
+   ]
+  },
+  {
+   "tag": "iter100-vs-sorda",
+   "opponent": "self-deaf",
+   "games": 600,
+   "winrate": 0.5116666666666667,
+   "ci90": [
+    0.47812040926963567,
+    0.5451081622383398
+   ]
+  },
+  {
+   "tag": "iter120",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.7183333333333334,
+   "ci90": [
+    0.6871970816997115,
+    0.7475090422352535
+   ]
+  },
+  {
+   "tag": "iter120-vs-hard",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.7183333333333334,
+   "ci90": [
+    0.6871970816997115,
+    0.7475090422352535
+   ]
+  },
+  {
+   "tag": "iter120-vs-r3/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r3/policies/best",
+   "games": 600,
+   "winrate": 0.53,
+   "ci90": [
+    0.4964224376575899,
+    0.5633081747914894
+   ]
+  },
+  {
+   "tag": "iter120-vs-callada",
+   "opponent": "self-mute",
+   "games": 600,
+   "winrate": 0.4683333333333333,
+   "ci90": [
+    0.4350395103519174,
+    0.5019115098407214
+   ]
+  },
+  {
+   "tag": "iter120-vs-sorda",
+   "opponent": "self-deaf",
+   "games": 600,
+   "winrate": 0.51,
+   "ci90": [
+    0.4764588162298593,
+    0.5434513879198337
+   ]
+  },
+  {
+   "tag": "iter140",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.705,
+   "ci90": [
+    0.6735081720851455,
+    0.734651012983562
+   ]
+  },
+  {
+   "tag": "iter140-vs-hard",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.705,
+   "ci90": [
+    0.6735081720851455,
+    0.734651012983562
+   ]
+  },
+  {
+   "tag": "iter140-vs-r3/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r3/policies/best",
+   "games": 600,
+   "winrate": 0.5016666666666667,
+   "ci90": [
+    0.4681564119552051,
+    0.5351619554030771
+   ]
+  },
+  {
+   "tag": "iter140-vs-callada",
+   "opponent": "self-mute",
+   "games": 600,
+   "winrate": 0.4666666666666667,
+   "ci90": [
+    0.43338756831090886,
+    0.5002450845234477
+   ]
+  },
+  {
+   "tag": "iter140-vs-sorda",
+   "opponent": "self-deaf",
+   "games": 600,
+   "winrate": 0.5033333333333333,
+   "ci90": [
+    0.469816151517627,
+    0.5368205831989373
+   ]
+  },
+  {
+   "tag": "iter160",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.7116666666666667,
+   "ci90": [
+    0.6803486454574619,
+    0.7410840090443742
+   ]
+  },
+  {
+   "tag": "iter160-vs-hard",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.7116666666666667,
+   "ci90": [
+    0.6803486454574619,
+    0.7410840090443742
+   ]
+  },
+  {
+   "tag": "iter160-vs-r3/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r3/policies/best",
+   "games": 600,
+   "winrate": 0.5566666666666666,
+   "ci90": [
+    0.5231241746068744,
+    0.5897003155747194
+   ]
+  },
+  {
+   "tag": "iter160-vs-callada",
+   "opponent": "self-mute",
+   "games": 600,
+   "winrate": 0.48833333333333334,
+   "ci90": [
+    0.4548918377616604,
+    0.5218795907303645
+   ]
+  },
+  {
+   "tag": "iter160-vs-sorda",
+   "opponent": "self-deaf",
+   "games": 600,
+   "winrate": 0.52,
+   "ci90": [
+    0.4864339397952951,
+    0.5533864685040909
+   ]
+  },
+  {
+   "tag": "iter180",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.695,
+   "ci90": [
+    0.6632620491206187,
+    0.7249869317983957
+   ]
+  },
+  {
+   "tag": "iter180-vs-hard",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.695,
+   "ci90": [
+    0.6632620491206187,
+    0.7249869317983957
+   ]
+  },
+  {
+   "tag": "iter180-vs-r3/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r3/policies/best",
+   "games": 600,
+   "winrate": 0.5316666666666666,
+   "ci90": [
+    0.49808849015927864,
+    0.5649604896480827
+   ]
+  },
+  {
+   "tag": "iter180-vs-callada",
+   "opponent": "self-mute",
+   "games": 600,
+   "winrate": 0.485,
+   "ci90": [
+    0.451579401875767,
+    0.5185552918996935
+   ]
+  },
+  {
+   "tag": "iter180-vs-sorda",
+   "opponent": "self-deaf",
+   "games": 600,
+   "winrate": 0.5183333333333333,
+   "ci90": [
+    0.4847704912768052,
+    0.5517315496642987
+   ]
+  },
+  {
+   "tag": "iter200",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.725,
+   "ci90": [
+    0.6940536497461554,
+    0.7539259436219381
+   ]
+  },
+  {
+   "tag": "iter200-vs-hard",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.725,
+   "ci90": [
+    0.6940536497461554,
+    0.7539259436219381
+   ]
+  },
+  {
+   "tag": "iter200-vs-r3/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r3/policies/best",
+   "games": 600,
+   "winrate": 0.555,
+   "ci90": [
+    0.5214524985764061,
+    0.5880536242469058
+   ]
+  },
+  {
+   "tag": "iter200-vs-callada",
+   "opponent": "self-mute",
+   "games": 600,
+   "winrate": 0.5083333333333333,
+   "ci90": [
+    0.474797593996303,
+    0.5417942427951078
+   ]
+  },
+  {
+   "tag": "iter200-vs-sorda",
+   "opponent": "self-deaf",
+   "games": 600,
+   "winrate": 0.49333333333333335,
+   "ci90": [
+    0.4598632730681447,
+    0.5268632574987268
+   ]
+  },
+  {
+   "tag": "iter220",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.725,
+   "ci90": [
+    0.6940536497461554,
+    0.7539259436219381
+   ]
+  },
+  {
+   "tag": "iter220-vs-hard",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.725,
+   "ci90": [
+    0.6940536497461554,
+    0.7539259436219381
+   ]
+  },
+  {
+   "tag": "iter220-vs-r3/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r3/policies/best",
+   "games": 600,
+   "winrate": 0.575,
+   "ci90": [
+    0.5415376495516762,
+    0.6077888815710215
+   ]
+  },
+  {
+   "tag": "iter220-vs-callada",
+   "opponent": "self-mute",
+   "games": 600,
+   "winrate": 0.4866666666666667,
+   "ci90": [
+    0.45323543432940216,
+    0.5202176268043406
+   ]
+  },
+  {
+   "tag": "iter220-vs-sorda",
+   "opponent": "self-deaf",
+   "games": 600,
+   "winrate": 0.48833333333333334,
+   "ci90": [
+    0.4548918377616604,
+    0.5218795907303645
+   ]
+  },
+  {
+   "tag": "iter240",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.755,
+   "ci90": [
+    0.7250139836536688,
+    0.782696222163504
+   ]
+  },
+  {
+   "tag": "iter240-vs-hard",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.755,
+   "ci90": [
+    0.7250139836536688,
+    0.782696222163504
+   ]
+  },
+  {
+   "tag": "iter240-vs-r3/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r3/policies/best",
+   "games": 600,
+   "winrate": 0.555,
+   "ci90": [
+    0.5214524985764061,
+    0.5880536242469058
+   ]
+  },
+  {
+   "tag": "iter240-vs-callada",
+   "opponent": "self-mute",
+   "games": 600,
+   "winrate": 0.5133333333333333,
+   "ci90": [
+    0.4797823731956594,
+    0.546764565670598
+   ]
+  },
+  {
+   "tag": "iter240-vs-sorda",
+   "opponent": "self-deaf",
+   "games": 600,
+   "winrate": 0.495,
+   "ci90": [
+    0.46152115961455353,
+    0.5285237383106001
+   ]
+  },
+  {
+   "tag": "iter260",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.7316666666666667,
+   "ci90": [
+    0.7009185301174704,
+    0.760334532683752
+   ]
+  },
+  {
+   "tag": "iter260-vs-hard",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.7316666666666667,
+   "ci90": [
+    0.7009185301174704,
+    0.760334532683752
+   ]
+  },
+  {
+   "tag": "iter260-vs-r3/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r3/policies/best",
+   "games": 600,
+   "winrate": 0.5383333333333333,
+   "ci90": [
+    0.5047564308089119,
+    0.5715660184315781
+   ]
+  },
+  {
+   "tag": "iter260-vs-callada",
+   "opponent": "self-mute",
+   "games": 600,
+   "winrate": 0.485,
+   "ci90": [
+    0.451579401875767,
+    0.5185552918996935
+   ]
+  },
+  {
+   "tag": "iter260-vs-sorda",
+   "opponent": "self-deaf",
+   "games": 600,
+   "winrate": 0.515,
+   "ci90": [
+    0.48144470810030654,
+    0.548420598124233
+   ]
+  },
+  {
+   "tag": "iter280",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.7433333333333333,
+   "ci90": [
+    0.7129526605559725,
+    0.7715289737532248
+   ]
+  },
+  {
+   "tag": "iter280-vs-hard",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.7433333333333333,
+   "ci90": [
+    0.7129526605559725,
+    0.7715289737532248
+   ]
+  },
+  {
+   "tag": "iter280-vs-r3/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r3/policies/best",
+   "games": 600,
+   "winrate": 0.5416666666666666,
+   "ci90": [
+    0.5080926432245094,
+    0.5748665407325448
+   ]
+  },
+  {
+   "tag": "iter280-vs-callada",
+   "opponent": "self-mute",
+   "games": 600,
+   "winrate": 0.5033333333333333,
+   "ci90": [
+    0.469816151517627,
+    0.5368205831989373
+   ]
+  },
+  {
+   "tag": "iter280-vs-sorda",
+   "opponent": "self-deaf",
+   "games": 600,
+   "winrate": 0.5233333333333333,
+   "ci90": [
+    0.48976195140248346,
+    0.5566951916134669
+   ]
+  },
+  {
+   "tag": "iter300",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.7333333333333333,
+   "ci90": [
+    0.7026360713437265,
+    0.7619353588157778
+   ]
+  },
+  {
+   "tag": "iter300-vs-hard",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.7333333333333333,
+   "ci90": [
+    0.7026360713437265,
+    0.7619353588157778
+   ]
+  },
+  {
+   "tag": "iter300-vs-r3/best",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r3/policies/best",
+   "games": 600,
+   "winrate": 0.5516666666666666,
+   "ci90": [
+    0.518110278252891,
+    0.5847591098538563
+   ]
+  },
+  {
+   "tag": "iter300-vs-callada",
+   "opponent": "self-mute",
+   "games": 600,
+   "winrate": 0.48,
+   "ci90": [
+    0.44661353149590904,
+    0.5135660602047049
+   ]
+  },
+  {
+   "tag": "iter300-vs-sorda",
+   "opponent": "self-deaf",
+   "games": 600,
+   "winrate": 0.5133333333333333,
+   "ci90": [
+    0.4797823731956594,
+    0.546764565670598
+   ]
+  }
+ ],
+ "gauntlet": [
+  {
+   "iter": 20,
+   "score": 0.5975,
+   "rates": [
+    0.7066666666666667,
+    0.48833333333333334
+   ]
+  },
+  {
+   "iter": 40,
+   "score": 0.6216666666666667,
+   "rates": [
+    0.7233333333333334,
+    0.52
+   ]
+  },
+  {
+   "iter": 60,
+   "score": 0.6333333333333333,
+   "rates": [
+    0.725,
+    0.5416666666666666
+   ]
+  },
+  {
+   "iter": 80,
+   "score": 0.6391666666666667,
+   "rates": [
+    0.75,
+    0.5283333333333333
+   ]
+  },
+  {
+   "iter": 100,
+   "score": 0.6041666666666667,
+   "rates": [
+    0.7083333333333334,
+    0.5
+   ]
+  },
+  {
+   "iter": 120,
+   "score": 0.6241666666666668,
+   "rates": [
+    0.7183333333333334,
+    0.53
+   ]
+  },
+  {
+   "iter": 140,
+   "score": 0.6033333333333333,
+   "rates": [
+    0.705,
+    0.5016666666666667
+   ]
+  },
+  {
+   "iter": 160,
+   "score": 0.6341666666666667,
+   "rates": [
+    0.7116666666666667,
+    0.5566666666666666
+   ]
+  },
+  {
+   "iter": 180,
+   "score": 0.6133333333333333,
+   "rates": [
+    0.695,
+    0.5316666666666666
+   ]
+  },
+  {
+   "iter": 200,
+   "score": 0.64,
+   "rates": [
+    0.725,
+    0.555
+   ]
+  },
+  {
+   "iter": 220,
+   "score": 0.6499999999999999,
+   "rates": [
+    0.725,
+    0.575
+   ]
+  },
+  {
+   "iter": 240,
+   "score": 0.655,
+   "rates": [
+    0.755,
+    0.555
+   ]
+  },
+  {
+   "iter": 260,
+   "score": 0.635,
+   "rates": [
+    0.7316666666666667,
+    0.5383333333333333
+   ]
+  },
+  {
+   "iter": 280,
+   "score": 0.6425,
+   "rates": [
+    0.7433333333333333,
+    0.5416666666666666
+   ]
+  },
+  {
+   "iter": 300,
+   "score": 0.6425,
+   "rates": [
+    0.7333333333333333,
+    0.5516666666666666
+   ]
+  }
+ ],
+ "best": "r4-piloto/iter240",
+ "lastStyle": {
+  "truco": 0.104,
+  "farol": 0.375,
+  "envido": 0.569,
+  "farol_envido": 0.424,
+  "envido_<24": 0.407,
+  "envido_24-27": 0.716,
+  "envido_28-30": 0.861,
+  "envido_31+": 0.913,
+  "quiere_truco": 0.356,
+  "sube_truco": 0.059,
+  "quiere_envido": 0.26,
+  "acepta_envido_<24": 0.304,
+  "acepta_envido_24-27": 0.47,
+  "acepta_envido_28-30": 0.756,
+  "acepta_envido_31+": 0.982,
+  "farol_envido_exito": 0.578,
+  "farol_envido_pts": -0.34,
+  "farol_envido_dW": 0.0033,
+  "tantos_envido_exito": 0.55,
+  "tantos_envido_pts": 0.87,
+  "tantos_envido_dW": 0.0297
+ },
+ "lastEntropyByDecision": {
+  "cartas": 0.116,
+  "turno": 0.32,
+  "resp_truco": 0.156,
+  "resp_envido": 0.165,
+  "indica": 0.447,
+  "habla": 0.797
+ },
+ "talkAblation": [
+  {
+   "iter": 20,
+   "vsMute": 0.45166666666666666,
+   "vsDeaf": 0.5
+  },
+  {
+   "iter": 40,
+   "vsMute": 0.48,
+   "vsDeaf": 0.5166666666666667
+  },
+  {
+   "iter": 60,
+   "vsMute": 0.4816666666666667,
+   "vsDeaf": 0.4683333333333333
+  },
+  {
+   "iter": 80,
+   "vsMute": 0.5,
+   "vsDeaf": 0.5066666666666667
+  },
+  {
+   "iter": 100,
+   "vsMute": 0.49,
+   "vsDeaf": 0.5116666666666667
+  },
+  {
+   "iter": 120,
+   "vsMute": 0.4683333333333333,
+   "vsDeaf": 0.51
+  },
+  {
+   "iter": 140,
+   "vsMute": 0.4666666666666667,
+   "vsDeaf": 0.5033333333333333
+  },
+  {
+   "iter": 160,
+   "vsMute": 0.48833333333333334,
+   "vsDeaf": 0.52
+  },
+  {
+   "iter": 180,
+   "vsMute": 0.485,
+   "vsDeaf": 0.5183333333333333
+  },
+  {
+   "iter": 200,
+   "vsMute": 0.5083333333333333,
+   "vsDeaf": 0.49333333333333335
+  },
+  {
+   "iter": 220,
+   "vsMute": 0.4866666666666667,
+   "vsDeaf": 0.48833333333333334
+  },
+  {
+   "iter": 240,
+   "vsMute": 0.5133333333333333,
+   "vsDeaf": 0.495
+  },
+  {
+   "iter": 260,
+   "vsMute": 0.485,
+   "vsDeaf": 0.515
+  },
+  {
+   "iter": 280,
+   "vsMute": 0.5033333333333333,
+   "vsDeaf": 0.5233333333333333
+  },
+  {
+   "iter": 300,
+   "vsMute": 0.48,
+   "vsDeaf": 0.5133333333333333
+  }
+ ],
+ "lastClaims": {
+  "dice_tanto_mucho_engano": {
+   "mucho": 0.19,
+   "algo": 0.33,
+   "nada": 0.4,
+   "calla": 0.08
+  },
+  "dice_tanto_algo_engano": {
+   "mucho": 0.2,
+   "algo": 0.37,
+   "nada": 0.34,
+   "calla": 0.09
+  },
+  "dice_tanto_nada_engano": {
+   "mucho": 0.18,
+   "algo": 0.27,
+   "nada": 0.44,
+   "calla": 0.1
+  },
+  "dice_tanto_mucho_resto": {
+   "mucho": 0.22,
+   "algo": 0.22,
+   "nada": 0.41,
+   "calla": 0.15
+  },
+  "dice_tanto_algo_resto": {
+   "mucho": 0.27,
+   "algo": 0.33,
+   "nada": 0.22,
+   "calla": 0.18
+  },
+  "dice_tanto_nada_resto": {
+   "mucho": 0.23,
+   "algo": 0.18,
+   "nada": 0.44,
+   "calla": 0.14
+  },
+  "miente_nada_con_mucho": 0.406,
+  "miente_mucho_con_nada": 0.199,
+  "canta_si_nada": 0.678,
+  "canta_si_tiene": 0.716,
+  "canta_si_nada_dicho": 0.516,
+  "engano_manos": 908,
+  "engano_rival_canta": 0.101,
+  "engano_pts": 1.89
+ }
+}

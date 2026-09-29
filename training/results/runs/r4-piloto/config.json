@@ -1,0 +1,103 @@
+{
+  "players": 4,
+  "seed": 4,
+  "workers": 16,
+  "wtable": {
+    "matches": 8000
+  },
+  "bc": {
+    "matches": 4000,
+    "teacher": "hard",
+    "opponents": [
+      {
+        "kind": "heur",
+        "difficulty": "hard",
+        "weight": 0.5
+      },
+      {
+        "kind": "heur",
+        "difficulty": "normal",
+        "weight": 0.3
+      },
+      {
+        "kind": "heur",
+        "difficulty": "easy",
+        "weight": 0.2
+      }
+    ],
+    "epochs": 6,
+    "batch": 512,
+    "lr": 0.001,
+    "evalPairs": 300,
+    "playerMix": {
+      "4": 1
+    },
+    "onlyTalk": true
+  },
+  "ppo": {
+    "iterations": 300,
+    "matchesPerIter": 1024,
+    "epochs": 4,
+    "minibatch": 8192,
+    "lr": 0.0003,
+    "criticLr": 0.001,
+    "clip": 0.2,
+    "gaeLambda": 0.95,
+    "entropy": 0.01,
+    "klBc": 0.01,
+    "klBcFinal": 0.002,
+    "klBcDecayIters": 200,
+    "maxGradNorm": 1.0,
+    "snapshotEvery": 10,
+    "leagueSize": 40,
+    "opponents": {
+      "self": 0.5,
+      "league": 0.3,
+      "hard": 0.1,
+      "normal": 0.05,
+      "easy": 0.05
+    },
+    "obeyBonus": {
+      "start": 0.005,
+      "floor": 0.005,
+      "decayIters": 1
+    },
+    "playerMix": {
+      "4": 1
+    }
+  },
+  "eval": {
+    "every": 20,
+    "pairs": 300,
+    "opponent": "hard",
+    "players": [
+      4
+    ],
+    "select": [
+      4
+    ],
+    "gauntlet": {
+      "pairs": 300,
+      "opponents": [
+        "hard",
+        "runs/r3/policies/best"
+      ]
+    },
+    "talkAblation": true
+  },
+  "checkpoint": {
+    "keepLast": 5,
+    "keepBest": 3,
+    "backupDir": null
+  },
+  "_comment": "r4-piloto: la red habla y escucha (charla p\u00fablica), solo 4 jugadores y solo del tanto. Arranca de r3 (iteraci\u00f3n 560, la mejor) con 48 entradas nuevas (lo dicho por cada asiento, en cero: al principio juega igual que r3) y 8 salidas nuevas (qu\u00e9 decir del tanto y de las cartas). Imitaci\u00f3n solo de lo que se dice (la heur\u00edstica dice la verdad salvo el enga\u00f1o del envido), sin tocar el resto de la red. Despu\u00e9s PPO contra s\u00ed misma, la liga y las heur\u00edsticas (que escuchan y hacen el enga\u00f1o de esperar y subir). Se eval\u00faa contra la dif\u00edcil, contra r3 y contra s\u00ed misma callada y sorda (\u00bfsirve hablar? \u00bfsirve escuchar?).",
+  "talk": {
+    "topics": [
+      "tanto"
+    ]
+  },
+  "init": {
+    "fromCkpt": "runs/r3/ckpt/iter_000560.pt",
+    "wtableFrom": "r3"
+  }
+}
