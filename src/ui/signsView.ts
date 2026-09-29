@@ -59,6 +59,8 @@ export function visibleSignals(state: MatchState, signals: readonly Signal[]): S
   return signals.filter((signal) => {
     if (signal.from === HUMAN) return false;
     if (CARD_SIGNS.includes(signal.kind)) return !played.has(`${signal.from}:${signal.cardId}`);
+    // "Nada" le sirve al pie toda la mano; el envido y la flor, solo mientras se pueden cantar (1ra baza).
+    if (signal.kind === 'NADA') return true;
     return state.hand.tricks.length === 0;
   });
 }

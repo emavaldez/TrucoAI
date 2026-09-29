@@ -294,7 +294,10 @@ Diseño del piloto (4 jugadores, solo el tanto; `config/r4-piloto.json`):
   vez (queda poco de información). Lo pescan mintiendo 10% → 22%.
 - La reputación no cambió cómo escucha (le cree igual, o un poco más, al que ya pescó mintiendo; probablemente
   confundido con el momento de la partida).
-- Para la tesis: la comunicación sobrevive donde los intereses del que habla y del que escucha coinciden (el
-  compañero necesita saber qué queda) y colapsa donde solo sirve para engañar (el tanto, que el compañero ya sabe).
+- Corrección de Emmanuel: las señas le quedan al pie toda la mano (verificado: la red las ve en la 2da y 3ra baza).
+  Entonces la charla de cartas no le agrega mucho al pie. Hipótesis más probable: las cartas casi siempre se ven
+  (se juegan) y mentir sobre ellas se paga con la reputación; el tanto solo se ve si se canta el envido, y mentir
+  sale casi gratis. A medir (cuánto se comprueba cada tema; la misma corrida sin reputación).
+- En el juego, la seña "nada" ahora se le muestra al pie humano toda la mano (antes solo en la 1ra baza).
 - Registro en `results/runs/r4-piloto/` y `results/runs/r4-reputacion/` (el `archive` ahora guarda también los
   duelos contra sí misma callada y sorda y la última línea de charla).

@@ -69,7 +69,8 @@ y con 2 jugadores tampoco. Las señas no son acciones del reglamento: no cambian
   el pie, puede hacerlas (botón "Señas") **hasta jugar su primera carta**; solo las verdaderas, cada una una vez.
 - **En la mesa:** si sos el pie, las señas de cada compañero se ven junto a su asiento: la carta señada (el ancho,
   el 7) o lo que dice la seña (un 3, 27+, flor, nada) y el gesto. Una seña de carta se ve hasta que el compañero
-  juega esa carta; las demás, durante la primera baza.
+  juega esa carta; "nada", toda la mano; 27+ y flor, durante la primera baza (después ya no se cantan). La IA pie
+  tiene en cuenta las señas toda la mano (junto con las cartas que ya se jugaron).
 - **La IA las usa** (sin romper §11.1: es información que un compañero humano también tendría): el pie, al estimar
   la mano y el envido, reparte las cartas no vistas respetando las señas de sus compañeros.
 

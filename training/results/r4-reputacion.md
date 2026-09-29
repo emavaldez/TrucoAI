@@ -36,8 +36,7 @@ Configuración: `config/r4-reputacion.json`. Corrió de 19:15 a 20:34 sin cortes
 - **El tanto vuelve a perder significado** (como en el piloto), aunque queda algo de información: con poco tanto dice
   "nada" 55–59% y con mucho, 41–44%.
 - **Lo que dice de las cartas conserva el significado:** con buenas cartas dice "mucho" 4 veces más que estando seco,
-  y "nada" 5 veces menos. Es la charla que le sirve al compañero (las señas son del principio y no dicen lo que
-  queda después de la 1ra baza).
+  y "nada" 5 veces menos.
 - Lo pescan mintiendo cada vez más: de lo que se pudo comprobar, 10% era mentira al principio y 22% al final.
 - **La reputación no se nota en cómo escucha:** con el pie en la 1ra baza canta envido 55% si el "nada" vino de alguien
   confiable y 60% si vino de alguien ya pescado mintiendo (esperable al revés; la diferencia es chica y puede venir
@@ -46,8 +45,12 @@ Configuración: `config/r4-reputacion.json`. Corrió de 19:15 a 20:34 sin cortes
 
 ## Lectura
 
-La charla que conserva el significado es la que le sirve al equipo (las cartas: información que el compañero no
-tiene); la que solo sirve para engañar al rival (el tanto, que el compañero ya sabe por seña) se degrada hasta casi
-no informar, con o sin reputación. Con 300 iteraciones, la reputación en la partida no alcanzó para que mentir
+Lo que dice de las cartas conserva el significado y lo del tanto no. Ojo: las señas le quedan al pie toda la mano
+(la red las ve en la 2da y 3ra baza, junto con las cartas jugadas), así que en el entrenamiento, donde contesta
+siempre el pie, lo que dicen sus compañeros de las cartas tampoco le agrega mucho. Dos explicaciones posibles, a
+medir: (1) **las cartas casi siempre se terminan viendo** (se juegan), así que mentir sobre ellas se paga con la
+reputación, mientras que el tanto solo se ve si se canta el envido o se juegan las tres cartas: mentir sobre el tanto
+sale casi gratis; (2) lo dicho de las cartas le sirve igual al equipo en lo que las señas no cubren (las cartas sin
+seña). Para separarlas: cuánto se comprueba cada tema y la misma corrida sin reputación. Con 300 iteraciones, la reputación en la partida no alcanzó para que mentir
 tuviera un costo visible. Candidatos para el juego: r4-piloto (iteración 240, la más fuerte contra r3) o esta
 (iteración 40, que además habla de las cartas con sentido).
