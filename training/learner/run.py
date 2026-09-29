@@ -562,11 +562,15 @@ class Run:
                 if gauntlet:
                     # Duelos contra redes fijas (versiones anteriores y atacantes): la difícil ya no discrimina.
                     rates = []
+                    g_players = [int(n) for n in gauntlet.get("players", [self.cfg["players"]])]
                     for spec in gauntlet["opponents"]:
                         opp = spec if spec in ("hard", "normal", "easy") else f"mlp:{training_path(spec)}"
                         name = spec if spec in ("hard", "normal", "easy") else training_path(spec).parent.parent.name + "/" + Path(spec).name
-                        r = self.evaluate(current, gauntlet["pairs"], opp, tag=f"iter{it}-vs-{name}")
-                        rates.append(r["winrate"])
+                        for n in g_players:
+                            # Con varias cantidades de jugadores (`gauntlet.players`), un duelo por cantidad.
+                            tag = f"iter{it}-vs-{name}" if len(g_players) == 1 else f"iter{it}-vs-{name}-{n}j"
+                            r = self.evaluate(current, gauntlet["pairs"], opp, tag=tag, players=n)
+                            rates.append(r["winrate"])
                     score = sum(rates) / len(rates)
                     self.event("gauntlet", iter=it, score=score, rates=rates)
                     log(f"duelos iter{it}: promedio {100 * score:.1f}% ({', '.join(f'{100 * x:.1f}' for x in rates)})")
@@ -643,6 +647,7 @@ class Run:
         listen = {k: np.zeros(2) for k in ("nada", "tiene", "nada_dicho", "nada_confiable", "nada_mentiroso")}
         bait = np.zeros(3)
         caught = np.zeros(2)
+        checked = {"tanto": np.zeros(2), "cartas": np.zeros(2)}
         found = False
         for meta in metas:
             cl = meta.get("claims")
@@ -655,6 +660,8 @@ class Run:
             for k in listen:
                 listen[k] += cl["escucha"].get(k, [0, 0])
             caught += cl.get("pescado", [0, 0])
+            for topic in checked:
+                checked[topic] += cl.get("comprobado", {}).get(topic, [0, 0])
             bait += [cl["engano"]["hands"], cl["engano"]["rivalSang"], cl["engano"]["points"]]
         if not found:
             return {}
@@ -675,6 +682,10 @@ class Run:
         for k, (opp, calls) in listen.items():
             if opp:
                 out[f"canta_si_{k}"] = round(float(calls / opp), 3)
+        for topic, (said, seen) in checked.items():
+            if said:
+                # De lo que dijo (sin contar callarse), cuánto se pudo comprobar al terminar la mano.
+                out[f"comprobado_{topic}"] = round(float(seen / said), 3)
         if caught[0]:
             # De lo que dijo y se pudo comprobar al final de la mano, cuánto era mentira (la pescaron).
             out["pescada_mintiendo"] = round(float(caught[1] / caught[0]), 3)
@@ -1039,7 +1050,7 @@ def cmd_duel(args) -> None:
     jobs = [
         {"mode": "eval", "seed": args.seed + i, "matches": m, "players": args.players, "out": str(tmp / f"e{i}.json"),
          "a": {"kind": "mlp", "path": str(a)}, "b": b_spec,
-         **({"talk": {"topics": args.talk.split(",")}} if args.talk else {})}
+         **({"talk": {"topics": args.talk.split(","), "reputation": bool(args.reputation)}} if args.talk else {})}
         for i, m in enumerate(split_matches(args.pairs, workers))
     ]
     started = time.time()
@@ -1056,7 +1067,8 @@ def cmd_duel(args) -> None:
     record = {"date": time.strftime("%Y-%m-%d %H:%M"), "a": policy_label(args.a), "b": policy_label(args.b),
               "players": args.players, "games": games, "winrate": wins / games, "ci90": [low, high],
               "pointsPerGame": [pa / games, pb / games], "seed": args.seed, "commit": git_commit(),
-              "seconds": round(time.time() - started, 1), "note": args.note or "", **({"talk": args.talk} if args.talk else {})}
+              "seconds": round(time.time() - started, 1), "note": args.note or "",
+              **({"talk": args.talk, "reputation": bool(args.reputation)} if args.talk else {})}
     RESULTS.mkdir(parents=True, exist_ok=True)
     append_jsonl(RESULTS / "duelos.jsonl", record)
     log(f"{record['a']} vs {record['b']}: {100 * wins / games:.1f}% (IC90 {100 * low:.1f}–{100 * high:.1f}) en {games} partidas"
@@ -1154,6 +1166,7 @@ def main() -> None:
     du.add_argument("--workers", type=int)
     du.add_argument("--note", help="para qué se corrió (queda en el registro)")
     du.add_argument("--talk", help="con charla pública (r4): temas separados por coma, p. ej. tanto o tanto,cartas")
+    du.add_argument("--reputation", action="store_true", help="con --talk: lo dicho se comprueba y se arrastra en la partida")
     ar = sub.add_parser("archive", help="guarda el registro de una corrida (y opcionalmente una copia de respaldo)")
     ar.add_argument("--run", required=True)
     ar.add_argument("--backup", help="carpeta de respaldo fuera del repo (iCloud, disco externo)")

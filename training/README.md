@@ -89,6 +89,11 @@ con lo que cueste en las manos siguientes; las primeras 10 iteraciones solo apre
 (`ppo.criticWarmup`). En la línea `charla`, además: `dice_cartas`, `pescada_mintiendo` y
 `canta_si_nada_confiable` / `canta_si_nada_mentiroso` (¿le cree menos al que ya pescó?).
 
+**Tanda de la noche:** `caffeinate -dimsu bash training/noche.sh` corre una atrás de otra `r4-sinrep` (control sin
+reputación), `r5-charla` (la red que habla en 4 y 6, 700 iteraciones) y duelos de 1000 pares; guarda los registros
+con `archive`. En la línea `charla`, `comprobado_tanto` / `comprobado_cartas`: de lo que dijo, cuánto se pudo
+comprobar al terminar la mano.
+
 ## Registro (para la tesis)
 
 Todo lo que se corre queda registrado en git, en `results/`:

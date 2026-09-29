@@ -1,0 +1,81 @@
+{
+  "_comment": "r4-sinrep: la misma corrida que r4-reputación pero SIN reputación (control): se habla del tanto y de las cartas, la trayectoria es la partida entera, pero lo dicho no se arrastra (la red no ve la reputación y la heurística le cree siempre 75%). Arranca del mismo punto (r4-piloto, iteración 240). Sirve para saber si lo que dice de las cartas conserva el significado por la reputación o por otra cosa.",
+  "players": 4,
+  "seed": 6,
+  "workers": 16,
+  "talk": {
+    "topics": [
+      "tanto",
+      "cartas"
+    ],
+    "reputation": false,
+    "matchCredit": true
+  },
+  "init": {
+    "fromCkpt": "runs/r4-piloto/ckpt/iter_000240.pt",
+    "wtableFrom": "r4-piloto"
+  },
+  "wtable": {
+    "matches": 8000
+  },
+  "bc": {
+    "matches": 4000,
+    "playerMix": {
+      "4": 1
+    },
+    "onlyTalk": true,
+    "epochs": 6,
+    "batch": 512,
+    "lr": 0.001,
+    "evalPairs": 300
+  },
+  "ppo": {
+    "matchesPerIter": 1024,
+    "minibatch": 8192,
+    "iterations": 300,
+    "criticWarmup": 10,
+    "playerMix": {
+      "4": 1
+    },
+    "klBc": 0.01,
+    "klBcFinal": 0.002,
+    "klBcDecayIters": 200,
+    "opponents": {
+      "self": 0.4,
+      "league": 0.3,
+      "hard": 0.2,
+      "normal": 0.05,
+      "easy": 0.05
+    },
+    "obeyBonus": {
+      "start": 0.005,
+      "floor": 0.005,
+      "decayIters": 1
+    }
+  },
+  "eval": {
+    "every": 20,
+    "pairs": 300,
+    "opponent": "hard",
+    "players": [
+      4
+    ],
+    "select": [
+      4
+    ],
+    "gauntlet": {
+      "pairs": 300,
+      "opponents": [
+        "hard",
+        "runs/r3/policies/best",
+        "runs/r4-reputacion/policies/best"
+      ]
+    },
+    "talkAblation": true
+  },
+  "checkpoint": {
+    "keepLast": 5,
+    "keepBest": 3,
+    "backupDir": null
+  }
+}

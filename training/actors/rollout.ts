@@ -291,6 +291,8 @@ interface ClaimStats {
   engano: { hands: number; rivalSang: number; points: number };
   /** dichos de la red que se pudieron comprobar: [comprobados, mentiras pescadas] */
   pescado: [number, number];
+  /** por tema: [dichos de la red (sin contar callarse), cuántos se pudieron comprobar al terminar la mano] */
+  comprobado: Record<TalkTopic, [number, number]>;
 }
 
 function emptyClaimStats(): ClaimStats {
@@ -301,6 +303,7 @@ function emptyClaimStats(): ClaimStats {
     escucha: { nada: [0, 0], tiene: [0, 0], nada_dicho: [0, 0], nada_confiable: [0, 0], nada_mentiroso: [0, 0] },
     engano: { hands: 0, rivalSang: 0, points: 0 },
     pescado: [0, 0],
+    comprobado: { tanto: [0, 0], cartas: [0, 0] },
   };
 }
 
@@ -484,13 +487,19 @@ function playMatch(
         recorder.trajectory(steps, rewardFor(teamOf(state, playerId)));
       }
     }
-    if (withRep) {
+    if (withClaims) {
+      // Se comprueba lo dicho siempre (para medir); la reputación solo se arrastra si está prendida.
       const verdicts = checkClaims(state, claims);
-      addVerdicts(reputation, verdicts);
+      if (withRep) addVerdicts(reputation, verdicts);
       if (claimStats) {
+        const mine = (from: PlayerId): boolean => {
+          const seat = seatIndex.get(from) as number;
+          return record(seat) && !!seatAgents[seat].mlp;
+        };
+        for (const c of claims) if (c.level !== 'calla' && mine(c.from)) claimStats.comprobado[c.about][0] += 1;
         for (const v of verdicts) {
-          const seat = seatIndex.get(v.from) as number;
-          if (!record(seat) || !seatAgents[seat].mlp) continue;
+          if (!mine(v.from)) continue;
+          claimStats.comprobado[v.about][1] += 1;
           claimStats.pescado[0] += 1;
           if (v.verdict === 'mentira') claimStats.pescado[1] += 1;
         }

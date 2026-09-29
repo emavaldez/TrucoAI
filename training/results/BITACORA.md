@@ -301,3 +301,13 @@ Diseño del piloto (4 jugadores, solo el tanto; `config/r4-piloto.json`):
 - En el juego, la seña "nada" ahora se le muestra al pie humano toda la mano (antes solo en la 1ra baza).
 - Registro en `results/runs/r4-piloto/` y `results/runs/r4-reputacion/` (el `archive` ahora guarda también los
   duelos contra sí misma callada y sorda y la última línea de charla).
+
+## 2026-09-28 23:30 — Tanda de la noche (`training/noche.sh`)
+
+- `r4-sinrep`: r4-reputación sin reputación (control, mismo punto de partida). Separa si lo dicho de las cartas
+  conserva el significado por la reputación.
+- `r5-charla`: la red que habla, escucha y arrastra la reputación en 4 y 6 jugadores, 700 iteraciones, desde la
+  mejor de r4-reputación. Candidata para el juego. Duelos por cantidad de jugadores (`eval.gauntlet.players`).
+- Duelos de 1000 pares al final. Métrica nueva `comprobado_<tema>`: en la prueba local, lo dicho de las cartas se
+  comprueba menos (~12%) que lo del tanto (~30%): muchas manos terminan antes de jugar todas las cartas (truco no
+  querido). Si se confirma, la hipótesis "las cartas se terminan viendo" no alcanza.
