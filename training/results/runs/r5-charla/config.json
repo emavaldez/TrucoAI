@@ -1,0 +1,116 @@
+{
+  "players": 4,
+  "seed": 7,
+  "workers": 16,
+  "wtable": {
+    "matches": 8000
+  },
+  "bc": {
+    "matches": 4000,
+    "teacher": "hard",
+    "opponents": [
+      {
+        "kind": "heur",
+        "difficulty": "hard",
+        "weight": 0.5
+      },
+      {
+        "kind": "heur",
+        "difficulty": "normal",
+        "weight": 0.3
+      },
+      {
+        "kind": "heur",
+        "difficulty": "easy",
+        "weight": 0.2
+      }
+    ],
+    "epochs": 6,
+    "batch": 512,
+    "lr": 0.001,
+    "evalPairs": 300,
+    "playerMix": {
+      "4": 0.5,
+      "6": 0.5
+    },
+    "onlyTalk": true
+  },
+  "ppo": {
+    "iterations": 700,
+    "matchesPerIter": 1024,
+    "epochs": 4,
+    "minibatch": 8192,
+    "lr": 0.0003,
+    "criticLr": 0.001,
+    "clip": 0.2,
+    "gaeLambda": 0.95,
+    "entropy": 0.01,
+    "klBc": 0.01,
+    "klBcFinal": 0.002,
+    "klBcDecayIters": 200,
+    "maxGradNorm": 1.0,
+    "snapshotEvery": 10,
+    "leagueSize": 40,
+    "opponents": {
+      "self": 0.4,
+      "league": 0.3,
+      "hard": 0.2,
+      "normal": 0.05,
+      "easy": 0.05
+    },
+    "obeyBonus": {
+      "start": 0.005,
+      "floor": 0.005,
+      "decayIters": 1
+    },
+    "criticWarmup": 10,
+    "playerMix": {
+      "4": 0.5,
+      "6": 0.5
+    }
+  },
+  "eval": {
+    "every": 25,
+    "pairs": 300,
+    "opponent": "hard",
+    "players": [
+      4,
+      6
+    ],
+    "select": [
+      4,
+      6
+    ],
+    "gauntlet": {
+      "pairs": 300,
+      "players": [
+        4,
+        6
+      ],
+      "opponents": [
+        "hard",
+        "runs/r3/policies/best",
+        "runs/r4-reputacion/policies/best"
+      ]
+    },
+    "talkAblation": true
+  },
+  "checkpoint": {
+    "keepLast": 5,
+    "keepBest": 3,
+    "backupDir": null
+  },
+  "_comment": "r5-charla: la red que habla, escucha y arrastra la reputaci\u00f3n, ahora en 4 y 6 jugadores (mitad y mitad) y m\u00e1s larga (700 iteraciones). Arranca de la mejor de r4-reputaci\u00f3n (iteraci\u00f3n 40); imitaci\u00f3n solo de lo que se dice en 4 y 6. Se eval\u00faa contra la dif\u00edcil en 4 y 6, duelos contra la dif\u00edcil, r3 y r4-reputaci\u00f3n en 4 y 6 (la mejor se elige por el promedio de esos duelos) y contra s\u00ed misma callada y sorda. Es la candidata para el juego (Experta de 4 y 6 que habla).",
+  "talk": {
+    "topics": [
+      "tanto",
+      "cartas"
+    ],
+    "reputation": true,
+    "matchCredit": true
+  },
+  "init": {
+    "fromCkpt": "runs/r4-reputacion/ckpt/iter_000040.pt",
+    "wtableFrom": "r4-reputacion"
+  }
+}

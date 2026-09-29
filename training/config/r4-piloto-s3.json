@@ -1,0 +1,69 @@
+{
+  "_comment": "Réplica de r4-piloto con otra semilla (12): ¿el 'balbuceo' (la charla del tanto deja de informar y hablar o escuchar no da ventaja) se repite? Misma configuración; solo cambia la semilla.",
+  "players": 4,
+  "seed": 12,
+  "workers": 16,
+  "talk": {
+    "topics": [
+      "tanto"
+    ]
+  },
+  "init": {
+    "fromCkpt": "runs/r3/ckpt/iter_000560.pt",
+    "wtableFrom": "r3"
+  },
+  "wtable": {
+    "matches": 8000
+  },
+  "bc": {
+    "matches": 4000,
+    "playerMix": {
+      "4": 1
+    },
+    "onlyTalk": true,
+    "epochs": 6,
+    "batch": 512,
+    "lr": 0.001,
+    "evalPairs": 300
+  },
+  "ppo": {
+    "matchesPerIter": 1024,
+    "minibatch": 8192,
+    "iterations": 300,
+    "playerMix": {
+      "4": 1
+    },
+    "klBc": 0.01,
+    "klBcFinal": 0.002,
+    "klBcDecayIters": 200,
+    "obeyBonus": {
+      "start": 0.005,
+      "floor": 0.005,
+      "decayIters": 1
+    }
+  },
+  "eval": {
+    "every": 20,
+    "pairs": 300,
+    "opponent": "hard",
+    "players": [
+      4
+    ],
+    "select": [
+      4
+    ],
+    "gauntlet": {
+      "pairs": 300,
+      "opponents": [
+        "hard",
+        "runs/r3/policies/best"
+      ]
+    },
+    "talkAblation": true
+  },
+  "checkpoint": {
+    "keepLast": 5,
+    "keepBest": 3,
+    "backupDir": null
+  }
+}

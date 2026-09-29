@@ -311,3 +311,19 @@ Diseño del piloto (4 jugadores, solo el tanto; `config/r4-piloto.json`):
 - Duelos de 1000 pares al final. Métrica nueva `comprobado_<tema>`: en la prueba local, lo dicho de las cartas se
   comprueba menos (~12%) que lo del tanto (~30%): muchas manos terminan antes de jugar todas las cartas (truco no
   querido). Si se confirma, la hipótesis "las cartas se terminan viendo" no alcanza.
+
+## 2026-09-29 — Resultados de la noche (`results/noche-2026-09-28.md`)
+
+- r4-sinrep: lo dicho de las cartas conserva el significado también sin reputación → la reputación no lo explica.
+  Se comprueba poco (13–17%). Reputación contra sin reputación: 50,7% (1000 pares).
+- r5-charla (4 y 6, 700 iteraciones): la mejor es la iteración 25; después pierde contra las redes fijas (r3 de 52%
+  a 44–46%). Duelos: 52,4% contra r3 en 4, 48,4% en 6; 75,0% / 81,3% contra la difícil. Las cartas también se
+  degradan con más entrenamiento.
+- Conclusión provisoria: con self-play la charla pública pierde el significado (más rápido la que solo sirve para
+  engañar); hablar y escuchar no dan ventaja; entrenar más no mejora.
+
+## 2026-09-29 — Tanda de día (`training/dia.sh`)
+
+- Explotabilidad de r5-charla (red entrenada solo para ganarle, 150 iteraciones): ¿la red que habla es explotable?
+- Réplicas de r4-piloto con las semillas 11 y 12: ¿el balbuceo se repite? (rigor para la tesis).
+- `exploit` ahora copia también las tablas W de 4 y 6 y no hace los duelos de charla.

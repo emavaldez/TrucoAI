@@ -1,0 +1,10 @@
+{
+  "run": "r4-sinrep",
+  "created": "2026-09-29 00:17:51",
+  "commit": "c5704a5095dcf4fcb2167d2e060d3c552a9aaa10",
+  "layoutHash": "956879f1",
+  "obsDim": 1054,
+  "machine": "macOS-26.6.2-arm64-arm-64bit",
+  "python": "3.12.13",
+  "torch": "2.14.0"
+}

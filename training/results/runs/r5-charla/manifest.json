@@ -1,0 +1,10 @@
+{
+  "run": "r5-charla",
+  "created": "2026-09-29 01:27:03",
+  "commit": "c5704a5095dcf4fcb2167d2e060d3c552a9aaa10",
+  "layoutHash": "d2aaf8cd",
+  "obsDim": 1066,
+  "machine": "macOS-26.6.2-arm64-arm-64bit",
+  "python": "3.12.13",
+  "torch": "2.14.0"
+}
