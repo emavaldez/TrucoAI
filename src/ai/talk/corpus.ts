@@ -74,9 +74,14 @@ export const CORPUS: Corpus = {
     libres: ["igualala", "hacé que quede empatada"],
   },
   IND_TRANQUILO: {
-    reglas: ["tranquilo", "jugá tranquilo", "como quieras", "lo que quieras", "jugá libre", "hacé la tuya"],
-    ejemplos: ["jugá tranquilo che", "tranqui", "jugá como quieras", "hacé lo que quieras", "jugá a tu gusto", "tranquilo compañero", "jugá libre nomás", "lo que vos quieras", "tranqui, jugá", "hacé la tuya compañero", "como vos veas", "jugá a tu manera", "tranquilo que vamos bien", "dale tranquilo", "hacé lo que te parezca"],
-    libres: ["vos sabés", "a tu criterio", "confío en vos"],
+    reglas: ["tranquilo", "jugá tranquilo", "jugá chica", "guardá la grande", "no gastes la grande"],
+    ejemplos: ["jugá tranquilo che", "tranqui", "tranquilo compañero", "tranqui, jugá", "tranquilo que vamos bien", "dale tranquilo", "jugá chica nomás", "guardate la grande", "no quemes la grande", "jugá chiquita", "tirá chica", "tranquilo, guardá", "chica y tranquilo", "no te gastes", "jugá tranqui compa"],
+    libres: ["despacio, no la gastes", "jugá bajo perfil", "guardá la buena"],
+  },
+  IND_LIBRE: {
+    reglas: ["como quieras", "lo que quieras", "jugá libre", "hacé la tuya", "hacé como quieras"],
+    ejemplos: ["jugá como quieras", "hacé lo que quieras", "jugá a tu gusto", "jugá libre nomás", "lo que vos quieras", "hacé la tuya compañero", "como vos veas", "jugá a tu manera", "hacé lo que te parezca", "vos sabés", "a tu criterio", "decidí vos", "hacé vos", "lo que te parezca mejor", "como te parezca"],
+    libres: ["confío en vos", "es tu decisión", "vos fijate"],
   },
   IND_CANTA_TRUCO: {
     reglas: ["cantá", "cantale", "cantales", "cantá vos", "dale cantá", "cantalo"],

@@ -358,3 +358,28 @@ Diseño del piloto (4 jugadores, solo el tanto; `config/r4-piloto.json`):
   `init.fromRun` copia también las tablas W de 4 y 6. Probado el actor en 4 y 6 (eval y ppo) con las tres banderas.
 - Fase C: duelos de 1000 pares de cada red entrenada contra su emisor (oyendo y sorda) y contra R tal cual.
   Resultados en `results/runs/r6-escucha-*/` y `results/duelos.jsonl`.
+
+## 2026-10-20 01:30 — Primer resultado de r6 y cambios en la mesa (juego)
+
+- **r6-escucha-verdad (terminada 01:27)**: contra la misma red que dice la verdad, la que escucha sube de ≈50% a
+  **57–60% en 4 jugadores** y 52–55% en 6 (iteraciones 150–170, 600 partidas por punto); la misma red **sorda** da
+  46–49%. La información de la charla vale ~8–10 puntos cuando es sincera: el problema de r5 era el emisor que
+  balbucea, no el canal. Falta ver mentira y moneda, y los duelos de 1000 pares.
+- Emmanuel, jugando: (1) "jugá tranquilo" al compañero con un 2 y el ancho de basto, y tiró el ancho: `TRANQUILO`
+  significaba "lo que quieras". **Ahora es "jugá chica, guardá la grande"** (nunca la mejor; abre con la mejor de las
+  otras, contesta ganando barato o con la más baja), por regla para la heurística y para la red (que lo aprendió como
+  "libre"; `src/ai/followInstruction.ts`). "Hacé como quieras" pasa a ser otra intención (`IND_LIBRE`): el que
+  preguntó decide solo. (2) El pie dijo "matá" al primero y "matá" también al segundo cuando el primero ya la tenía:
+  ahora dice "pasá, ya la tenemos". (3) Lo que dicen los compañeros no influía en el pie de la IA (solo lo tuyo):
+  **ahora los compañeros de la IA opinan en los dos equipos** (tanto, respuesta a un canto, y truco antes de que
+  juegue el pie) **y el pie decide** (sigue el consejo en el borde; con la mano clara manda él; "cantá el tanto" se
+  obedece; el engaño del tanto sigue siendo a propósito y no es consejo). El pie avisa "Dejá, esperemos" cuando
+  espera y sube. Respuestas nuevas al pie: "No tengo nada" y "Hacé como quieras".
+- Como ahora los rivales también hablan entre ellos en voz alta, el humano oye sus engaños: la mesa reproduce lo que
+  se mide en r4/r5. El clasificador de frases hay que reentrenarlo (nueva intención): lo hace `training/mentira.sh`.
+
+## 2026-10-20 01:35 — Tanda 2: ¿la mentira influye en el otro equipo? (`training/mentira.sh`)
+
+- Detrás de escucha.sh: R con lo dicho impuesto (verdad / mentira / moneda / callada / tal cual) contra la difícil,
+  que escucha y cree 75%, en 4 y 6, 1000 pares; y mentira y verdad contra r3 (que no oye) como control. Si mentir
+  rinde contra quien escucha, la mentira debe ganar más que la verdad y que callarse; contra r3, nada cambia.

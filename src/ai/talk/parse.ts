@@ -135,7 +135,8 @@ export function parseRules(raw: string): Understanding | null {
   if (has(t, /\b(mata|matala|matalo|ganala|gana esa|pisala)\b/) || has(t, /\b(tira|juga|echa|mete) la (mas )?(alta|grande|fuerte|mejor)\b/)) return result('IND_MATA', t);
   if (has(t, /\b(pasa|pasala|deja pasar|anda bajo|juga bajo)\b/) || has(t, /\b(tira|juga|echa) la (mas )?(baja|chica|peor)\b/)) return result('IND_PASA', t);
   if (has(t, /\b(parda|pardala|emparda|empardala|empata|empatala)\b/)) return result('IND_PARDA', t);
-  if (has(t, /\b(tranquilo|tranqui|como quieras|lo que quieras|juga libre|hace la tuya|juga como quieras)\b/)) return result('IND_TRANQUILO', t);
+  if (has(t, /\b(como quieras|lo que quieras|juga libre|hace la tuya|juga como quieras|hace como quieras|a tu criterio|vos sabes|lo que te parezca|como vos veas|a tu gusto|a tu manera)\b/)) return result('IND_LIBRE', t);
+  if (has(t, /\b(tranquilo|tranqui|juga chica|guarda la grande|no gastes la grande)\b/)) return result('IND_TRANQUILO', t);
 
   // Jugar una carta ("tiro el ancho", "va el siete de oro", "juego la más baja", "el tres de copa").
   const card = parseCard(t);

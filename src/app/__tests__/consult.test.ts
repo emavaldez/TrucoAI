@@ -154,7 +154,7 @@ describe('más charla de equipo (pedido de Emmanuel 2026-09-28)', () => {
       const consult = controller.snapshot().consult;
       if (consult?.kind !== 'jugada') continue;
       expect(['¿Qué juego?', '¿Qué tiro?', '¿Qué hago?']).toContain(consult.question);
-      expect(consult.options).toEqual(['¡Matá!', 'Pasá', 'Pardá', 'Jugá tranquilo']);
+      expect(consult.options).toEqual(['¡Matá!', 'Pasá', 'Pardá', 'Jugá tranquilo', 'No tengo nada', 'Hacé como quieras']);
       const before = controller.getState().hand.currentTrick.plays.length;
       expect(controller.humanSays('Pasá').ok).toBe(true);
       expect(controller.snapshot().instructions).toContainEqual({ from: HUMAN_ID, kind: 'PASA' });
@@ -201,5 +201,31 @@ describe('más charla de equipo (pedido de Emmanuel 2026-09-28)', () => {
     expect(controller.holdConsult()).toBe(true);
     expect(controller.holdConsult()).toBe(true);
     expect(controller.holdConsult()).toBe(false);
+  });
+});
+
+describe('el pie escucha a sus compañeros y decide (Emmanuel 2026-10-20)', () => {
+  it('«Hacé como quieras» y «No tengo nada» cierran la consulta y el pie decide solo', () => {
+    for (const phrase of ['Hacé como quieras', 'No tengo nada']) {
+      const { controller, scheduler } = withTantoConsult();
+      const version = controller.getState().version;
+      expect(controller.snapshot().consult?.options).toContain(phrase);
+      expect(controller.humanSays(phrase).ok).toBe(true);
+      expect(controller.snapshot().consult).toBeNull();
+      scheduler.runNext();
+      expect(controller.getState().version).not.toBe(version);
+    }
+  });
+
+  it('en el otro equipo los compañeros también hablan (y lo oís)', () => {
+    for (let seed = 1; seed < 60; seed++) {
+      const { controller, scheduler } = make(seed, 0);
+      const state = controller.getState();
+      const myTeam = state.seats.find((seat) => seat.id === HUMAN_ID)?.team;
+      const rivals = new Set(state.seats.filter((seat) => seat.team !== myTeam).map((seat) => seat.id));
+      const heard = () => controller.snapshot().speech.some((line) => rivals.has(line.playerId));
+      if (advance(controller, scheduler, () => heard() || controller.getState().hand.number > 2, 400) && heard()) return;
+    }
+    throw new Error('los rivales nunca hablaron');
   });
 });

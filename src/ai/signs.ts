@@ -216,7 +216,7 @@ export const INSTRUCTIONS: InstructionInfo[] = [
   { kind: 'MATA', group: 'cartas', label: '¡Matá!', meaning: 'Ganá la baza si podés' },
   { kind: 'PASA', group: 'cartas', label: 'Pasá, la mato yo', meaning: 'Jugá la más baja' },
   { kind: 'PARDA', group: 'cartas', label: 'Pardá', meaning: 'Empardá si podés' },
-  { kind: 'TRANQUILO', group: 'cartas', label: 'Jugá tranquilo', meaning: 'Lo que quieras' },
+  { kind: 'TRANQUILO', group: 'cartas', label: 'Jugá tranquilo', meaning: 'Jugá chica, guardá la grande' },
   { kind: 'CANTA_TRUCO', group: 'truco', label: 'Cantá', meaning: 'Tenemos con qué: cantá truco' },
   { kind: 'ESPERA', group: 'truco', label: 'Jugá callado', meaning: 'No cantes truco' },
 ];

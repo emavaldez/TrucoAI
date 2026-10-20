@@ -17,10 +17,13 @@ import {
   aiCardsAnswer,
   aiResponseOpinion,
   aiTantoAnswer,
+  aiTrucoOpinion,
+  mergeAdvice,
   tacticalDecision,
   type PublicClaim,
   type TeamAdvice,
 } from '../ai/talk/team.js';
+import { trickLeader } from '../ai/cardPlay.js';
 import { availableSigns, instructionInfo, INSTRUCTIONS, type GivenInstruction, type Instruction, type Signal, type SignKind } from '../ai/signs.js';
 import {
   EMPTY_TALK,
@@ -184,8 +187,8 @@ export class GameController {
   private speechId = 0;
   /** lo que se afirmó en voz alta en esta mano (los rivales de la IA lo escuchan) */
   private claims: PublicClaim[] = [];
-  /** consejo del equipo del humano para su pie / el que contesta (de esta mano) */
-  private advice: TeamAdvice = {};
+  /** consejo de cada equipo para su pie / el que contesta (de esta mano); lo dan los compañeros, de la IA o vos */
+  private advice = new Map<TeamId, TeamAdvice>();
   /** equipos cuyo pie decidió esperar y subir el envido en esta mano */
   private slowPlay = new Set<TeamId>();
   /** consultas ya hechas en esta mano (para no repetirlas) */
@@ -327,7 +330,7 @@ export class GameController {
     const consult = this.consult && this.teamOf(this.consult.askerId) === this.teamOf(HUMAN_ID) ? this.consult : null;
     // Contestar una consulta del equipo: el consejo le llega al que decide, que juega enseguida.
     const answer = (advice: TeamAdvice): SayResult => {
-      this.advice = { ...this.advice, ...advice };
+      this.addAdvice(this.teamOf(HUMAN_ID) as TeamId, advice);
       if (consult) this.answerConsult();
       if (consult) this.say(consult.askerId, 'Dale.');
       return done({ understood: u, ok: true });
@@ -419,7 +422,7 @@ export class GameController {
         if (aiPartners.length === 0) this.say(rivals[0], rivalBanter(this.rng, true));
         else if (this.state.phase === 'AWAITING_TRUCO' || this.state.phase === 'AWAITING_ENVIDO') {
           for (const partner of aiPartners) this.say(partner, aiResponseOpinion(this.state, partner).text);
-        } else if (aiPie) this.say(aiPie, pieWhatToDo(instructionsFor(this.state, this.talk, HUMAN_ID)));
+        } else if (aiPie) this.say(aiPie, pieWhatToDo(instructionsFor(this.state, this.talk, HUMAN_ID), this.teamLeadsTrick(HUMAN_ID)));
         else this.say(aiPartners[0], 'Vos sos el pie: decime vos.');
         return done({ understood: u, ok: true });
       }
@@ -444,7 +447,16 @@ export class GameController {
         }
         for (const kind of told) this.sendHumanSignal(kind);
         if (consult?.kind === 'tanto' && about === 'tanto') return answer({ tanto: u.label === 'TENGO' ? 'canta' : 'callado' });
+        // «No tengo nada» contestando «¿qué hago?» o «¿qué hacemos?»: ya lo oyeron todos; el que decide, decide.
+        if (consult) return answer({});
         if (aiPie) this.say(aiPie, 'Dale.');
+        return done({ understood: u, ok: true });
+      }
+      case 'IND_LIBRE': {
+        // «Hacé como quieras»: el que preguntó decide solo (no es una indicación de cartas).
+        if (consult) return answer({});
+        if (aiPartners.length === 0) return done({ understood: u, ok: false, note: 'No tenés compañeros a quienes decírselo.' });
+        this.say(aiPie ?? aiPartners[0], 'Dale.');
         return done({ understood: u, ok: true });
       }
       case 'CHARLA':
@@ -528,12 +540,12 @@ export class GameController {
     let wait = this.timing.consultWait;
     if (state.phase === 'PLAYING' && this.isPieNow(actor) && trick === 0 && legal.some((a) => a.type === 'CALL_ENVIDO') && !this.asked.has('tanto')) {
       this.asked.add('tanto');
-      consult = { askerId: actor, kind: 'tanto', question: '¿Canto tanto?', options: ['Cantá el tanto', 'Jugá callado', 'Tengo tanto', 'No tengo nada'] };
+      consult = { askerId: actor, kind: 'tanto', question: '¿Canto tanto?', options: ['Cantá el tanto', 'Jugá callado', 'Tengo tanto', 'No tengo nada', 'Hacé como quieras'] };
     } else if (state.phase === 'AWAITING_TRUCO' || state.phase === 'AWAITING_ENVIDO') {
       const key = `resp-${state.phase}-${state.hand.truco.level}-${state.hand.envido.chain.length}`;
       if (!this.asked.has(key)) {
         this.asked.add(key);
-        const options = ['Quiero', 'No quiero', 'Subile'];
+        const options = ['Quiero', 'No quiero', 'Subile', 'No tengo nada', 'Hacé como quieras'];
         if (state.phase === 'AWAITING_TRUCO' && legal.some((a) => a.type === 'CALL_ENVIDO')) options.unshift('El envido está primero');
         consult = { askerId: actor, kind: 'respuesta', question: '¿Qué hacemos?', options };
       }
@@ -543,13 +555,13 @@ export class GameController {
       this.asked.add(key);
       const questions = ['¿Qué juego?', '¿Qué tiro?', '¿Qué hago?'];
       const question = questions[Math.floor(this.rng.next() * questions.length)];
-      const options = ['¡Matá!', 'Pasá', 'Pardá', 'Jugá tranquilo'];
+      const options = ['¡Matá!', 'Pasá', 'Pardá', 'Jugá tranquilo', 'No tengo nada', 'Hacé como quieras'];
       if (humanPie) {
         consult = { askerId: actor, kind: 'jugada', question, options };
       } else if (aiPie) {
         // Le pregunta al pie de la IA, que contesta con lo que indica.
         this.say(actor, question);
-        this.say(aiPie, pieWhatToDo(this.instructionsFor(actor)));
+        this.say(aiPie, pieWhatToDo(this.instructionsFor(actor), this.teamLeadsTrick(actor)));
         if (trick === 0) return 0;
         // Desde la 2da baza se coordina entre todos: tenés un rato para indicar otra cosa.
         this.consult = { askerId: actor, kind: 'jugada', question, options, waitMs: Math.round(wait * 0.5), id: ++this.consultSeq };
@@ -559,16 +571,7 @@ export class GameController {
     }
     if (!consult) return 0;
     this.say(actor, consult.question);
-    for (const partner of partnersOf(state, actor)) {
-      if (partner === HUMAN_ID || consult.kind === 'jugada') continue;
-      if (consult.kind === 'tanto') {
-        const reply = aiTantoAnswer(state, partner, this.rng);
-        this.say(partner, reply.text);
-        this.claims.push(reply.claim);
-      } else {
-        this.say(partner, aiResponseOpinion(state, partner).text);
-      }
-    }
+    if (consult.kind !== 'jugada') this.partnersVolunteer(actor);
     if (wait <= 0) wait = 0;
     this.consult = { ...consult, waitMs: wait, id: ++this.consultSeq };
     this.consultHolds = 0;
@@ -687,7 +690,7 @@ export class GameController {
    */
   private dealSignals(): void {
     this.claims = [];
-    this.advice = {};
+    this.advice = new Map();
     this.slowPlay = new Set();
     this.asked = new Set();
     this.consult = null;
@@ -703,6 +706,63 @@ export class GameController {
   }
 
   /** Lo que el pie le indicó a `playerId` (nada si él mismo es el pie). */
+  /** ¿La baza en curso ya la tiene el equipo de `playerId`? (para "pasá, ya la tenemos") */
+  private teamLeadsTrick(playerId: PlayerId): boolean {
+    const teams = new Map(this.state.seats.map((seat) => [seat.id, seat.team as TeamId]));
+    return trickLeader(this.state.hand.currentTrick.plays, teams).winner === this.teamOf(playerId);
+  }
+
+  private addAdvice(team: TeamId, advice: TeamAdvice): void {
+    this.advice.set(team, mergeAdvice(this.advice.get(team) ?? {}, advice));
+  }
+
+  /**
+   * Los compañeros de la IA de `actor` opinan en voz alta antes de que decida (Emmanuel 2026-10-20: lo que dicen
+   * influye en el pie, que decide). Una vez por situación y por mano: el tanto (cuando el pie puede cantarlo),
+   * la respuesta a un canto rival, y el truco (antes de que juegue el pie en la 1ra baza). Todo es público:
+   * lo oye el otro equipo también (y el engaño del tanto es a propósito).
+   */
+  private partnersVolunteer(actor: PlayerId): void {
+    if (!this.signalsAllowed()) return;
+    const state = this.state;
+    const team = this.teamOf(actor) as TeamId;
+    const legal = getLegalActions(state, actor);
+    const partners = partnersOf(state, actor).filter((id) => id !== actor && id !== HUMAN_ID);
+    if (partners.length === 0) return;
+    const once = (key: string): boolean => {
+      if (this.asked.has(key)) return false;
+      this.asked.add(key);
+      return true;
+    };
+    if (state.phase === 'AWAITING_TRUCO' || state.phase === 'AWAITING_ENVIDO') {
+      if (!once(`opina-${state.phase}-${state.hand.truco.level}-${state.hand.envido.chain.length}-${team}`)) return;
+      for (const partner of partners) {
+        const opinion = aiResponseOpinion(state, partner);
+        this.say(partner, opinion.text);
+        this.addAdvice(team, { resp: opinion.advice });
+      }
+      return;
+    }
+    if (state.phase !== 'PLAYING' || !this.isPieNow(actor) || state.hand.tricks.length > 0) return;
+    if (legal.some((a) => a.type === 'CALL_ENVIDO') && once(`opina-tanto-${team}`)) {
+      for (const partner of partners) {
+        const reply = aiTantoAnswer(state, partner, this.rng);
+        this.say(partner, reply.text);
+        this.claims.push(reply.claim);
+        if (reply.advice) this.addAdvice(team, { tanto: reply.advice });
+      }
+    }
+    if (legal.some((a) => a.type === 'CALL_TRUCO') && state.hand.truco.level === 0 && once(`opina-truco-${team}`)) {
+      for (const partner of partners) {
+        const opinion = aiTrucoOpinion(state, partner);
+        if (!opinion) continue;
+        this.say(partner, opinion.text);
+        this.claims.push(opinion.claim);
+        if (opinion.advice) this.addAdvice(team, { truco: opinion.advice });
+      }
+    }
+  }
+
   private instructionsFor(playerId: PlayerId): Instruction[] {
     return instructionsFor(this.state, this.talk, playerId);
   }
@@ -845,10 +905,15 @@ export class GameController {
         // La red ve también lo que indicó ella misma si es pie (así se entrenó); la heurística, solo lo que le indicaron.
         const told = policy instanceof NetPolicy ? teamInstructions(this.state, this.talk, actor) : this.instructionsFor(actor);
         const team = this.teamOf(actor) as TeamId;
-        const advice = team === this.teamOf(HUMAN_ID) && actor !== HUMAN_ID ? this.advice : {};
+        // Los compañeros de la IA opinan antes de que decida (en los dos equipos; lo que dicen lo oyen todos).
+        if (actor !== HUMAN_ID) this.partnersVolunteer(actor);
+        const advice = actor !== HUMAN_ID ? (this.advice.get(team) ?? {}) : {};
         // Táctica de equipo encima de la política: seguir el consejo del equipo, o esperar y subir el tanto.
         const tactic = actor === HUMAN_ID ? null : tacticalDecision({ state: this.state, actor, signals: this.signalsFor(actor), advice, slowPlaying: this.slowPlay.has(team) });
-        if (tactic?.slowPlay) this.slowPlay.add(team);
+        if (tactic?.slowPlay && !this.slowPlay.has(team)) {
+          this.slowPlay.add(team);
+          this.say(actor, 'Dejá, esperemos.');
+        }
         if (tactic?.action) action = tactic.action;
         else {
           const obs = getObservation(this.state, actor);
@@ -856,7 +921,7 @@ export class GameController {
           const view = exclude ? { ...obs, legalActions: obs.legalActions.filter((a) => !exclude(a)) } : obs;
           action = policy.decide(view, this.rng, this.signalsFor(actor), told, this.claims);
         }
-        if (this.state.phase === 'AWAITING_TRUCO' || this.state.phase === 'AWAITING_ENVIDO') this.advice = { ...this.advice, resp: undefined, call: undefined };
+        if (this.state.phase === 'AWAITING_TRUCO' || this.state.phase === 'AWAITING_ENVIDO') this.advice.set(team, { ...(this.advice.get(team) ?? {}), resp: undefined, call: undefined });
       } catch (error) {
         console.warn('[truco] la IA falló al decidir; juega la primera acción legal', error);
       }

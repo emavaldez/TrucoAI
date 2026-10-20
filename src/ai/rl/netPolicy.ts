@@ -5,6 +5,7 @@
 // - Usa exactamente la misma codificación que el entrenamiento (encode.ts) y la misma inferencia (mlp.ts).
 
 import type { Action, Observation, Rng } from '../../engine/index.js';
+import { cardForInstruction } from '../followInstruction.js';
 import type { Policy } from '../policy.js';
 import type { Instruction, Signal } from '../signs.js';
 import { ACTION_NAMES, instructionMask, instructionOf, legalMask, N_ENGINE_ACTIONS, type InstructionDecision } from './actions.js';
@@ -84,6 +85,13 @@ export class NetPolicy implements Policy {
     const mlp = netFor(obs);
     if (!mlp || obs.legalActions.length === 0) return this.fallback.decide(obs, rng, signals, instructions);
     if (obs.legalActions.length === 1) return obs.legalActions[0];
+    // "Jugá tranquilo" cambió de significado (jugá chica, guardá la grande): la red lo aprendió como "libre",
+    // así que la carta la elige la regla, no la red.
+    if (obs.phase === 'PLAYING' && instructions.includes('TRANQUILO') && obs.picaPica === null) {
+      const card = cardForInstruction(obs, ['TRANQUILO']);
+      const play = card ? obs.legalActions.find((a) => a.type === 'PLAY_CARD' && a.cardId === card.id) : undefined;
+      if (play) return play;
+    }
     let legal: ReturnType<typeof legalMask>;
     try {
       legal = legalMask(obs);

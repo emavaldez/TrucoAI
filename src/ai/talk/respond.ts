@@ -27,9 +27,15 @@ export function partnerTrucoAnswer(hand: readonly Card[]): string {
 }
 
 /** Lo que dice el pie cuando le preguntan qué hacer: sus indicaciones vigentes. */
-export function pieWhatToDo(instructions: readonly Instruction[]): string {
+/**
+ * Lo que contesta el pie a "¿qué hago?": sus indicaciones vigentes. Si pidió "¡matá!" pero la baza ya la tiene el
+ * equipo (un compañero mató antes), al que pregunta le dice "pasá" (Emmanuel 2026-10-20).
+ */
+export function pieWhatToDo(instructions: readonly Instruction[], teamLeadsTrick = false): string {
   if (instructions.length === 0) return 'Jugá tranquilo.';
-  return instructions.map((kind) => instructionInfo(kind).label).join(' ');
+  return instructions
+    .map((kind) => (kind === 'MATA' && teamLeadsTrick ? 'Pasá, ya la tenemos.' : instructionInfo(kind).label))
+    .join(' ');
 }
 
 const RIVAL_BANTER = [

@@ -19,6 +19,7 @@ export const INTENT_LABELS = [
   'IND_PASA',
   'IND_PARDA',
   'IND_TRANQUILO',
+  'IND_LIBRE', // «hacé como quieras», «hacé la tuya»: el que preguntó decide solo
   'IND_CANTA_TRUCO', // «cantá»
   'IND_ESPERA', // «jugá callado»
   'IND_CANTA_TANTO', // «cantá el tanto»
@@ -73,6 +74,7 @@ export const INTENT_TEXT: Record<IntentLabel, string> = {
   IND_PASA: 'decir «pasá»',
   IND_PARDA: 'decir «pardá»',
   IND_TRANQUILO: 'decir «jugá tranquilo»',
+  IND_LIBRE: 'decir «hacé como quieras»',
   IND_CANTA_TRUCO: 'decir «cantá»',
   IND_ESPERA: 'decir «jugá callado»',
   IND_CANTA_TANTO: 'decir «cantá el tanto»',

@@ -5,6 +5,8 @@
 // - Lo que alguien afirma en voz alta queda como un dicho público que los rivales de la IA pueden creer.
 // - La táctica de esperar y subir: el pie que sabe que su equipo tiene mucho tanto y todavía le falta
 //   jugar al pie rival no canta; espera que el rival cante y le sube.
+// - Lo que dicen los compañeros (de la IA o el humano) influye en el pie, pero la decisión final es del pie
+//   (Emmanuel 2026-10-20): con la mano clara manda él; en el borde, sigue el consejo.
 
 import { cardRank, envidoScore, getLegalActions, pieOf } from '../../engine/index.js';
 import type { Action, Card, EnvidoCall, MatchState, PlayerId, Rng, TeamId } from '../../engine/index.js';
@@ -23,6 +25,8 @@ export interface PublicClaim {
 /** Consejo del equipo para el que decide (el pie o el que contesta). */
 export interface TeamAdvice {
   tanto?: 'canta' | 'callado';
+  /** cantar o no el truco (lo que opinan los compañeros antes de que juegue el pie) */
+  truco?: 'canta' | 'espera';
   /** contestar un canto: querer, no querer, subir, o (a un truco en la 1ra baza) «el envido está primero» */
   resp?: 'quiero' | 'no' | 'subile' | 'envido';
   /** qué envido cantar al subir o con «el envido está primero» (si se nombró) */
@@ -66,14 +70,47 @@ export function teamHasStrongTanto(state: MatchState, playerId: PlayerId, signal
  * salvo cuando tiene mucho (ya se lo señó al pie) y todavía puede cantar el rival: ahí, a veces, dice que
  * no tiene nada para que el rival se anime y su pie le suba.
  */
-export function aiTantoAnswer(state: MatchState, playerId: PlayerId, rng: Rng): { text: string; claim: PublicClaim } {
+export function aiTantoAnswer(state: MatchState, playerId: PlayerId, rng: Rng): { text: string; claim: PublicClaim; advice?: TeamAdvice['tanto'] } {
   const score = envidoScore(state.hand.dealt[playerId] ?? []);
   const claim = (level: PublicClaim['level']): PublicClaim => ({ from: playerId, about: 'tanto', level });
-  if (score >= 27 && rivalPieStillToAct(state, playerId) && rng.next() < 0.7) return { text: 'No, nada. Jugá callado.', claim: claim('nada') };
-  if (score >= 30) return { text: '¡Cantá, que tengo muchos!', claim: claim('mucho') };
-  if (score >= 27) return { text: 'Tengo algo. Cantá.', claim: claim('algo') };
+  // El engaño: lo dice para el rival; a su pie no le aconseja nada (ya sabe la verdad por la seña). Y mientras
+  // el pie rival pueda cantar, un «cantá» sincero tampoco es consejo: el pie decide si espera y sube.
+  const early = rivalPieStillToAct(state, playerId);
+  if (score >= 27 && early && rng.next() < 0.7) return { text: 'No, nada. Jugá callado.', claim: claim('nada') };
+  if (score >= 30) return { text: '¡Cantá, que tengo muchos!', claim: claim('mucho'), ...(early ? {} : { advice: 'canta' as const }) };
+  if (score >= 27) return { text: 'Tengo algo. Cantá.', claim: claim('algo'), ...(early ? {} : { advice: 'canta' as const }) };
   if (score >= 24) return { text: 'Poco. Como quieras.', claim: claim('algo') };
-  return { text: 'No, nada. Jugá callado.', claim: claim('nada') };
+  return { text: 'No, nada. Jugá callado.', claim: claim('nada'), advice: 'callado' };
+}
+
+/**
+ * Opinión de un compañero de la IA sobre cantar el truco, antes de que juegue el pie (Emmanuel 2026-10-20).
+ * Con dos cartas grandes, "cantá"; sin nada, "jugá callado"; en el medio no opina. Lo que dice queda como
+ * dicho público sobre sus cartas.
+ */
+export function aiTrucoOpinion(state: MatchState, playerId: PlayerId): { text: string; claim: PublicClaim; advice?: TeamAdvice['truco'] } | null {
+  const hand = state.hand.hands[playerId] ?? [];
+  if (hand.length === 0) return null;
+  const ranks = hand.map(cardRank);
+  const big = ranks.filter((rank) => rank >= 10).length;
+  const good = ranks.filter((rank) => rank >= 8).length;
+  const claim = (level: PublicClaim['level']): PublicClaim => ({ from: playerId, about: 'cartas', level });
+  if (big >= 2 || (big === 1 && good >= 2)) return { text: 'Cantá, que vengo bien.', claim: claim('mucho'), advice: 'canta' };
+  if (good === 0) return { text: 'Jugá callado, estoy seco.', claim: claim('nada'), advice: 'espera' };
+  return null;
+}
+
+/** Junta la opinión de varios compañeros: la más decidida gana (subile > quiero > no; canta > espera). */
+export function mergeAdvice(current: TeamAdvice, next: TeamAdvice): TeamAdvice {
+  const out = { ...current };
+  const rank = (value: string | undefined, order: readonly string[]): number => (value === undefined ? -1 : order.indexOf(value));
+  if (rank(next.tanto, ['callado', 'canta']) > rank(out.tanto, ['callado', 'canta'])) out.tanto = next.tanto;
+  if (rank(next.truco, ['espera', 'canta']) > rank(out.truco, ['espera', 'canta'])) out.truco = next.truco;
+  if (rank(next.resp, ['no', 'quiero', 'envido', 'subile']) > rank(out.resp, ['no', 'quiero', 'envido', 'subile'])) {
+    out.resp = next.resp;
+    out.call = next.call;
+  } else if (next.call !== undefined && out.resp === next.resp) out.call = next.call;
+  return out;
 }
 
 /** Lo que contesta un compañero de la IA cuando le preguntan por sus cartas (siempre en términos de seña). */
@@ -119,11 +156,17 @@ export function tacticalDecision(args: {
   advice: TeamAdvice;
   slowPlaying: boolean;
 }): { action?: Action; exclude?: (action: Action) => boolean; slowPlay?: boolean } | null {
-  const { state, actor, signals, advice, slowPlaying } = args;
+  const { state, actor, signals, slowPlaying } = args;
   const legal = getLegalActions(state, actor);
   const find = (predicate: (action: Action) => boolean): Action | undefined => legal.find(predicate);
   const isEnvidoCall = (action: Action): boolean => action.type === 'CALL_ENVIDO';
   const hand = state.hand;
+  // La decisión final es del que decide: con la mano clara no sigue un "no" ni un "esperá" (Emmanuel 2026-10-20).
+  const myScore = envidoScore(hand.dealt[actor] ?? []);
+  const myBest = Math.max(-1, ...(hand.hands[actor] ?? []).map(cardRank));
+  const advice: TeamAdvice = { ...args.advice };
+  if (state.phase === 'AWAITING_ENVIDO' && advice.resp === 'no' && myScore >= 28) advice.resp = undefined;
+  if (state.phase === 'AWAITING_TRUCO' && advice.resp === 'no' && myBest >= 12) advice.resp = undefined;
 
   // Contestar un envido del rival.
   if (state.phase === 'AWAITING_ENVIDO' && hand.envido.pending?.responderId === actor) {
@@ -154,11 +197,20 @@ export function tacticalDecision(args: {
     }
     return null;
   }
-  // Cantar o no el tanto (el pie, en su turno de la 1ra baza). Solo en equipo (4 y 6).
-  if (!legal.some(isEnvidoCall) || state.phase !== 'PLAYING' || state.rules.playerCount < 4) return null;
-  if (advice.tanto === 'canta') return pick(find((a) => a.type === 'CALL_ENVIDO' && a.call === 'E'));
-  if (teamHasStrongTanto(state, actor, signals) && rivalPieStillToAct(state, actor)) return { exclude: isEnvidoCall, slowPlay: true };
-  if (advice.tanto === 'callado') return { exclude: isEnvidoCall };
+  if (state.phase !== 'PLAYING' || state.rules.playerCount < 4) return null;
+  // Cantar o no el tanto (el pie, en su turno de la 1ra baza): «cantá el tanto» se obedece; si no, esperar y subir.
+  if (legal.some(isEnvidoCall)) {
+    if (advice.tanto === 'canta') return pick(find((a) => a.type === 'CALL_ENVIDO' && a.call === 'E'));
+    if (teamHasStrongTanto(state, actor, signals) && rivalPieStillToAct(state, actor)) return { exclude: isEnvidoCall, slowPlay: true };
+    if (advice.tanto === 'callado') return { exclude: isEnvidoCall };
+  }
+  // El truco, según los compañeros: "cantá" lo sigue si tiene con qué acompañar; "esperá", salvo que tenga una grande.
+  const isTrucoCall = (action: Action): boolean => action.type === 'CALL_TRUCO';
+  if (legal.some(isTrucoCall) && hand.truco.level === 0) {
+    // "Cantá" recién cuando el tanto ya está resuelto (si no, se pisaría el envido).
+    if (advice.truco === 'canta' && myBest >= 8 && !legal.some(isEnvidoCall)) return pick(find(isTrucoCall));
+    if (advice.truco === 'espera' && myBest < 12) return { exclude: isTrucoCall };
+  }
   return null;
 }
 
