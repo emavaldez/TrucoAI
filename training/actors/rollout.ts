@@ -55,7 +55,13 @@ import { computeWTable, wValue, type HandDistribution, type WTable } from '../en
  * `mute`: se calla siempre (lo que dice queda como "calla"); `deaf`: no escucha (no ve lo dicho, y si es heurística
  * no le cree a nadie). Sirven para medir cuánto vale hablar y escuchar (r4).
  */
-type TalkFlags = { mute?: boolean; deaf?: boolean };
+/**
+ * `speech` (r6): se le impone qué dice, sin mirar la red ni la heurística: `truth` dice la verdad (trueLevel), `lie`
+ * dice el extremo opuesto (mucho↔nada; con algo, uno de los otros dos al azar) y `coin` dice la verdad la mitad de
+ * las veces y si no, un nivel distinto al azar. Sirve para entrenar a la que escucha contra un emisor fijo.
+ */
+type Speech = 'truth' | 'lie' | 'coin';
+type TalkFlags = { mute?: boolean; deaf?: boolean; speech?: Speech };
 type AgentSpec = ({ kind: 'mlp'; path: string; greedy?: boolean } | { kind: 'heur'; difficulty: Difficulty } | { kind: 'self' }) & TalkFlags;
 
 interface Job {
@@ -101,6 +107,7 @@ interface Agent {
   hearsRep?: boolean;
   mute?: boolean;
   deaf?: boolean;
+  speech?: Speech;
 }
 
 /** Huellas de la observación: sin lo dicho (hasta r3) y con lo dicho (r4). */
@@ -113,10 +120,10 @@ interface Hashes {
 const mlpCache = new Map<string, Mlp>();
 
 async function makeAgent(spec: AgentSpec, learner: Agent | null, name: string, hashes: Hashes): Promise<Agent> {
-  const flags = { mute: spec.mute, deaf: spec.deaf };
+  const flags = { mute: spec.mute, deaf: spec.deaf, speech: spec.speech };
   if (spec.kind === 'self') {
     if (!learner) throw new Error('"self" sin red que aprende');
-    return spec.mute || spec.deaf ? { ...learner, ...flags, name } : learner;
+    return spec.mute || spec.deaf || spec.speech ? { ...learner, ...flags, name } : learner;
   }
   if (spec.kind === 'heur') return { name, policy: createPolicy(spec.difficulty), ...flags };
   let mlp = mlpCache.get(spec.path);
@@ -129,6 +136,15 @@ async function makeAgent(spec: AgentSpec, learner: Agent | null, name: string, h
   }
   const hash = mlp.meta.layoutHash;
   return { name, mlp, greedy: spec.greedy, hears: hash !== hashes.base, hearsRep: hash === hashes.reputation, ...flags };
+}
+
+/** Lo que dice un emisor fijo (r6) según lo que tiene de verdad. */
+function forcedLevel(speech: Speech, truth: 'mucho' | 'algo' | 'nada', rng: Rng): 'mucho' | 'algo' | 'nada' {
+  const others = TRUTH.filter((level) => level !== truth);
+  const lie = (): 'mucho' | 'algo' | 'nada' => (truth === 'algo' ? others[Math.floor(rng.next() * others.length)] : truth === 'mucho' ? 'nada' : 'mucho');
+  if (speech === 'truth') return truth;
+  if (speech === 'lie') return lie();
+  return rng.next() < 0.5 ? truth : others[Math.floor(rng.next() * others.length)];
 }
 
 /** ¿Esta red sabe hablar? (tiene las salidas 19–26) */
@@ -372,7 +388,10 @@ function playMatch(
     const agent = seatAgents[seat];
     let level: PublicClaim['level'] = 'calla';
     if (agent.mute) level = 'calla';
-    else if (netTalks(agent)) {
+    else if (agent.speech) {
+      // Emisor fijo (r6): lo que dice no es decisión de nadie, así que no se guarda como paso.
+      level = forcedLevel(agent.speech, trueLevel(topic, state.hand.dealt[speaker] ?? [], state.hand.hands[speaker] ?? []), rng);
+    } else if (netTalks(agent)) {
       const x = encodeFor(agent, getObservation(state, speaker), talkExtras(state, talk, speaker));
       const mask = talkMask(topic);
       const choice = (agent.mlp as Mlp).act(x, mask, rng, agent.greedy);

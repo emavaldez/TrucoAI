@@ -1,0 +1,418 @@
+{
+ "run": "r5-charla-br-r5-charla-iter25",
+ "archived": "2026-09-29 19:11",
+ "starts": [
+  {
+   "t": 1790717946.11566,
+   "commit": "c727183a0bca1e9aaee7c19fb5fb3401aafe29cd"
+  }
+ ],
+ "lastIter": 150,
+ "evals": [
+  {
+   "tag": "iter10-4j",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r5-charla-br-r5-charla-iter25/target",
+   "games": 1000,
+   "winrate": 0.493,
+   "ci90": [
+    0.4670468163007825,
+    0.5189909658098815
+   ]
+  },
+  {
+   "tag": "iter10-6j",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r5-charla-br-r5-charla-iter25/target",
+   "games": 1000,
+   "winrate": 0.514,
+   "ci90": [
+    0.4879977609239025,
+    0.5399266748547695
+   ]
+  },
+  {
+   "tag": "iter20-4j",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r5-charla-br-r5-charla-iter25/target",
+   "games": 1000,
+   "winrate": 0.515,
+   "ci90": [
+    0.48899656529482466,
+    0.5409224730394668
+   ]
+  },
+  {
+   "tag": "iter20-6j",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r5-charla-br-r5-charla-iter25/target",
+   "games": 1000,
+   "winrate": 0.496,
+   "ci90": [
+    0.47003701032536266,
+    0.5219845794521596
+   ]
+  },
+  {
+   "tag": "iter30-4j",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r5-charla-br-r5-charla-iter25/target",
+   "games": 1000,
+   "winrate": 0.512,
+   "ci90": [
+    0.48600046338471636,
+    0.5379347672827168
+   ]
+  },
+  {
+   "tag": "iter30-6j",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r5-charla-br-r5-charla-iter25/target",
+   "games": 1000,
+   "winrate": 0.499,
+   "ci90": [
+    0.47302813701015806,
+    0.5249772604342224
+   ]
+  },
+  {
+   "tag": "iter40-4j",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r5-charla-br-r5-charla-iter25/target",
+   "games": 1000,
+   "winrate": 0.532,
+   "ci90": [
+    0.5059921341060778,
+    0.557835147673744
+   ]
+  },
+  {
+   "tag": "iter40-6j",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r5-charla-br-r5-charla-iter25/target",
+   "games": 1000,
+   "winrate": 0.486,
+   "ci90": [
+    0.4600733251452304,
+    0.5120022390760974
+   ]
+  },
+  {
+   "tag": "iter50-4j",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r5-charla-br-r5-charla-iter25/target",
+   "games": 1000,
+   "winrate": 0.525,
+   "ci90": [
+    0.4989903192766839,
+    0.5508747446138019
+   ]
+  },
+  {
+   "tag": "iter50-6j",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r5-charla-br-r5-charla-iter25/target",
+   "games": 1000,
+   "winrate": 0.522,
+   "ci90": [
+    0.4959911022769884,
+    0.5478901539466391
+   ]
+  },
+  {
+   "tag": "iter60-4j",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r5-charla-br-r5-charla-iter25/target",
+   "games": 1000,
+   "winrate": 0.519,
+   "ci90": [
+    0.49299282055572075,
+    0.5449046280010483
+   ]
+  },
+  {
+   "tag": "iter60-6j",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r5-charla-br-r5-charla-iter25/target",
+   "games": 1000,
+   "winrate": 0.514,
+   "ci90": [
+    0.4879977609239025,
+    0.5399266748547695
+   ]
+  },
+  {
+   "tag": "iter70-4j",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r5-charla-br-r5-charla-iter25/target",
+   "games": 1000,
+   "winrate": 0.537,
+   "ci90": [
+    0.5109965574223652,
+    0.5628037371355539
+   ]
+  },
+  {
+   "tag": "iter70-6j",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r5-charla-br-r5-charla-iter25/target",
+   "games": 1000,
+   "winrate": 0.513,
+   "ci90": [
+    0.4869990602927902,
+    0.5389307729302624
+   ]
+  },
+  {
+   "tag": "iter80-4j",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r5-charla-br-r5-charla-iter25/target",
+   "games": 1000,
+   "winrate": 0.538,
+   "ci90": [
+    0.5119977553244741,
+    0.5637971417890644
+   ]
+  },
+  {
+   "tag": "iter80-6j",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r5-charla-br-r5-charla-iter25/target",
+   "games": 1000,
+   "winrate": 0.493,
+   "ci90": [
+    0.4670468163007825,
+    0.5189909658098815
+   ]
+  },
+  {
+   "tag": "iter90-4j",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r5-charla-br-r5-charla-iter25/target",
+   "games": 1000,
+   "winrate": 0.558,
+   "ci90": [
+    0.5320437348414815,
+    0.5836432133844456
+   ]
+  },
+  {
+   "tag": "iter90-6j",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r5-charla-br-r5-charla-iter25/target",
+   "games": 1000,
+   "winrate": 0.511,
+   "ci90": [
+    0.4850019701841558,
+    0.5369386579276579
+   ]
+  },
+  {
+   "tag": "iter100-4j",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r5-charla-br-r5-charla-iter25/target",
+   "games": 1000,
+   "winrate": 0.558,
+   "ci90": [
+    0.5320437348414815,
+    0.5836432133844456
+   ]
+  },
+  {
+   "tag": "iter100-6j",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r5-charla-br-r5-charla-iter25/target",
+   "games": 1000,
+   "winrate": 0.516,
+   "ci90": [
+    0.4899954734235754,
+    0.5419181674663356
+   ]
+  },
+  {
+   "tag": "iter110-4j",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r5-charla-br-r5-charla-iter25/target",
+   "games": 1000,
+   "winrate": 0.54,
+   "ci90": [
+    0.5140004647370979,
+    0.5657836374876792
+   ]
+  },
+  {
+   "tag": "iter110-6j",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r5-charla-br-r5-charla-iter25/target",
+   "games": 1000,
+   "winrate": 0.489,
+   "ci90": [
+    0.46306134207234206,
+    0.5149980298158442
+   ]
+  },
+  {
+   "tag": "iter120-4j",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r5-charla-br-r5-charla-iter25/target",
+   "games": 1000,
+   "winrate": 0.556,
+   "ci90": [
+    0.5300372425001012,
+    0.581660500614587
+   ]
+  },
+  {
+   "tag": "iter120-6j",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r5-charla-br-r5-charla-iter25/target",
+   "games": 1000,
+   "winrate": 0.515,
+   "ci90": [
+    0.48899656529482466,
+    0.5409224730394668
+   ]
+  },
+  {
+   "tag": "iter130-4j",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r5-charla-br-r5-charla-iter25/target",
+   "games": 1000,
+   "winrate": 0.541,
+   "ci90": [
+    0.5150019763458221,
+    0.5667767284345745
+   ]
+  },
+  {
+   "tag": "iter130-6j",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r5-charla-br-r5-charla-iter25/target",
+   "games": 1000,
+   "winrate": 0.49,
+   "ci90": [
+    0.46405755512063473,
+    0.515996419323171
+   ]
+  },
+  {
+   "tag": "iter140-4j",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r5-charla-br-r5-charla-iter25/target",
+   "games": 1000,
+   "winrate": 0.569,
+   "ci90": [
+    0.5430870198901034,
+    0.5945405564476371
+   ]
+  },
+  {
+   "tag": "iter140-6j",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r5-charla-br-r5-charla-iter25/target",
+   "games": 1000,
+   "winrate": 0.487,
+   "ci90": [
+    0.4610692270697376,
+    0.5130009397072097
+   ]
+  },
+  {
+   "tag": "iter150-4j",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r5-charla-br-r5-charla-iter25/target",
+   "games": 1000,
+   "winrate": 0.55,
+   "ci90": [
+    0.5240202974986379,
+    0.5757098302823338
+   ]
+  },
+  {
+   "tag": "iter150-6j",
+   "opponent": "mlp:/Users/emmanuelvaldez/GameDev/TrucoAI/training/runs/r5-charla-br-r5-charla-iter25/target",
+   "games": 1000,
+   "winrate": 0.481,
+   "ci90": [
+    0.45509537199895156,
+    0.5070071794442792
+   ]
+  }
+ ],
+ "gauntlet": [],
+ "best": "r5-charla-br-r5-charla-iter25/iter100",
+ "lastStyle": {
+  "truco": 0.13,
+  "farol": 0.481,
+  "envido": 0.472,
+  "farol_envido": 0.474,
+  "envido_<24": 0.374,
+  "envido_24-27": 0.524,
+  "envido_28-30": 0.721,
+  "envido_31+": 0.9,
+  "quiere_truco": 0.39,
+  "sube_truco": 0.09,
+  "quiere_envido": 0.193,
+  "acepta_envido_<24": 0.486,
+  "acepta_envido_24-27": 0.624,
+  "acepta_envido_28-30": 0.778,
+  "acepta_envido_31+": 0.946,
+  "farol_envido_exito": 0.675,
+  "farol_envido_pts": -0.03,
+  "farol_envido_dW": 0.0064,
+  "tantos_envido_exito": 0.635,
+  "tantos_envido_pts": 0.94,
+  "tantos_envido_dW": 0.0283
+ },
+ "lastEntropyByDecision": {
+  "cartas": 0.215,
+  "turno": 0.468,
+  "resp_truco": 0.343,
+  "resp_envido": 0.257,
+  "indica": 0.607,
+  "habla": 0.652
+ },
+ "talkAblation": [],
+ "lastClaims": {
+  "dice_tanto_mucho_engano": {
+   "mucho": 0.3,
+   "algo": 0.2,
+   "nada": 0.45,
+   "calla": 0.05
+  },
+  "dice_tanto_algo_engano": {
+   "mucho": 0.25,
+   "algo": 0.32,
+   "nada": 0.38,
+   "calla": 0.05
+  },
+  "dice_tanto_nada_engano": {
+   "mucho": 0.2,
+   "algo": 0.22,
+   "nada": 0.53,
+   "calla": 0.04
+  },
+  "dice_tanto_mucho_resto": {
+   "mucho": 0.31,
+   "algo": 0.29,
+   "nada": 0.36,
+   "calla": 0.05
+  },
+  "dice_tanto_algo_resto": {
+   "mucho": 0.25,
+   "algo": 0.46,
+   "nada": 0.25,
+   "calla": 0.04
+  },
+  "dice_tanto_nada_resto": {
+   "mucho": 0.18,
+   "algo": 0.32,
+   "nada": 0.48,
+   "calla": 0.03
+  },
+  "miente_nada_con_mucho": 0.42,
+  "miente_mucho_con_nada": 0.195,
+  "dice_cartas": {
+   "mucho": {
+    "mucho": 0.66,
+    "algo": 0.24,
+    "nada": 0.09,
+    "calla": 0.01
+   },
+   "algo": {
+    "mucho": 0.28,
+    "algo": 0.44,
+    "nada": 0.27,
+    "calla": 0.01
+   },
+   "nada": {
+    "mucho": 0.14,
+    "algo": 0.29,
+    "nada": 0.56,
+    "calla": 0.01
+   }
+  },
+  "canta_si_nada": 0.649,
+  "canta_si_tiene": 0.564,
+  "canta_si_nada_dicho": 0.409,
+  "canta_si_nada_confiable": 0.641,
+  "canta_si_nada_mentiroso": 0.713,
+  "comprobado_tanto": 0.213,
+  "comprobado_cartas": 0.104,
+  "pescada_mintiendo": 0.284,
+  "engano_manos": 870,
+  "engano_rival_canta": 0.101,
+  "engano_pts": 1.45
+ }
+}

@@ -327,3 +327,34 @@ Diseño del piloto (4 jugadores, solo el tanto; `config/r4-piloto.json`):
 - Explotabilidad de r5-charla (red entrenada solo para ganarle, 150 iteraciones): ¿la red que habla es explotable?
 - Réplicas de r4-piloto con las semillas 11 y 12: ¿el balbuceo se repite? (rigor para la tesis).
 - `exploit` ahora copia también las tablas W de 4 y 6 y no hace los duelos de charla.
+
+## 2026-10-20 00:30 — Registros de la tanda de día del 2026-09-29 (sin analizar todavía)
+
+- Quedaron sin commitear `results/runs/r5-charla-br-r5-charla-iter25/` (explotabilidad de r5-charla: la mejor
+  respuesta queda en ≈49–52%, nada que explotar), `r4-piloto-s2` y `r4-piloto-s3` (réplicas con semillas 11 y 12:
+  en la iteración 20, 73% contra la difícil y 50–53% contra r3, como la original). Falta el resumen en `results/`.
+
+## 2026-10-20 00:40 — r6 "escucha": ¿la charla no sirve, o el emisor aprendió a balbucear? (`training/escucha.sh`)
+
+- Pregunta de Emmanuel: le llama la atención que cantar cosas no cambie nada. Propuso que la mejor red juegue con
+  cuatro variantes de lo dicho: siempre la verdad, siempre mentira, mitad y mitad, y tal cual habla hoy.
+- Tal cual, las cuatro dan ≈50% casi seguro: quien escucha (r5-charla) ya demostró que ignora lo dicho (contra sí
+  misma sorda, ≈50%). Si nadie escucha, da lo mismo qué se diga. Eso queda como **línea de base (fase A)**.
+- La pregunta de fondo es si la información no vale nada o si en self-play el emisor aprendió a no decir nada útil
+  (el "balbuceo" del cheap talk: con intereses opuestos, el equilibrio es que lo dicho no informe). Para separarlo,
+  **se fija al que habla y se entrena a la que escucha (fase B)**: desde r5-charla iteración 25, 150 iteraciones con
+  un único rival, la misma red congelada (`runs/r5-charla-br-r5-charla-iter25/target`) con lo dicho impuesto:
+  `r6-escucha-verdad` (siempre la verdad), `r6-escucha-mentira` (el extremo opuesto; con "algo", uno de los otros dos
+  al azar) y `r6-escucha-moneda` (la verdad la mitad de las veces; si no, un nivel distinto al azar). Mitad en 4 y
+  mitad en 6. Referencia para el cuarto caso (tal cual habla): la explotabilidad del 2026-09-29, 49–52%.
+- Lectura esperada: si la que escucha le gana claramente a la que dice la verdad (y a la que siempre miente, que es
+  igual de informativa si se invierte la lectura), la información **sí** vale y el problema de r5 es el emisor. Si
+  queda en ≈50%, lo dicho no agrega nada a lo que ya dan las señas y las cartas jugadas. La moneda es el control
+  (señal degradada). Cada 10 iteraciones se evalúa contra su emisor oyendo y **sorda** (`eval.deafControl`): la
+  diferencia es lo que saca de lo que oye. La "mejor" se elige por lo que le gana al emisor.
+- Código: bandera `speech: truth | lie | coin` en los agentes del rollout (junto a `mute` y `deaf`; lo impuesto no se
+  guarda como paso de la red). En el learner, cualquier red o heurística admite `#banderas` (`ruta#truth`,
+  `self#deaf`, `hard#deaf`) en `duel`, en `eval.opponent`, en el gauntlet y en `ppo.fixedOpponents` (`speech`);
+  `init.fromRun` copia también las tablas W de 4 y 6. Probado el actor en 4 y 6 (eval y ppo) con las tres banderas.
+- Fase C: duelos de 1000 pares de cada red entrenada contra su emisor (oyendo y sorda) y contra R tal cual.
+  Resultados en `results/runs/r6-escucha-*/` y `results/duelos.jsonl`.

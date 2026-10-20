@@ -94,6 +94,13 @@ reputación), `r5-charla` (la red que habla en 4 y 6, 700 iteraciones) y duelos 
 con `archive`. En la línea `charla`, `comprobado_tanto` / `comprobado_cartas`: de lo que dijo, cuánto se pudo
 comprobar al terminar la mano.
 
+**La que escucha contra un emisor fijo (r6):** `caffeinate -dimsu bash training/escucha.sh`. Cualquier red o heurística
+admite `#banderas`: `mute` / `deaf` (r4) y `truth` / `lie` / `coin` (r6: se le impone lo que dice, sin mirar la red). Vale
+en `duel` (`--a runs/x/policies/best#deaf --b runs/y/policies/best#truth`), en `eval.opponent`, en el gauntlet y en
+`ppo.fixedOpponents` (campo `speech`). Con `eval.deafControl`, cada evaluación se repite con la red sorda: la diferencia
+es lo que saca de lo que oye. `config/r6-escucha-{verdad,mentira,moneda}.json` entrenan desde r5-charla (iteración 25)
+contra la misma red congelada que dice la verdad, miente o tira la moneda.
+
 ## Registro (para la tesis)
 
 Todo lo que se corre queda registrado en git, en `results/`:

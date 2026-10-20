@@ -1,0 +1,10 @@
+{
+  "run": "r4-piloto-s3",
+  "created": "2026-09-29 20:09:11",
+  "commit": "c727183a0bca1e9aaee7c19fb5fb3401aafe29cd",
+  "layoutHash": "956879f1",
+  "obsDim": 1054,
+  "machine": "macOS-26.6.2-arm64-arm-64bit",
+  "python": "3.12.13",
+  "torch": "2.14.0"
+}

@@ -111,6 +111,41 @@ def training_path(p: str) -> Path:
     return q if q.is_absolute() else TRAINING / q
 
 
+TALK_FLAGS = ("mute", "deaf", "truth", "lie", "coin")
+
+
+def split_flags(spec: str) -> tuple[str, dict]:
+    """
+    'ruta#truth' → ('ruta', {'speech': 'truth'}); 'ruta#deaf,coin' → ('ruta', {'deaf': True, 'speech': 'coin'}).
+    Banderas: mute / deaf (r4) y truth / lie / coin (r6: emisor fijo que dice la verdad, miente o tira la moneda).
+    """
+    base, _, raw = spec.partition("#")
+    flags: dict = {}
+    for f in filter(None, raw.split(",")):
+        if f not in TALK_FLAGS:
+            raise SystemExit(f"bandera desconocida '{f}' en {spec} (válidas: {', '.join(TALK_FLAGS)})")
+        if f in ("mute", "deaf"):
+            flags[f] = True
+        else:
+            flags["speech"] = f
+    return base, flags
+
+
+def agent_spec(spec: str, policy_base: Path | None = None) -> dict:
+    """'hard' / 'normal' / 'easy', 'self', o una ruta de red (sin extensión); cualquiera con '#banderas'."""
+    base, flags = split_flags(spec)
+    if base in ("hard", "normal", "easy"):
+        return {"kind": "heur", "difficulty": base, **flags}
+    if base == "self":
+        if policy_base is None:
+            raise SystemExit("'self' sin red de referencia")
+        return {"kind": "mlp", "path": str(policy_base), **flags}
+    path = training_path(base)
+    if not path.with_suffix(".json").exists():
+        raise SystemExit(f"no existe la red {path}.json")
+    return {"kind": "mlp", "path": str(path), **flags}
+
+
 def merge(base: dict, over: dict) -> dict:
     out = copy.deepcopy(base)
     for key, value in over.items():
@@ -193,6 +228,11 @@ class Run:
             shutil.copy2(parent / f, self.dir / f)
         for phase in ("wtable", "bcdata", "bc"):
             self.mark(phase, {"from": init["fromRun"], "iter": init["iter"]})
+        # Equipos (4 y 6): también sus tablas W, si la corrida madre las tiene (r6 desde r5-charla).
+        for n in (4, 6):
+            if (parent / f"wtable-{n}.json").exists() and not self.done(f"wtable-{n}"):
+                shutil.copy2(parent / f"wtable-{n}.json", self.wtable_path(n))
+                self.mark(f"wtable-{n}", {"from": init["fromRun"], "iter": init["iter"]})
         log(f"sigue desde {init['fromRun']} iteración {init['iter']}")
 
     def talk_job(self) -> dict:
@@ -402,16 +442,16 @@ class Run:
         if opponent in ("self-mute", "self-deaf"):
             return {"kind": "mlp", "path": str(policy_base), opponent[5:]: True}
         if opponent.startswith("mlp:"):
-            return {"kind": "mlp", "path": opponent[4:]}
-        return {"kind": "heur", "difficulty": opponent}
+            opponent = opponent[4:]
+        return agent_spec(opponent, policy_base)
 
-    def evaluate(self, policy_base: Path, pairs: int, opponent: str, tag: str, players: int | None = None) -> dict:
+    def evaluate(self, policy_base: Path, pairs: int, opponent: str, tag: str, players: int | None = None, a_flags: dict | None = None) -> dict:
         tmp = self.dir / f"tmp-eval-{tag.replace('/', '-')}"
         remove_tree(tmp)
         n_players = players or self.cfg["players"]
         jobs = [
             {"mode": "eval", "seed": 777_000 + i, "matches": m, "players": n_players, "out": str(tmp / f"e{i}.json"),
-             "a": {"kind": "mlp", "path": str(policy_base)}, "b": self.opponent_spec(opponent, policy_base), **self.talk_job()}
+             "a": {"kind": "mlp", "path": str(policy_base), **(a_flags or {})}, "b": self.opponent_spec(opponent, policy_base), **self.talk_job()}
             for i, m in enumerate(split_matches(pairs, self.workers))
         ]
         started = time.time()
@@ -564,8 +604,10 @@ class Run:
                     rates = []
                     g_players = [int(n) for n in gauntlet.get("players", [self.cfg["players"]])]
                     for spec in gauntlet["opponents"]:
-                        opp = spec if spec in ("hard", "normal", "easy") else f"mlp:{training_path(spec)}"
-                        name = spec if spec in ("hard", "normal", "easy") else training_path(spec).parent.parent.name + "/" + Path(spec).name
+                        base, _ = split_flags(spec)
+                        suffix = spec[len(base):]
+                        opp = spec if base in ("hard", "normal", "easy") else f"mlp:{training_path(base)}{suffix}"
+                        name = spec if base in ("hard", "normal", "easy") else training_path(base).parent.parent.name + "/" + Path(base).name + suffix
                         for n in g_players:
                             # Con varias cantidades de jugadores (`gauntlet.players`), un duelo por cantidad.
                             tag = f"iter{it}-vs-{name}" if len(g_players) == 1 else f"iter{it}-vs-{name}-{n}j"
@@ -582,6 +624,13 @@ class Run:
                     mute = self.evaluate(current, e["pairs"], "self-mute", tag=f"iter{it}-vs-callada")
                     deaf = self.evaluate(current, e["pairs"], "self-deaf", tag=f"iter{it}-vs-sorda")
                     self.event("talk_ablation", iter=it, vsMute=mute["winrate"], vsDeaf=deaf["winrate"])
+                if e.get("deafControl"):
+                    # r6: ¿cuánto vale escuchar al emisor fijo? La misma red, sorda, contra el mismo rival de
+                    # la evaluación. La diferencia con la evaluación normal es lo que saca de lo que oye.
+                    by_n = {n: self.evaluate(current, e["pairs"], e["opponent"], tag=f"iter{it}-sorda-{n}j", players=n, a_flags={"deaf": True})["winrate"]
+                            for n in players}
+                    self.event("deaf_control", iter=it, byPlayers=by_n)
+                    log(f"sorda iter{it}: " + ", ".join(f"{n}j {100 * r:.1f}%" for n, r in by_n.items()))
             self.save_ckpt(policy, critic, opt, state, it)
 
     def load_training(self, ck: dict, policy, critic, opt) -> None:
@@ -697,7 +746,8 @@ class Run:
 
     def league_opponents(self, state: dict, c: dict) -> list[dict]:
         if c.get("fixedOpponents"):
-            return c["fixedOpponents"]
+            # Rutas relativas a training/ (en la configuración) o absolutas (exploit).
+            return [{**o, "path": str(training_path(o["path"]))} if o.get("kind") == "mlp" else o for o in c["fixedOpponents"]]
         w = c["opponents"]
         out: list[dict] = [{"kind": "self", "weight": w["self"], "name": "self"}]
         for diff in ("hard", "normal", "easy"):
@@ -1032,7 +1082,9 @@ RESULTS = TRAINING / "results"
 
 
 def policy_label(spec: str) -> str:
-    return spec if spec in ("hard", "normal", "easy") else "/".join(training_path(spec).parts[-3:])
+    base, _ = split_flags(spec)
+    suffix = spec[len(base):]
+    return spec if base in ("hard", "normal", "easy") else "/".join(training_path(base).parts[-3:]) + suffix
 
 
 def cmd_duel(args) -> None:
@@ -1041,21 +1093,16 @@ def cmd_duel(args) -> None:
     training/results/duelos.jsonl, que va a git: es el registro de todas las comparaciones.
     """
     workers = args.workers or default_workers()
-    a = training_path(args.a)
-    if not a.with_suffix(".json").exists():
-        raise SystemExit(f"no existe la red {a}.json")
-    if args.b in ("hard", "normal", "easy"):
-        b_spec = {"kind": "heur", "difficulty": args.b}
-    else:
-        b = training_path(args.b)
-        if not b.with_suffix(".json").exists():
-            raise SystemExit(f"no existe la red {b}.json")
-        b_spec = {"kind": "mlp", "path": str(b)}
+    # r6: cualquiera de los dos puede llevar banderas ('ruta#truth', 'hard#deaf', 'ruta#deaf,lie').
+    a_spec = agent_spec(args.a)
+    if a_spec["kind"] != "mlp":
+        raise SystemExit("--a tiene que ser una red")
+    b_spec = agent_spec(args.b)
     tmp = TRAINING / "runs" / f"tmp-duel-{os.getpid()}"
     remove_tree(tmp)
     jobs = [
         {"mode": "eval", "seed": args.seed + i, "matches": m, "players": args.players, "out": str(tmp / f"e{i}.json"),
-         "a": {"kind": "mlp", "path": str(a)}, "b": b_spec,
+         "a": a_spec, "b": b_spec,
          **({"talk": {"topics": args.talk.split(","), "reputation": bool(args.reputation)}} if args.talk else {})}
         for i, m in enumerate(split_matches(args.pairs, workers))
     ]
@@ -1164,8 +1211,8 @@ def main() -> None:
     x.add_argument("--pairs", type=int, default=500)
     x.add_argument("--workers", type=int, default=6)
     du = sub.add_parser("duel", help="duelo entre dos redes; se registra en training/results/duelos.jsonl")
-    du.add_argument("--a", required=True, help="red (ruta sin extensión, relativa a training/ o absoluta)")
-    du.add_argument("--b", required=True, help="otra red, o hard / normal / easy")
+    du.add_argument("--a", required=True, help="red (ruta sin extensión, relativa a training/ o absoluta); admite '#banderas' (mute, deaf, truth, lie, coin)")
+    du.add_argument("--b", required=True, help="otra red, o hard / normal / easy; admite '#banderas'")
     du.add_argument("--pairs", type=int, default=1000)
     du.add_argument("--players", type=int, default=2)
     du.add_argument("--seed", type=int, default=888_000)
