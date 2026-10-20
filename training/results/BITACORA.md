@@ -409,3 +409,17 @@ Diseño del piloto (4 jugadores, solo el tanto; `config/r4-piloto.json`):
   `miente_*`; `engano_rival_canta`, `engano_pts`), la evaluación contra la que escucha oyendo y sorda, contra sí misma
   callada y sorda, y los duelos finales: r7 libre, obligada a la verdad, obligada a mentir y callada, contra la que
   escucha. Si libre > verdad, lo que dice le rinde. También r6-escucha-verdad contra r3 y la difícil (¿va al juego?).
+
+## 2026-10-20 11:00 — Resultados de r7 "engaño" (`results/r7-engano.md`)
+
+- Terminó 09:48–10:59 (200 iteraciones + 28 duelos). **Con un rival que escucha, la red aprende a mentir a propósito
+  en 25 iteraciones**: con mucho tanto y el pie rival por cantar dice "nada" 60–67% (arrancó en 41%), "mucho" 8–15%.
+  Es la mentira de esperar y subir; el farol de aparentar tanto casi no crece.
+- Contra la que escucha: libre 76% / 68% (4 / 6), obligada a la verdad 66% / 59%, mintiendo 75% / 69%, callada
+  72% / 60%; contra la que escucha sorda 74% / 63%. Lo dicho vale ~2 puntos en 4 y ~5 en 6 por encima de explotar
+  las cartas; decir la verdad cuesta 10.
+- Precio: r7 pierde con r3 (47% / 46%) y con R (49% / 45%): especialista de liga fija. `r6-escucha-verdad` tampoco va
+  al juego (47% / 44% contra r3; 46% / 55% contra la difícil).
+- Cadena para la tesis cerrada: balbuceo en self-play (r4/r5) → escuchar paga si hay sinceros (r6) → mentir paga si
+  hay quien escucha (r7) → el balbuceo es el equilibrio. Para la mesa sigue r3 + charla con reglas; una red que
+  hable bien sin jugar peor sería r8 (liga completa con PFSP y peso chico de la que escucha).

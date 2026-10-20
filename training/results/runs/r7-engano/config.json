@@ -1,0 +1,137 @@
+{
+  "players": 4,
+  "seed": 71,
+  "workers": 16,
+  "wtable": {
+    "matches": 4000
+  },
+  "bc": {
+    "matches": 60000,
+    "teacher": "hard",
+    "opponents": [
+      {
+        "kind": "heur",
+        "difficulty": "hard",
+        "weight": 0.5
+      },
+      {
+        "kind": "heur",
+        "difficulty": "normal",
+        "weight": 0.3
+      },
+      {
+        "kind": "heur",
+        "difficulty": "easy",
+        "weight": 0.2
+      }
+    ],
+    "epochs": 6,
+    "batch": 4096,
+    "lr": 0.001,
+    "evalPairs": 1000
+  },
+  "ppo": {
+    "iterations": 350,
+    "matchesPerIter": 1024,
+    "epochs": 4,
+    "minibatch": 8192,
+    "lr": 0.0003,
+    "criticLr": 0.001,
+    "clip": 0.2,
+    "gaeLambda": 0.95,
+    "entropy": 0.01,
+    "klBc": 0.0,
+    "klBcFinal": 0.0,
+    "klBcDecayIters": 2000,
+    "maxGradNorm": 1.0,
+    "snapshotEvery": 1000000000,
+    "leagueSize": 40,
+    "opponents": {
+      "self": 0.5,
+      "league": 0.3,
+      "hard": 0.1,
+      "normal": 0.05,
+      "easy": 0.05
+    },
+    "obeyBonus": {
+      "start": 0.005,
+      "floor": 0.005,
+      "decayIters": 1
+    },
+    "criticWarmup": 0,
+    "playerMix": {
+      "4": 0.5,
+      "6": 0.5
+    },
+    "fixedOpponents": [
+      {
+        "kind": "self",
+        "weight": 0.35,
+        "name": "self"
+      },
+      {
+        "kind": "mlp",
+        "path": "runs/r6-escucha-verdad/policies/best",
+        "weight": 0.35,
+        "name": "escucha"
+      },
+      {
+        "kind": "heur",
+        "difficulty": "hard",
+        "weight": 0.2,
+        "name": "heur-hard"
+      },
+      {
+        "kind": "mlp",
+        "path": "runs/r3/policies/best",
+        "weight": 0.1,
+        "name": "r3"
+      }
+    ]
+  },
+  "eval": {
+    "every": 10,
+    "pairs": 300,
+    "opponent": "runs/r6-escucha-verdad/policies/best",
+    "players": [
+      4,
+      6
+    ],
+    "select": [
+      4,
+      6
+    ],
+    "deafControl": true,
+    "talkAblation": true,
+    "gauntlet": {
+      "pairs": 300,
+      "players": [
+        4,
+        6
+      ],
+      "opponents": [
+        "hard",
+        "runs/r3/policies/best",
+        "runs/r5-charla-br-r5-charla-iter25/target"
+      ]
+    }
+  },
+  "checkpoint": {
+    "keepLast": 3,
+    "keepBest": 3,
+    "backupDir": null
+  },
+  "_comment": "r7-enga\u00f1o: \u00bfla red aprende a mentir a prop\u00f3sito cuando hay quien escucha, y le rinde? Arranca de r6-escucha-verdad (iteraci\u00f3n 150: ya sabe escuchar) y juega 200 iteraciones contra una liga en la que se escucha: ella misma (35%), r6-escucha-verdad congelada (35%), la dif\u00edcil que cree 75% (20%) y r3 que no oye (10%). Mitad 4 y mitad 6. Se eval\u00faa contra r6-escucha-verdad (oyendo y sorda), contra s\u00ed misma callada y sorda, y duelos contra la dif\u00edcil, r3 y R. Lo que dice se mide en la l\u00ednea 'charla' (dice_tanto_*_engano, miente_*, engano_pts). Despu\u00e9s, engano.sh compara r7 hablando libre contra r7 obligada a decir la verdad, las dos contra la que escucha.",
+  "talk": {
+    "topics": [
+      "tanto",
+      "cartas"
+    ],
+    "reputation": true,
+    "matchCredit": true
+  },
+  "init": {
+    "fromRun": "r6-escucha-verdad",
+    "iter": 150
+  }
+}
