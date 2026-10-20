@@ -61,7 +61,11 @@ import { computeWTable, wValue, type HandDistribution, type WTable } from '../en
  * las veces y si no, un nivel distinto al azar. Sirve para entrenar a la que escucha contra un emisor fijo.
  */
 type Speech = 'truth' | 'lie' | 'coin';
-type TalkFlags = { mute?: boolean; deaf?: boolean; speech?: Speech };
+/**
+ * r8 ("dos audiencias"): `deafTeam` no oye a su equipo, `deafRivals` no oye a los rivales (para separar cuánto vale
+ * escuchar a cada uno), `nosigns` no ve las señas de sus compañeros (cuánto valen las señas).
+ */
+type TalkFlags = { mute?: boolean; deaf?: boolean; speech?: Speech; deafTeam?: boolean; deafRivals?: boolean; nosigns?: boolean };
 type AgentSpec = ({ kind: 'mlp'; path: string; greedy?: boolean } | { kind: 'heur'; difficulty: Difficulty } | { kind: 'self' }) & TalkFlags;
 
 interface Job {
@@ -91,7 +95,17 @@ interface Job {
    * `matchCredit`: la trayectoria de cada jugador es la partida entera (el premio sigue siendo mano por mano, pero
    * una mentira carga con lo que cueste en las manos siguientes).
    */
-  talk?: { topics: TalkTopic[]; reputation?: boolean; matchCredit?: boolean };
+  talk?: {
+    topics: TalkTopic[];
+    reputation?: boolean;
+    matchCredit?: boolean;
+    /** r8: `false` = nadie hace señas (el compañero solo sabe lo que oye) */
+    signs?: boolean;
+    /** r8: al empezar la mano, cada compañero del pie dice algo de sus cartas y de su tanto (la charla en lugar de las señas) */
+    opening?: boolean;
+    /** r8: quién oye lo dicho: todos ('public', como hasta r7), solo el equipo ('team'), o los rivales con esa probabilidad */
+    audience?: 'public' | 'team' | number;
+  };
 }
 
 // ---------- agentes ----------
@@ -108,6 +122,9 @@ interface Agent {
   mute?: boolean;
   deaf?: boolean;
   speech?: Speech;
+  deafTeam?: boolean;
+  deafRivals?: boolean;
+  nosigns?: boolean;
 }
 
 /** Huellas de la observación: sin lo dicho (hasta r3) y con lo dicho (r4). */
@@ -120,10 +137,10 @@ interface Hashes {
 const mlpCache = new Map<string, Mlp>();
 
 async function makeAgent(spec: AgentSpec, learner: Agent | null, name: string, hashes: Hashes): Promise<Agent> {
-  const flags = { mute: spec.mute, deaf: spec.deaf, speech: spec.speech };
+  const flags = { mute: spec.mute, deaf: spec.deaf, speech: spec.speech, deafTeam: spec.deafTeam, deafRivals: spec.deafRivals, nosigns: spec.nosigns };
   if (spec.kind === 'self') {
     if (!learner) throw new Error('"self" sin red que aprende');
-    return spec.mute || spec.deaf || spec.speech ? { ...learner, ...flags, name } : learner;
+    return Object.values(flags).some(Boolean) ? { ...learner, ...flags, name } : learner;
   }
   if (spec.kind === 'heur') return { name, policy: createPolicy(spec.difficulty), ...flags };
   let mlp = mlpCache.get(spec.path);
@@ -303,7 +320,10 @@ function emptyTalkStats(): TalkStats {
 interface ClaimStats {
   tanto: { engano: number[][]; resto: number[][] };
   cartas: number[][];
-  escucha: Record<'nada' | 'tiene' | 'nada_dicho' | 'nada_confiable' | 'nada_mentiroso', [number, number]>;
+  escucha: Record<
+    'nada' | 'tiene' | 'nada_dicho' | 'nada_confiable' | 'nada_mentiroso' | 'compa_mucho' | 'compa_algo' | 'compa_nada' | 'compa_calla',
+    [number, number]
+  >;
   engano: { hands: number; rivalSang: number; points: number };
   /** dichos de la red que se pudieron comprobar: [comprobados, mentiras pescadas] */
   pescado: [number, number];
@@ -316,7 +336,17 @@ function emptyClaimStats(): ClaimStats {
   return {
     tanto: { engano: grid(), resto: grid() },
     cartas: grid(),
-    escucha: { nada: [0, 0], tiene: [0, 0], nada_dicho: [0, 0], nada_confiable: [0, 0], nada_mentiroso: [0, 0] },
+    escucha: {
+      nada: [0, 0],
+      tiene: [0, 0],
+      nada_dicho: [0, 0],
+      nada_confiable: [0, 0],
+      nada_mentiroso: [0, 0],
+      compa_mucho: [0, 0],
+      compa_algo: [0, 0],
+      compa_nada: [0, 0],
+      compa_calla: [0, 0],
+    },
     engano: { hands: 0, rivalSang: 0, points: 0 },
     pescado: [0, 0],
     comprobado: { tanto: [0, 0], cartas: [0, 0] },
@@ -366,21 +396,35 @@ function playMatch(
   const matchCredit = !!job.talk?.matchCredit;
   /** reputación en la partida (no se borra entre manos) */
   const reputation: Reputation = {};
-  let claims: SpokenClaim[] = [];
+  const audience = job.talk?.audience ?? 'public';
+  const signsOn = job.talk?.signs !== false;
+  if (withRep && audience !== 'public') throw new Error('la reputación es pública: no va con charla solo para el equipo');
+  /** lo dicho en la mano; `rivalsHeard`: si lo oyó el otro equipo (r8) */
+  let claims: (SpokenClaim & { rivalsHeard: boolean })[] = [];
   let said = new Set<string>();
   let slowPlay = new Set<TeamId>();
   const baitTeams = new Set<TeamId>();
 
+  /** Lo dicho que oye un agente del equipo `team` (r8: su equipo siempre; los rivales, si les llegó). */
+  const visibleTo = (team: TeamId, agent: Agent): typeof claims => {
+    if (agent.deaf) return [];
+    return claims.filter((c) => (teamOf(state, c.from) === team ? !agent.deafTeam : c.rivalsHeard && !agent.deafRivals));
+  };
+
   /** La observación codificada para este agente: las redes de r4 ven lo dicho; las demás, no. */
-  const encodeFor = (agent: Agent, obs: ReturnType<typeof getObservation>, extras: ReturnType<typeof talkExtras>): Float32Array => {
+  const encodeFor = (agent: Agent, obs: ReturnType<typeof getObservation>, extras0: ReturnType<typeof talkExtras>): Float32Array => {
+    const extras = agent.nosigns ? { ...extras0, signals: [] } : extras0;
     const hears = agent.mlp ? agent.hears : withClaims;
     const hearsRep = agent.mlp ? agent.hearsRep : withRep;
     if (!hears) return encodeObs(obs, extras);
-    return encodeObs(obs, { ...extras, claims: agent.deaf ? [] : claims, ...(hearsRep ? { reputation: agent.deaf ? {} : reputation } : {}) });
+    return encodeObs(obs, { ...extras, claims: visibleTo(obs.selfTeam, agent), ...(hearsRep ? { reputation: agent.deaf ? {} : reputation } : {}) });
   };
 
   /** Lo dicho, como lo escucha la heurística: con reputación, le cree más o menos a cada uno. */
-  const heardClaims = (): PublicClaim[] => (withRep ? claims.map((c) => ({ ...c, trust: trustFor(reputation[c.from]) })) : claims);
+  const heardClaims = (team: TeamId, agent: Agent): PublicClaim[] => {
+    const heard = visibleTo(team, agent);
+    return withRep ? heard.map((c) => ({ ...c, trust: trustFor(reputation[c.from]) })) : heard;
+  };
 
   /** Alguien dice algo en voz alta (o se calla) en un momento de la charla. */
   const speak = (speaker: PlayerId, topic: TalkTopic, key: string): void => {
@@ -412,7 +456,8 @@ function playMatch(
       if (topic === 'tanto' && level === 'nada' && truth === 0) baitTeams.add(teamOf(state, speaker));
     }
     said.add(key);
-    claims.push({ from: speaker, about: topic, level, cards: topic === 'cartas' ? (state.hand.hands[speaker] ?? []).map((c) => c.id) : [] });
+    const rivalsHeard = audience === 'public' ? true : audience === 'team' ? false : rng.next() < audience;
+    claims.push({ from: speaker, about: topic, level, cards: topic === 'cartas' ? (state.hand.hands[speaker] ?? []).map((c) => c.id) : [], rivalsHeard });
   };
 
   const pushStep = (playerId: PlayerId, step: Step): void => {
@@ -469,7 +514,15 @@ function playMatch(
     said = new Set();
     slowPlay = new Set();
     baitTeams.clear();
-    talk = dealTalk(state, () => true);
+    talk = dealTalk(state, () => signsOn);
+    if (job.talk?.opening && talkAllowed(state)) {
+      // r8: la charla en lugar de las señas: cada compañero del pie dice algo de sus cartas y de su tanto.
+      for (const id of state.hand.participants) {
+        if (pieOf(state, teamOf(state, id)) === id) continue;
+        if (job.talk.topics.includes('cartas')) speak(id, 'cartas', `abre-cartas-${id}`);
+        if (job.talk.topics.includes('tanto')) speak(id, 'tanto', `tanto-${id}`);
+      }
+    }
     pieTalk(true);
   };
   startHand();
@@ -572,7 +625,16 @@ function playMatch(
       action = actions[choice.action] ?? action;
       if (claimStats && record(seat) && obs.phase === 'PLAYING' && obs.tricks.length === 0 && mask[6]) {
         // Escuchar: ¿canta envido distinto según lo que dijo del tanto el otro equipo?
-        const rivals = claims.filter((c) => c.about === 'tanto' && c.level !== 'calla' && teamOf(state, c.from) !== teamOf(state, actor));
+        const heardNow = visibleTo(teamOf(state, actor), agent);
+        const rivals = heardNow.filter((c) => c.about === 'tanto' && c.level !== 'calla' && teamOf(state, c.from) !== teamOf(state, actor));
+        // r8: ¿y según lo que dijo su compañero? (lo más alto que dijo alguno)
+        const mates = heardNow.filter((c) => c.about === 'tanto' && c.from !== actor && teamOf(state, c.from) === teamOf(state, actor));
+        if (mates.length > 0) {
+          const top = (['mucho', 'algo', 'nada', 'calla'] as const).find((lv) => mates.some((c) => c.level === lv)) ?? 'calla';
+          const key = `compa_${top}` as const;
+          claimStats.escucha[key][0] += 1;
+          claimStats.escucha[key][1] += ENVIDO_CALLS.has(choice.action) ? 1 : 0;
+        }
         const bucket = rivals.length === 0 ? 'nada_dicho' : rivals.some((c) => c.level !== 'nada') ? 'tiene' : 'nada';
         const calls = ENVIDO_CALLS.has(choice.action) ? 1 : 0;
         claimStats.escucha[bucket][0] += 1;
@@ -600,7 +662,7 @@ function playMatch(
         if (recorder) pushStep(actor, { obs: x, priv: encodePriv(state, actor), mask, act: choice.action, logp: choice.logp, bonus: obeyBonus * obeyed });
       }
     } else if (agent.policy) {
-      const signals = signalsFor(state, talk, actor);
+      const signals = agent.nosigns ? [] : signalsFor(state, talk, actor);
       // Con charla, la heurística escucha (le cree a lo dicho) y hace la jugada de esperar y subir, como en el juego.
       const team = teamOf(state, actor);
       const tactic = job.talk ? tacticalDecision({ state, actor, signals, advice: {}, slowPlaying: slowPlay.has(team) }) : null;
@@ -609,7 +671,7 @@ function playMatch(
       else {
         const exclude = tactic?.exclude;
         const view = exclude ? { ...obs, legalActions: obs.legalActions.filter((a) => !exclude(a)) } : obs;
-        const heard = job.talk && !agent.deaf ? heardClaims() : [];
+        const heard = job.talk && !agent.deaf ? heardClaims(team, agent) : [];
         action = agent.policy.decide(view, rng, signals, instructionsFor(state, talk, actor), heard);
       }
       if (record(seat) && recorder && obs.legalActions.length > 1) {

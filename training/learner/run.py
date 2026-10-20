@@ -111,21 +111,24 @@ def training_path(p: str) -> Path:
     return q if q.is_absolute() else TRAINING / q
 
 
-TALK_FLAGS = ("mute", "deaf", "truth", "lie", "coin")
+TALK_FLAGS = ("mute", "deaf", "truth", "lie", "coin", "deafteam", "deafrivals", "nosigns")
+# Nombre de la bandera en el actor (rollout.ts) para las que no son lo que se dice.
+FLAG_FIELD = {"mute": "mute", "deaf": "deaf", "deafteam": "deafTeam", "deafrivals": "deafRivals", "nosigns": "nosigns"}
 
 
 def split_flags(spec: str) -> tuple[str, dict]:
     """
     'ruta#truth' → ('ruta', {'speech': 'truth'}); 'ruta#deaf,coin' → ('ruta', {'deaf': True, 'speech': 'coin'}).
-    Banderas: mute / deaf (r4) y truth / lie / coin (r6: emisor fijo que dice la verdad, miente o tira la moneda).
+    Banderas: mute / deaf (r4), truth / lie / coin (r6: emisor fijo que dice la verdad, miente o tira la moneda),
+    deafteam / deafrivals (r8: no oye a su equipo / a los rivales) y nosigns (r8: no ve las señas de sus compañeros).
     """
     base, _, raw = spec.partition("#")
     flags: dict = {}
     for f in filter(None, raw.split(",")):
         if f not in TALK_FLAGS:
             raise SystemExit(f"bandera desconocida '{f}' en {spec} (válidas: {', '.join(TALK_FLAGS)})")
-        if f in ("mute", "deaf"):
-            flags[f] = True
+        if f in FLAG_FIELD:
+            flags[FLAG_FIELD[f]] = True
         else:
             flags["speech"] = f
     return base, flags
@@ -619,7 +622,15 @@ class Run:
                     self.update_best(state, it, {**result, "winrate": score}, policy)
                 else:
                     self.update_best(state, it, result, policy)
-                if e.get("talkAblation"):
+                ablation = e.get("talkAblation")
+                if isinstance(ablation, list) and it % e.get("ablationEvery", e["every"]) == 0:
+                    # r8: la red contra sí misma con cada bandera (mute, deaf, deafteam, deafrivals, nosigns), por
+                    # cantidad de jugadores. Si le gana a la versión con la bandera, eso que le falta a la otra vale.
+                    rates = {f"{flag}-{n}j": self.evaluate(current, e["pairs"], f"self#{flag}", tag=f"iter{it}-vs-{flag}-{n}j", players=n)["winrate"]
+                             for flag in ablation for n in players}
+                    self.event("talk_ablation", iter=it, rates=rates)
+                    log(f"ablación iter{it}: " + ", ".join(f"{k} {100 * v:.1f}%" for k, v in rates.items()))
+                elif ablation and not isinstance(ablation, list):
                     # ¿Sirve hablar? ¿Sirve escuchar? La red contra sí misma callada y contra sí misma sorda.
                     mute = self.evaluate(current, e["pairs"], "self-mute", tag=f"iter{it}-vs-callada")
                     deaf = self.evaluate(current, e["pairs"], "self-deaf", tag=f"iter{it}-vs-sorda")
@@ -693,7 +704,8 @@ class Run:
         """
         grids = {"engano": np.zeros((3, 4)), "resto": np.zeros((3, 4))}
         cartas = np.zeros((3, 4))
-        listen = {k: np.zeros(2) for k in ("nada", "tiene", "nada_dicho", "nada_confiable", "nada_mentiroso")}
+        listen = {k: np.zeros(2) for k in ("nada", "tiene", "nada_dicho", "nada_confiable", "nada_mentiroso",
+                                           "compa_mucho", "compa_algo", "compa_nada", "compa_calla")}
         bait = np.zeros(3)
         caught = np.zeros(2)
         checked = {"tanto": np.zeros(2), "cartas": np.zeros(2)}
@@ -725,6 +737,18 @@ class Run:
             out["miente_nada_con_mucho"] = round(float(total[0][2] / total[0].sum()), 3)
         if total[2].sum():
             out["miente_mucho_con_nada"] = round(float(total[2][0] / total[2].sum()), 3)
+        # r8: cuánta información lleva lo dicho, en bits: I(lo que tiene; lo que dice), y la fracción de lo que se
+        # podría informar (I / H(lo que tiene)). 0 = balbuceo; 1 = dice exactamente lo que tiene.
+        for name, g in (("tanto", total), ("cartas", cartas)):
+            n = g.sum()
+            if n:
+                p = g / n
+                pt, pl = p.sum(1, keepdims=True), p.sum(0, keepdims=True)
+                nz = p > 0
+                mi = float((p[nz] * np.log2(p[nz] / (pt @ pl)[nz])).sum())
+                ht = float(-(pt[pt > 0] * np.log2(pt[pt > 0])).sum())
+                out[f"info_{name}_bits"] = round(mi, 3)
+                out[f"info_{name}_frac"] = round(mi / ht, 3) if ht else 0.0
         if cartas.sum():
             out["dice_cartas"] = {truth: {lv: round(float(v / max(1, cartas[i].sum())), 2) for lv, v in zip(levels, cartas[i])}
                                   for i, truth in enumerate(("mucho", "algo", "nada"))}
@@ -1087,6 +1111,18 @@ def policy_label(spec: str) -> str:
     return spec if base in ("hard", "normal", "easy") else "/".join(training_path(base).parts[-3:]) + suffix
 
 
+def duel_talk(args) -> dict:
+    """La charla del duelo (r8: también sin señas, con charla al abrir la mano y con quién la oye)."""
+    talk: dict = {"topics": args.talk.split(","), "reputation": bool(args.reputation), "matchCredit": True}
+    if args.no_signs:
+        talk["signs"] = False
+    if args.opening:
+        talk["opening"] = True
+    if args.audience:
+        talk["audience"] = args.audience if args.audience in ("public", "team") else float(args.audience)
+    return talk
+
+
 def cmd_duel(args) -> None:
     """
     Duelo entre dos redes (o una red y una heurística) en partidas duplicadas. El resultado se agrega a
@@ -1103,7 +1139,7 @@ def cmd_duel(args) -> None:
     jobs = [
         {"mode": "eval", "seed": args.seed + i, "matches": m, "players": args.players, "out": str(tmp / f"e{i}.json"),
          "a": a_spec, "b": b_spec,
-         **({"talk": {"topics": args.talk.split(","), "reputation": bool(args.reputation)}} if args.talk else {})}
+         **({"talk": duel_talk(args)} if args.talk else {})}
         for i, m in enumerate(split_matches(args.pairs, workers))
     ]
     started = time.time()
@@ -1121,7 +1157,8 @@ def cmd_duel(args) -> None:
               "players": args.players, "games": games, "winrate": wins / games, "ci90": [low, high],
               "pointsPerGame": [pa / games, pb / games], "seed": args.seed, "commit": git_commit(),
               "seconds": round(time.time() - started, 1), "note": args.note or "",
-              **({"talk": args.talk, "reputation": bool(args.reputation)} if args.talk else {})}
+              **({"talk": args.talk, "reputation": bool(args.reputation)} if args.talk else {}),
+              **({"talkJob": duel_talk(args)} if args.talk and (args.no_signs or args.opening or args.audience) else {})}
     RESULTS.mkdir(parents=True, exist_ok=True)
     append_jsonl(RESULTS / "duelos.jsonl", record)
     log(f"{record['a']} vs {record['b']}: {100 * wins / games:.1f}% (IC90 {100 * low:.1f}–{100 * high:.1f}) en {games} partidas"
@@ -1220,6 +1257,9 @@ def main() -> None:
     du.add_argument("--note", help="para qué se corrió (queda en el registro)")
     du.add_argument("--talk", help="con charla pública (r4): temas separados por coma, p. ej. tanto o tanto,cartas")
     du.add_argument("--reputation", action="store_true", help="con --talk: lo dicho se comprueba y se arrastra en la partida")
+    du.add_argument("--no-signs", action="store_true", help="r8: nadie hace señas")
+    du.add_argument("--opening", action="store_true", help="r8: los compañeros hablan al abrir la mano")
+    du.add_argument("--audience", default=None, help="r8: public / team / probabilidad de que oigan los rivales")
     ar = sub.add_parser("archive", help="guarda el registro de una corrida (y opcionalmente una copia de respaldo)")
     ar.add_argument("--run", required=True)
     ar.add_argument("--backup", help="carpeta de respaldo fuera del repo (iCloud, disco externo)")

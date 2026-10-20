@@ -423,3 +423,17 @@ Diseño del piloto (4 jugadores, solo el tanto; `config/r4-piloto.json`):
 - Cadena para la tesis cerrada: balbuceo en self-play (r4/r5) → escuchar paga si hay sinceros (r6) → mentir paga si
   hay quien escucha (r7) → el balbuceo es el equilibrio. Para la mesa sigue r3 + charla con reglas; una red que
   hable bien sin jugar peor sería r8 (liga completa con PFSP y peso chico de la que escucha).
+
+## 2026-10-20 19:30 — Programa del habla y tanda "dos audiencias" (r8, `dos-audiencias.sh`)
+
+- Emmanuel: "no quiero que cerremos, quiero que sigamos experimentando". Leídos NFSP, PSRO, safe subgame y la
+  literatura de charla con conflicto (Crawford-Sobel, Farrell-Gibbons, Cao 2018, Noukhovitch 2021, Liang 2020,
+  Strouse 2018). Programa en `results/programa-habla.md`.
+- Diagnóstico: el compañero ya sabe todo por las señas, así que la charla pública solo le habla al rival (suma
+  cero) y balbucea. Tanda 1: sacar las señas y variar quién oye (A señas + pública, B sin señas pública, C sin señas
+  solo equipo, D sin señas, el rival oye la mitad). Sin señas, al abrir la mano los compañeros del pie dicen algo
+  de cartas y tanto (`talk.opening`).
+- Código: `talk.signs`, `talk.opening`, `talk.audience` ('public' | 'team' | probabilidad); banderas `deafteam`,
+  `deafrivals`, `nosigns`; `eval.talkAblation` como lista; métricas `info_*_bits` (información mutua) y
+  `canta_si_compa_*`; `duel --no-signs --opening --audience`. Prueba corta en la VM: eval y ppo en 4 y 6 con las
+  cuatro variantes. De yapa: R contra R sin ver las señas ganó 45 de 60 en la prueba (las señas valen mucho).

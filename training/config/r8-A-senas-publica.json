@@ -1,0 +1,80 @@
+{
+  "_comment": "r8-A-senas-publica (tanda 'dos audiencias', 2026-10-20): control: con señas y charla pública (como r4/r5, sin reputación). Se espera balbuceo: la charla solo le llega de verdad al rival. Todas las condiciones arrancan de la misma red (r5-charla iteración 25), con la misma semilla y los mismos rivales (ella misma 70%, la difícil 15%, R congelada 15%), 200 iteraciones, mitad 4 y mitad 6, sin reputación y sin KL hacia la imitación (que la charla vaya adonde la lleven los incentivos). Se mide info_tanto/cartas_bits (información mutua entre lo que tiene y lo que dice), canta_si_compa_* (¿el pie escucha a su compañero?) y la ablación contra sí misma callada, sorda a su equipo y sorda a los rivales.",
+  "players": 4,
+  "seed": 81,
+  "workers": 16,
+  "talk": {
+    "topics": [
+      "tanto",
+      "cartas"
+    ],
+    "reputation": false,
+    "matchCredit": true,
+    "signs": true
+  },
+  "init": {
+    "fromRun": "r5-charla",
+    "iter": 25
+  },
+  "ppo": {
+    "iterations": 225,
+    "matchesPerIter": 1024,
+    "minibatch": 8192,
+    "criticWarmup": 5,
+    "playerMix": {
+      "4": 0.5,
+      "6": 0.5
+    },
+    "klBc": 0.0,
+    "klBcFinal": 0.0,
+    "snapshotEvery": 1000000000,
+    "fixedOpponents": [
+      {
+        "kind": "self",
+        "weight": 0.7,
+        "name": "self"
+      },
+      {
+        "kind": "heur",
+        "difficulty": "hard",
+        "weight": 0.15,
+        "name": "heur-hard"
+      },
+      {
+        "kind": "mlp",
+        "path": "runs/r5-charla-br-r5-charla-iter25/target",
+        "weight": 0.15,
+        "name": "R"
+      }
+    ],
+    "obeyBonus": {
+      "start": 0.005,
+      "floor": 0.005,
+      "decayIters": 1
+    }
+  },
+  "eval": {
+    "every": 20,
+    "pairs": 300,
+    "opponent": "hard",
+    "players": [
+      4,
+      6
+    ],
+    "select": [
+      4,
+      6
+    ],
+    "talkAblation": [
+      "mute",
+      "deafteam",
+      "deafrivals",
+      "nosigns"
+    ]
+  },
+  "checkpoint": {
+    "keepLast": 3,
+    "keepBest": 3,
+    "backupDir": null
+  }
+}
