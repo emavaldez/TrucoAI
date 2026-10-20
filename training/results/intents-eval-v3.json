@@ -1,0 +1,128 @@
+{
+ "fecha": "2026-10-20T12:38:45.043Z",
+ "corpus": {
+  "entrenamiento": 589,
+  "libres": 74,
+  "intenciones": 26
+ },
+ "reglas": {
+  "reglas": {
+   "n": 179,
+   "acierto": 1,
+   "sinEntender": 0,
+   "equivocadas": 0
+  },
+  "ejemplos": {
+   "n": 410,
+   "acierto": 0.9170731707317074,
+   "sinEntender": 0.07317073170731707,
+   "equivocadas": 0.00975609756097561
+  },
+  "libres": {
+   "n": 74,
+   "acierto": 0.12162162162162163,
+   "sinEntender": 0.7972972972972973,
+   "equivocadas": 0.08108108108108109
+  }
+ },
+ "vecino": {
+  "porTemperatura": {
+   "T=0.02": {
+    "libres": {
+     "n": 74,
+     "acierto": 0.4189189189189189,
+     "logLoss": 2.6749774489326237,
+     "ece": 0.28438541812024976
+    },
+    "entrenamientoLOO": {
+     "n": 589,
+     "acierto": 0.7928692699490663,
+     "logLoss": 0.7078081265896239,
+     "ece": 0.07711660788656799
+    }
+   },
+   "T=0.03": {
+    "libres": {
+     "n": 74,
+     "acierto": 0.4189189189189189,
+     "logLoss": 2.202674556301108,
+     "ece": 0.20475360799154352
+    },
+    "entrenamientoLOO": {
+     "n": 589,
+     "acierto": 0.7928692699490663,
+     "logLoss": 0.6705594843089691,
+     "ece": 0.036836800650778004
+    }
+   },
+   "T=0.05": {
+    "libres": {
+     "n": 74,
+     "acierto": 0.4189189189189189,
+     "logLoss": 2.090705805659261,
+     "ece": 0.217223352105749
+    },
+    "entrenamientoLOO": {
+     "n": 589,
+     "acierto": 0.7928692699490663,
+     "logLoss": 0.8833624993562679,
+     "ece": 0.23469977116734342
+    }
+   },
+   "T=0.08": {
+    "libres": {
+     "n": 74,
+     "acierto": 0.4189189189189189,
+     "logLoss": 2.28227162145894,
+     "ece": 0.2823124401256939
+    },
+    "entrenamientoLOO": {
+     "n": 589,
+     "acierto": 0.7928692699490663,
+     "logLoss": 1.341405849491073,
+     "ece": 0.46389939484093035
+    }
+   }
+  },
+  "combinadoLibres": {
+   "n": 74,
+   "acierto": 0.16216216216216217,
+   "equivocadas": 0.14864864864864866,
+   "preguntaDeNuevo": 0.6891891891891891
+  }
+ },
+ "regresion": {
+  "validacionCruzada": {
+   "l2=0.0001,épocas=150": 0.8166383701188455,
+   "l2=0.0001,épocas=400": 0.8149405772495756,
+   "l2=0.001,épocas=150": 0.5959252971137521,
+   "l2=0.001,épocas=400": 0.5959252971137521,
+   "l2=0.01,épocas=150": 0.1731748726655348,
+   "l2=0.01,épocas=400": 0.17487266553480477
+  },
+  "elegido": {
+   "l2": 0.0001,
+   "epocas": 150,
+   "temperatura": 0.7,
+   "aciertoVC": 0.8166383701188455
+  },
+  "libres": {
+   "n": 74,
+   "acierto": 0.4594594594594595,
+   "logLoss": 1.8183607165550322,
+   "ece": 0.21192007513990138
+  },
+  "combinadoLibres": {
+   "n": 74,
+   "acierto": 0.28378378378378377,
+   "equivocadas": 0.25675675675675674,
+   "preguntaDeNuevo": 0.4594594594594595
+  }
+ },
+ "modelo": {
+  "nombre": "onnx-community/embeddinggemma-300m-ONNX",
+  "dtype": "q4",
+  "msPorFrase": 4.3710407239819,
+  "cargaSegundos": 0.658
+ }
+}

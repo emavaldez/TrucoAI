@@ -29,4 +29,4 @@ for n in 4 6; do
 done
 step "clasificador de frases (EmbeddingGemma): nueva intención IND_LIBRE"
 node --import tsx training/lang/eval-intents.ts 2>&1 | tail -20 | tee -a "$LOG"
-step "listo: duelos en training/results/duelos.jsonl; clasificador en public/models/intent-head.json (commitearlo)"
+step "listo: duelos en training/results/duelos.jsonl; clasificador en public/models/intent-head.json (commitearlo); reporte en results/intents-eval-v3.json"

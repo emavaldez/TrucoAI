@@ -383,3 +383,19 @@ Diseño del piloto (4 jugadores, solo el tanto; `config/r4-piloto.json`):
 - Detrás de escucha.sh: R con lo dicho impuesto (verdad / mentira / moneda / callada / tal cual) contra la difícil,
   que escucha y cree 75%, en 4 y 6, 1000 pares; y mentira y verdad contra r3 (que no oye) como control. Si mentir
   rinde contra quien escucha, la mentira debe ganar más que la verdad y que callarse; contra r3, nada cambia.
+
+## 2026-10-20 09:40 — Resultados de r6 y de la tanda de la mentira (`results/r6-escucha.md`)
+
+- La fase C de escucha.sh se cayó a las 02:33 (`declare -A`, bash 3.2) y mentira.sh quedó esperando; se corrigió
+  (`SOLO_C=1`) y se corrió todo a la mañana (09:28–09:39). Las tres corridas de entrenamiento no se vieron afectadas.
+- **Escuchar paga cuando el emisor informa**: entrenada contra la verdad, 58,5% / 54,5% (4 / 6) oyendo y 50,5% / 46,2%
+  sorda; contra la mentira sistemática, 55,6% en 4 (la lee al revés); contra la moneda, nada (≈50%). La charla de
+  r4/r5 no servía porque el emisor balbuceaba, no porque la información no valga.
+- **Mentir no rinde contra la difícil ni contra r3**: todas las variantes de lo dicho dan lo mismo (74–76% en 4, 80–81%
+  en 6 contra la difícil; 51–55% contra r3). Nadie escucha de verdad todavía.
+- Próximo (r7): equipos que hablan y escuchan, con un rival que sí escucha (r6-escucha-verdad) en la liga, para ver
+  si la red aprende a mentir a propósito y cuánto le rinde. Y medir r6-escucha-verdad contra r3 y la difícil para
+  decidir si va al juego como Experta de 4 y 6.
+- Clasificador de frases v3 (26 intenciones, con `IND_LIBRE`): regresión sobre EmbeddingGemma, acierto 82% en
+  validación cruzada y 46% en las frases libres (v2: 88% / 41%; hay 3 libres más). `public/models/intent-head.json`
+  actualizado; reporte en `results/intents-eval-v3.json`.

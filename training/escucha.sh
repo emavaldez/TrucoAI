@@ -18,6 +18,8 @@ R=runs/r5-charla-br-r5-charla-iter25/target   # la mejor de r5-charla (iteració
 PAIRS="${PAIRS:-1000}"
 duel() { python training/learner/run.py duel --pairs "$PAIRS" --talk tanto,cartas --reputation "$@" 2>&1 | tee -a "$LOG"; }
 
+# SOLO_C=1: corre solo los duelos finales (la fase C se cayó la primera vez: `declare -A` no existe en la bash 3.2 de macOS).
+if [ -z "${SOLO_C:-}" ]; then
 step "A. línea de base: R contra sí misma con lo dicho impuesto"
 for n in 4 6; do
   for v in truth lie coin; do
@@ -39,11 +41,12 @@ for v in verdad mentira moneda; do
   step "terminó $run"
 done
 
+fi
 step "C. duelos finales"
-declare -A FLAG=([verdad]=truth [mentira]=lie [moneda]=coin)
+flag() { case "$1" in verdad) echo truth ;; mentira) echo lie ;; moneda) echo coin ;; esac; }
 for v in verdad mentira moneda; do
   best="runs/r6-escucha-$v/policies/best"
-  f=${FLAG[$v]}
+  f=$(flag "$v")
   for n in 4 6; do
     duel --a "$best" --b "$R#$f" --players "$n" --note "escucha C: entrenada contra $v, oyendo"
     duel --a "$best#deaf" --b "$R#$f" --players "$n" --note "escucha C: entrenada contra $v, sorda"

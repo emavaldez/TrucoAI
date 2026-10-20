@@ -1,0 +1,108 @@
+{
+  "players": 4,
+  "seed": 61,
+  "workers": 16,
+  "wtable": {
+    "matches": 4000
+  },
+  "bc": {
+    "matches": 60000,
+    "teacher": "hard",
+    "opponents": [
+      {
+        "kind": "heur",
+        "difficulty": "hard",
+        "weight": 0.5
+      },
+      {
+        "kind": "heur",
+        "difficulty": "normal",
+        "weight": 0.3
+      },
+      {
+        "kind": "heur",
+        "difficulty": "easy",
+        "weight": 0.2
+      }
+    ],
+    "epochs": 6,
+    "batch": 4096,
+    "lr": 0.001,
+    "evalPairs": 1000
+  },
+  "ppo": {
+    "iterations": 175,
+    "matchesPerIter": 1024,
+    "epochs": 4,
+    "minibatch": 8192,
+    "lr": 0.0003,
+    "criticLr": 0.001,
+    "clip": 0.2,
+    "gaeLambda": 0.95,
+    "entropy": 0.01,
+    "klBc": 0.0,
+    "klBcFinal": 0.0,
+    "klBcDecayIters": 2000,
+    "maxGradNorm": 1.0,
+    "snapshotEvery": 1000000000,
+    "leagueSize": 40,
+    "opponents": {
+      "self": 0.5,
+      "league": 0.3,
+      "hard": 0.1,
+      "normal": 0.05,
+      "easy": 0.05
+    },
+    "obeyBonus": {
+      "start": 0.005,
+      "floor": 0.005,
+      "decayIters": 1
+    },
+    "criticWarmup": 0,
+    "playerMix": {
+      "4": 0.5,
+      "6": 0.5
+    },
+    "fixedOpponents": [
+      {
+        "kind": "mlp",
+        "path": "runs/r5-charla-br-r5-charla-iter25/target",
+        "weight": 1,
+        "name": "mentira",
+        "speech": "lie"
+      }
+    ]
+  },
+  "eval": {
+    "every": 10,
+    "pairs": 300,
+    "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+    "players": [
+      4,
+      6
+    ],
+    "select": [
+      4,
+      6
+    ],
+    "deafControl": true
+  },
+  "checkpoint": {
+    "keepLast": 3,
+    "keepBest": 3,
+    "backupDir": null
+  },
+  "_comment": "r6-escucha-mentira: \u00bfla charla no sirve porque la informaci\u00f3n no vale, o porque en self-play el emisor aprendi\u00f3 a balbucear? Se entrena a la que escucha contra un emisor fijo: la mejor de r5-charla (iteraci\u00f3n 25, congelada en runs/r5-charla-br-r5-charla-iter25/target) jugando igual pero que siempre miente (el extremo opuesto; con 'algo', uno de los otros dos al azar). Arranca de r5-charla iteraci\u00f3n 25 (la misma red) y juega 150 iteraciones solo contra ese rival, mitad en 4 y mitad en 6. Se eval\u00faa contra el mismo rival cada 10 iteraciones, y adem\u00e1s sorda (deafControl): la diferencia es lo que saca de lo que oye. Referencia: la mejor respuesta al mismo rival sin cambiar lo que dice (r5-charla-br, 2026-09-29) qued\u00f3 en 49\u201352%.",
+  "talk": {
+    "topics": [
+      "tanto",
+      "cartas"
+    ],
+    "reputation": true,
+    "matchCredit": true
+  },
+  "init": {
+    "fromRun": "r5-charla",
+    "iter": 25
+  }
+}

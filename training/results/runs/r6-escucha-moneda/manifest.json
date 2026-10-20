@@ -1,0 +1,10 @@
+{
+  "run": "r6-escucha-moneda",
+  "created": "2026-10-20 02:00:10",
+  "commit": "8eeae75a06b217296232eafe94d69f36c39e4b2e",
+  "layoutHash": "d2aaf8cd",
+  "obsDim": 1066,
+  "machine": "macOS-27.0.1-arm64-arm-64bit",
+  "python": "3.12.13",
+  "torch": "2.14.0"
+}

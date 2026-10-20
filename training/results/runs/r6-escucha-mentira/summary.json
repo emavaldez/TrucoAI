@@ -1,0 +1,718 @@
+{
+ "run": "r6-escucha-mentira",
+ "archived": "2026-10-20 02:00",
+ "starts": [
+  {
+   "t": 1792470463.271213,
+   "commit": "7715c7b203fa3f5a1ebf0a53f5200306e765fcc6"
+  }
+ ],
+ "lastIter": 175,
+ "evals": [
+  {
+   "tag": "iter30-4j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.49166666666666664,
+   "ci90": [
+    0.45820575720489215,
+    0.5252024060036969
+   ]
+  },
+  {
+   "tag": "iter30-6j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.4816666666666667,
+   "ci90": [
+    0.4482684503357014,
+    0.5152295087231948
+   ]
+  },
+  {
+   "tag": "iter30-sorda-4j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.5066666666666667,
+   "ci90": [
+    0.47313674250127324,
+    0.5401367269318554
+   ]
+  },
+  {
+   "tag": "iter30-sorda-6j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.505,
+   "ci90": [
+    0.4714762616894,
+    0.5384788403854466
+   ]
+  },
+  {
+   "tag": "iter40-4j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.47833333333333333,
+   "ci90": [
+    0.4449589841280577,
+    0.5119022402142742
+   ]
+  },
+  {
+   "tag": "iter40-6j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.47333333333333333,
+   "ci90": [
+    0.4399975724623918,
+    0.5069085498050935
+   ]
+  },
+  {
+   "tag": "iter40-sorda-4j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.5016666666666667,
+   "ci90": [
+    0.4681564119552051,
+    0.5351619554030771
+   ]
+  },
+  {
+   "tag": "iter40-sorda-6j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.475,
+   "ci90": [
+    0.4416510044381925,
+    0.508573485187575
+   ]
+  },
+  {
+   "tag": "iter50-4j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.47,
+   "ci90": [
+    0.43669182520851074,
+    0.5035775623424102
+   ]
+  },
+  {
+   "tag": "iter50-6j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.47333333333333333,
+   "ci90": [
+    0.4399975724623918,
+    0.5069085498050935
+   ]
+  },
+  {
+   "tag": "iter50-sorda-4j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.49333333333333335,
+   "ci90": [
+    0.4598632730681447,
+    0.5268632574987268
+   ]
+  },
+  {
+   "tag": "iter50-sorda-6j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.5083333333333333,
+   "ci90": [
+    0.474797593996303,
+    0.5417942427951078
+   ]
+  },
+  {
+   "tag": "iter60-4j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.49666666666666665,
+   "ci90": [
+    0.4631794168010627,
+    0.5301838484823731
+   ]
+  },
+  {
+   "tag": "iter60-6j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.5116666666666667,
+   "ci90": [
+    0.47812040926963567,
+    0.5451081622383398
+   ]
+  },
+  {
+   "tag": "iter60-sorda-4j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.49833333333333335,
+   "ci90": [
+    0.46483804459692296,
+    0.531843588044795
+   ]
+  },
+  {
+   "tag": "iter60-sorda-6j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.49666666666666665,
+   "ci90": [
+    0.4631794168010627,
+    0.5301838484823731
+   ]
+  },
+  {
+   "tag": "iter70-4j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.52,
+   "ci90": [
+    0.4864339397952951,
+    0.5533864685040909
+   ]
+  },
+  {
+   "tag": "iter70-6j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.4716666666666667,
+   "ci90": [
+    0.438344512651016,
+    0.5052432422581872
+   ]
+  },
+  {
+   "tag": "iter70-sorda-4j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.48333333333333334,
+   "ci90": [
+    0.4499237405054938,
+    0.5168925859116846
+   ]
+  },
+  {
+   "tag": "iter70-sorda-6j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.49833333333333335,
+   "ci90": [
+    0.46483804459692296,
+    0.531843588044795
+   ]
+  },
+  {
+   "tag": "iter80-4j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.5016666666666667,
+   "ci90": [
+    0.4681564119552051,
+    0.5351619554030771
+   ]
+  },
+  {
+   "tag": "iter80-6j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.4816666666666667,
+   "ci90": [
+    0.4482684503357014,
+    0.5152295087231948
+   ]
+  },
+  {
+   "tag": "iter80-sorda-4j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.5066666666666667,
+   "ci90": [
+    0.47313674250127324,
+    0.5401367269318554
+   ]
+  },
+  {
+   "tag": "iter80-sorda-6j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.4816666666666667,
+   "ci90": [
+    0.4482684503357014,
+    0.5152295087231948
+   ]
+  },
+  {
+   "tag": "iter90-4j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.5266666666666666,
+   "ci90": [
+    0.4930914501949065,
+    0.5600024275376082
+   ]
+  },
+  {
+   "tag": "iter90-6j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.5116666666666667,
+   "ci90": [
+    0.47812040926963567,
+    0.5451081622383398
+   ]
+  },
+  {
+   "tag": "iter90-sorda-4j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.48,
+   "ci90": [
+    0.44661353149590904,
+    0.5135660602047049
+   ]
+  },
+  {
+   "tag": "iter90-sorda-6j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.49166666666666664,
+   "ci90": [
+    0.45820575720489215,
+    0.5252024060036969
+   ]
+  },
+  {
+   "tag": "iter100-4j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.5416666666666666,
+   "ci90": [
+    0.5080926432245094,
+    0.5748665407325448
+   ]
+  },
+  {
+   "tag": "iter100-6j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.5116666666666667,
+   "ci90": [
+    0.47812040926963567,
+    0.5451081622383398
+   ]
+  },
+  {
+   "tag": "iter100-sorda-4j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.5033333333333333,
+   "ci90": [
+    0.469816151517627,
+    0.5368205831989373
+   ]
+  },
+  {
+   "tag": "iter100-sorda-6j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.48333333333333334,
+   "ci90": [
+    0.4499237405054938,
+    0.5168925859116846
+   ]
+  },
+  {
+   "tag": "iter110-4j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.5383333333333333,
+   "ci90": [
+    0.5047564308089119,
+    0.5715660184315781
+   ]
+  },
+  {
+   "tag": "iter110-6j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.4716666666666667,
+   "ci90": [
+    0.438344512651016,
+    0.5052432422581872
+   ]
+  },
+  {
+   "tag": "iter110-sorda-4j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.49333333333333335,
+   "ci90": [
+    0.4598632730681447,
+    0.5268632574987268
+   ]
+  },
+  {
+   "tag": "iter110-sorda-6j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.5016666666666667,
+   "ci90": [
+    0.4681564119552051,
+    0.5351619554030771
+   ]
+  },
+  {
+   "tag": "iter120-4j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.5466666666666666,
+   "ci90": [
+    0.5130997711376025,
+    0.5798145148942982
+   ]
+  },
+  {
+   "tag": "iter120-6j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.49833333333333335,
+   "ci90": [
+    0.46483804459692296,
+    0.531843588044795
+   ]
+  },
+  {
+   "tag": "iter120-sorda-4j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.5016666666666667,
+   "ci90": [
+    0.4681564119552051,
+    0.5351619554030771
+   ]
+  },
+  {
+   "tag": "iter120-sorda-6j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.485,
+   "ci90": [
+    0.451579401875767,
+    0.5185552918996935
+   ]
+  },
+  {
+   "tag": "iter130-4j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.5483333333333333,
+   "ci90": [
+    0.514769564235502,
+    0.5814630891546811
+   ]
+  },
+  {
+   "tag": "iter130-6j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.5066666666666667,
+   "ci90": [
+    0.47313674250127324,
+    0.5401367269318554
+   ]
+  },
+  {
+   "tag": "iter130-sorda-4j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.47833333333333333,
+   "ci90": [
+    0.4449589841280577,
+    0.5119022402142742
+   ]
+  },
+  {
+   "tag": "iter130-sorda-6j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.47333333333333333,
+   "ci90": [
+    0.4399975724623918,
+    0.5069085498050935
+   ]
+  },
+  {
+   "tag": "iter140-4j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.5383333333333333,
+   "ci90": [
+    0.5047564308089119,
+    0.5715660184315781
+   ]
+  },
+  {
+   "tag": "iter140-6j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.5316666666666666,
+   "ci90": [
+    0.49808849015927864,
+    0.5649604896480827
+   ]
+  },
+  {
+   "tag": "iter140-sorda-4j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.5233333333333333,
+   "ci90": [
+    0.48976195140248346,
+    0.5566951916134669
+   ]
+  },
+  {
+   "tag": "iter140-sorda-6j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.47333333333333333,
+   "ci90": [
+    0.4399975724623918,
+    0.5069085498050935
+   ]
+  },
+  {
+   "tag": "iter150-4j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.5616666666666666,
+   "ci90": [
+    0.5281414713143622,
+    0.5946381209420781
+   ]
+  },
+  {
+   "tag": "iter150-6j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.485,
+   "ci90": [
+    0.451579401875767,
+    0.5185552918996935
+   ]
+  },
+  {
+   "tag": "iter150-sorda-4j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.5266666666666666,
+   "ci90": [
+    0.4930914501949065,
+    0.5600024275376082
+   ]
+  },
+  {
+   "tag": "iter150-sorda-6j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.47333333333333333,
+   "ci90": [
+    0.4399975724623918,
+    0.5069085498050935
+   ]
+  },
+  {
+   "tag": "iter160-4j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.5383333333333333,
+   "ci90": [
+    0.5047564308089119,
+    0.5715660184315781
+   ]
+  },
+  {
+   "tag": "iter160-6j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.49833333333333335,
+   "ci90": [
+    0.46483804459692296,
+    0.531843588044795
+   ]
+  },
+  {
+   "tag": "iter160-sorda-4j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.5366666666666666,
+   "ci90": [
+    0.5030888855399376,
+    0.5699151963422702
+   ]
+  },
+  {
+   "tag": "iter160-sorda-6j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.475,
+   "ci90": [
+    0.4416510044381925,
+    0.508573485187575
+   ]
+  },
+  {
+   "tag": "iter170-4j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.555,
+   "ci90": [
+    0.5214524985764061,
+    0.5880536242469058
+   ]
+  },
+  {
+   "tag": "iter170-6j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.49,
+   "ci90": [
+    0.45654861208016634,
+    0.5235411837701407
+   ]
+  },
+  {
+   "tag": "iter170-sorda-4j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.47333333333333333,
+   "ci90": [
+    0.4399975724623918,
+    0.5069085498050935
+   ]
+  },
+  {
+   "tag": "iter170-sorda-6j",
+   "opponent": "runs/r5-charla-br-r5-charla-iter25/target#lie",
+   "games": 600,
+   "winrate": 0.475,
+   "ci90": [
+    0.4416510044381925,
+    0.508573485187575
+   ]
+  }
+ ],
+ "gauntlet": [],
+ "best": "r6-escucha-mentira/iter140",
+ "lastStyle": {
+  "truco": 0.124,
+  "farol": 0.473,
+  "envido": 0.499,
+  "farol_envido": 0.483,
+  "envido_<24": 0.397,
+  "envido_24-27": 0.549,
+  "envido_28-30": 0.718,
+  "envido_31+": 0.853,
+  "quiere_truco": 0.39,
+  "sube_truco": 0.091,
+  "quiere_envido": 0.238,
+  "acepta_envido_<24": 0.485,
+  "acepta_envido_24-27": 0.573,
+  "acepta_envido_28-30": 0.742,
+  "acepta_envido_31+": 0.976,
+  "farol_envido_exito": 0.682,
+  "farol_envido_pts": 0.03,
+  "farol_envido_dW": 0.0096,
+  "tantos_envido_exito": 0.627,
+  "tantos_envido_pts": 0.88,
+  "tantos_envido_dW": 0.0307
+ },
+ "lastEntropyByDecision": {
+  "cartas": 0.18,
+  "turno": 0.441,
+  "resp_truco": 0.294,
+  "resp_envido": 0.22,
+  "indica": 0.595,
+  "habla": 0.674
+ },
+ "talkAblation": [],
+ "lastClaims": {
+  "dice_tanto_mucho_engano": {
+   "mucho": 0.33,
+   "algo": 0.22,
+   "nada": 0.36,
+   "calla": 0.08
+  },
+  "dice_tanto_algo_engano": {
+   "mucho": 0.28,
+   "algo": 0.34,
+   "nada": 0.33,
+   "calla": 0.05
+  },
+  "dice_tanto_nada_engano": {
+   "mucho": 0.21,
+   "algo": 0.3,
+   "nada": 0.44,
+   "calla": 0.06
+  },
+  "dice_tanto_mucho_resto": {
+   "mucho": 0.46,
+   "algo": 0.2,
+   "nada": 0.25,
+   "calla": 0.09
+  },
+  "dice_tanto_algo_resto": {
+   "mucho": 0.34,
+   "algo": 0.34,
+   "nada": 0.25,
+   "calla": 0.07
+  },
+  "dice_tanto_nada_resto": {
+   "mucho": 0.14,
+   "algo": 0.26,
+   "nada": 0.53,
+   "calla": 0.06
+  },
+  "miente_nada_con_mucho": 0.328,
+  "miente_mucho_con_nada": 0.189,
+  "dice_cartas": {
+   "mucho": {
+    "mucho": 0.6,
+    "algo": 0.31,
+    "nada": 0.07,
+    "calla": 0.02
+   },
+   "algo": {
+    "mucho": 0.29,
+    "algo": 0.52,
+    "nada": 0.17,
+    "calla": 0.03
+   },
+   "nada": {
+    "mucho": 0.14,
+    "algo": 0.37,
+    "nada": 0.48,
+    "calla": 0.02
+   }
+  },
+  "canta_si_nada": 0.377,
+  "canta_si_tiene": 0.676,
+  "canta_si_nada_dicho": 0.438,
+  "canta_si_nada_confiable": 0.361,
+  "canta_si_nada_mentiroso": 0.396,
+  "comprobado_tanto": 0.213,
+  "comprobado_cartas": 0.107,
+  "pescada_mintiendo": 0.264,
+  "engano_manos": 709,
+  "engano_rival_canta": 0.137,
+  "engano_pts": 1.52
+ }
+}
