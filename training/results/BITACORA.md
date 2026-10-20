@@ -399,3 +399,13 @@ Diseño del piloto (4 jugadores, solo el tanto; `config/r4-piloto.json`):
 - Clasificador de frases v3 (26 intenciones, con `IND_LIBRE`): regresión sobre EmbeddingGemma, acierto 82% en
   validación cruzada y 46% en las frases libres (v2: 88% / 41%; hay 3 libres más). `public/models/intent-head.json`
   actualizado; reporte en `results/intents-eval-v3.json`.
+
+## 2026-10-20 09:50 — r7 "engaño" (`training/engano.sh`, `config/r7-engano.json`)
+
+- Pregunta: si hay quien escucha, ¿la red aprende a mentir a propósito (decir lo contrario de lo que señó) y le
+  rinde? Arranca de r6-escucha-verdad (iteración 150) y juega 200 iteraciones contra una liga que escucha: ella
+  misma 35%, r6-escucha-verdad congelada 35%, la difícil (cree 75%) 20%, r3 (no oye) 10%. Mitad 4 y mitad 6.
+- Se mira: la línea `charla` por iteración (qué dice con mucho / nada cuando el pie rival todavía puede cantar;
+  `miente_*`; `engano_rival_canta`, `engano_pts`), la evaluación contra la que escucha oyendo y sorda, contra sí misma
+  callada y sorda, y los duelos finales: r7 libre, obligada a la verdad, obligada a mentir y callada, contra la que
+  escucha. Si libre > verdad, lo que dice le rinde. También r6-escucha-verdad contra r3 y la difícil (¿va al juego?).

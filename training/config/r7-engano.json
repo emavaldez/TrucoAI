@@ -1,0 +1,93 @@
+{
+  "_comment": "r7-engaño: ¿la red aprende a mentir a propósito cuando hay quien escucha, y le rinde? Arranca de r6-escucha-verdad (iteración 150: ya sabe escuchar) y juega 200 iteraciones contra una liga en la que se escucha: ella misma (35%), r6-escucha-verdad congelada (35%), la difícil que cree 75% (20%) y r3 que no oye (10%). Mitad 4 y mitad 6. Se evalúa contra r6-escucha-verdad (oyendo y sorda), contra sí misma callada y sorda, y duelos contra la difícil, r3 y R. Lo que dice se mide en la línea 'charla' (dice_tanto_*_engano, miente_*, engano_pts). Después, engano.sh compara r7 hablando libre contra r7 obligada a decir la verdad, las dos contra la que escucha.",
+  "players": 4,
+  "seed": 71,
+  "workers": 16,
+  "talk": {
+    "topics": [
+      "tanto",
+      "cartas"
+    ],
+    "reputation": true,
+    "matchCredit": true
+  },
+  "init": {
+    "fromRun": "r6-escucha-verdad",
+    "iter": 150
+  },
+  "ppo": {
+    "iterations": 350,
+    "matchesPerIter": 1024,
+    "minibatch": 8192,
+    "criticWarmup": 0,
+    "playerMix": {
+      "4": 0.5,
+      "6": 0.5
+    },
+    "klBc": 0.0,
+    "klBcFinal": 0.0,
+    "snapshotEvery": 1000000000,
+    "fixedOpponents": [
+      {
+        "kind": "self",
+        "weight": 0.35,
+        "name": "self"
+      },
+      {
+        "kind": "mlp",
+        "path": "runs/r6-escucha-verdad/policies/best",
+        "weight": 0.35,
+        "name": "escucha"
+      },
+      {
+        "kind": "heur",
+        "difficulty": "hard",
+        "weight": 0.2,
+        "name": "heur-hard"
+      },
+      {
+        "kind": "mlp",
+        "path": "runs/r3/policies/best",
+        "weight": 0.1,
+        "name": "r3"
+      }
+    ],
+    "obeyBonus": {
+      "start": 0.005,
+      "floor": 0.005,
+      "decayIters": 1
+    }
+  },
+  "eval": {
+    "every": 10,
+    "pairs": 300,
+    "opponent": "runs/r6-escucha-verdad/policies/best",
+    "players": [
+      4,
+      6
+    ],
+    "select": [
+      4,
+      6
+    ],
+    "deafControl": true,
+    "talkAblation": true,
+    "gauntlet": {
+      "pairs": 300,
+      "players": [
+        4,
+        6
+      ],
+      "opponents": [
+        "hard",
+        "runs/r3/policies/best",
+        "runs/r5-charla-br-r5-charla-iter25/target"
+      ]
+    }
+  },
+  "checkpoint": {
+    "keepLast": 3,
+    "keepBest": 3,
+    "backupDir": null
+  }
+}
