@@ -105,6 +105,8 @@ interface Job {
     opening?: boolean;
     /** r8: quién oye lo dicho: todos ('public', como hasta r7), solo el equipo ('team'), o los rivales con esa probabilidad */
     audience?: 'public' | 'team' | number;
+    /** r8: la observación tiene el tramo de reputación (en cero) aunque no se arrastre */
+    repInputs?: boolean;
   };
 }
 
@@ -706,7 +708,8 @@ async function main(): Promise<void> {
   const job = JSON.parse(await readFile(process.argv[2], 'utf8')) as Job;
   const rng = createRng(job.seed >>> 0);
   const sample = getObservation(createMatch({ rules: { playerCount: job.players, flor: false, picaPica: false }, seed: 1 }), 'p0');
-  const layout = obsLayout(sample, !!job.talk, !!job.talk?.reputation);
+  // r8: `repInputs` deja el tramo de reputación (en cero) para seguir desde una red que lo tiene.
+  const layout = obsLayout(sample, !!job.talk, !!(job.talk?.reputation || job.talk?.repInputs));
   const hash = layoutHash(layout);
   const hashes: Hashes = {
     base: layoutHash(obsLayout(sample)),

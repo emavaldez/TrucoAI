@@ -12,7 +12,8 @@
     "matchCredit": true,
     "signs": false,
     "opening": true,
-    "audience": 0.5
+    "audience": 0.5,
+    "repInputs": true
   },
   "init": {
     "fromRun": "r5-charla",

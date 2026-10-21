@@ -174,7 +174,9 @@ class Run:
         self.workers = workers or config.get("workers") or default_workers()
         # r4: con charla pública, la observación suma lo dicho en voz alta (tramo `claims`).
         talk = config.get("talk") or {}
-        self.layout = obs_layout(config["players"], claims=bool(talk), reputation=bool(talk.get("reputation")))
+        # r8: `repInputs` deja el tramo de reputación en la observación (en cero) aunque no se arrastre, para seguir
+        # desde una red que lo tiene (r5-charla).
+        self.layout = obs_layout(config["players"], claims=bool(talk), reputation=bool(talk.get("reputation") or talk.get("repInputs")))
         self.dev = device()
         self.log_path = self.dir / "log.jsonl"
         manifest = self.dir / "manifest.json"
@@ -1202,7 +1204,8 @@ def cmd_archive(args) -> None:
         "lastStyle": iters[-1].get("style") if iters else None,
         "lastEntropyByDecision": iters[-1].get("ent_by") if iters else None,
         # r4: duelos contra sí misma callada y sorda, y la última línea de charla.
-        "talkAblation": [{k: r[k] for k in ("iter", "vsMute", "vsDeaf")} for r in records if r["kind"] == "talk_ablation"],
+        # (r8: con `talkAblation` como lista, cada evento trae `rates` por bandera y cantidad de jugadores)
+        "talkAblation": [{k: r[k] for k in ("iter", "vsMute", "vsDeaf", "rates") if k in r} for r in records if r["kind"] == "talk_ablation"],
         "lastClaims": iters[-1].get("claims") if iters else None,
     }
     atomic_write_bytes(out / "summary.json", json.dumps(summary, indent=1, ensure_ascii=False).encode())

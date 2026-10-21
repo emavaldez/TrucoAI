@@ -437,3 +437,22 @@ Diseño del piloto (4 jugadores, solo el tanto; `config/r4-piloto.json`):
   `deafrivals`, `nosigns`; `eval.talkAblation` como lista; métricas `info_*_bits` (información mutua) y
   `canta_si_compa_*`; `duel --no-signs --opening --audience`. Prueba corta en la VM: eval y ppo en 4 y 6 con las
   cuatro variantes. De yapa: R contra R sin ver las señas ganó 45 de 60 en la prueba (las señas valen mucho).
+- 19:03 Duelo previo, **cuánto valen las señas**: R contra R que no ve las señas de sus compañeros, 1000 pares:
+  **69,5% en 4 y 80,3% en 6**. Las señas son la información más valiosa de la mesa (más que todo lo que se dijo
+  en r4–r7).
+- 19:07 Se cayó el arranque de r8-A: sin reputación la observación pierde 12 entradas y la red de r5-charla las
+  tiene. Arreglo: `talk.repInputs` deja el tramo de reputación en cero (learner y actor); la corrida fallida quedó
+  en `runs/_to_delete/`. Reanudó 19:11, ~15 s por iteración.
+
+## 2026-10-21 — Resultados de r8 "dos audiencias" (`results/r8-dos-audiencias.md`)
+
+- Las cuatro corridas terminaron (19:11–23:28) y los duelos (23:42). El `archive` se cayó en las cuatro
+  (KeyError: `talkAblation` ahora trae `rates`); arreglado y corrido con `r8-cierre.sh`, que además repite los duelos
+  con la última red (la "mejor" de A y B se eligió temprano, por lo que le ganan a la difícil).
+- Información del tanto al final: A (señas, pública) 0,01 bits · B (sin señas, pública) 0,13 · C (sin señas, solo
+  equipo) 0,36 · D (sin señas, oyen la mitad) 0,35. Hablar vale (contra sí misma callada): C 60,5% / 65,3%, D 57,0% /
+  64,7%; en A y B, ≈50%. Escuchar al rival vale 2–3 puntos en D y nada en B.
+- Lectura: la charla informa cuando el aliado la necesita y el rival no la oye toda; con señas se apaga sola. La curva
+  información contra probabilidad de que escuche el rival aguanta hasta ½ y se cae en 1. En C/D el lenguaje se
+  comprime a "mucho / no mucho" (lo que decide el envido); la charla de cartas se pierde en todas las condiciones.
+  Callarse también es un mensaje (B: el equipo callado le gana al que habla, porque leen el silencio como debilidad).

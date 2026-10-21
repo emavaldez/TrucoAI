@@ -1,0 +1,10 @@
+{
+  "run": "r8-B-sinsenas-publica",
+  "created": "2026-10-20 20:16:13",
+  "commit": "8d05ca70c1c430a2bcec06f442bf39ab5c3f4515",
+  "layoutHash": "d2aaf8cd",
+  "obsDim": 1066,
+  "machine": "macOS-27.0.1-arm64-arm-64bit",
+  "python": "3.12.13",
+  "torch": "2.14.0"
+}

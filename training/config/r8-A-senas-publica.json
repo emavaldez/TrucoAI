@@ -10,7 +10,8 @@
     ],
     "reputation": false,
     "matchCredit": true,
-    "signs": true
+    "signs": true,
+    "repInputs": true
   },
   "init": {
     "fromRun": "r5-charla",

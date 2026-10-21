@@ -1,0 +1,795 @@
+{
+ "run": "r8-C-sinsenas-equipo",
+ "archived": "2026-10-21 17:58",
+ "starts": [
+  {
+   "t": 1792542305.4186409,
+   "commit": "8d05ca70c1c430a2bcec06f442bf39ab5c3f4515"
+  }
+ ],
+ "lastIter": 225,
+ "evals": [
+  {
+   "tag": "iter40-4j",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.7533333333333333,
+   "ci90": [
+    0.7232892256557701,
+    0.7811026128031202
+   ]
+  },
+  {
+   "tag": "iter40-6j",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.7283333333333334,
+   "ci90": [
+    0.6974850391311774,
+    0.7571312889534806
+   ]
+  },
+  {
+   "tag": "iter40-vs-mute-4j",
+   "opponent": "self#mute",
+   "games": 600,
+   "winrate": 0.4816666666666667,
+   "ci90": [
+    0.4482684503357014,
+    0.5152295087231948
+   ]
+  },
+  {
+   "tag": "iter40-vs-mute-6j",
+   "opponent": "self#mute",
+   "games": 600,
+   "winrate": 0.46,
+   "ci90": [
+    0.42678353334051233,
+    0.4935756500607156
+   ]
+  },
+  {
+   "tag": "iter40-vs-deafteam-4j",
+   "opponent": "self#deafteam",
+   "games": 600,
+   "winrate": 0.475,
+   "ci90": [
+    0.4416510044381925,
+    0.508573485187575
+   ]
+  },
+  {
+   "tag": "iter40-vs-deafteam-6j",
+   "opponent": "self#deafteam",
+   "games": 600,
+   "winrate": 0.5116666666666667,
+   "ci90": [
+    0.47812040926963567,
+    0.5451081622383398
+   ]
+  },
+  {
+   "tag": "iter60-4j",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.7266666666666667,
+   "ci90": [
+    0.6957690832394132,
+    0.7555288774869626
+   ]
+  },
+  {
+   "tag": "iter60-6j",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.7566666666666667,
+   "ci90": [
+    0.7267393225549286,
+    0.7842892506205263
+   ]
+  },
+  {
+   "tag": "iter60-vs-mute-4j",
+   "opponent": "self#mute",
+   "games": 600,
+   "winrate": 0.49166666666666664,
+   "ci90": [
+    0.45820575720489215,
+    0.5252024060036969
+   ]
+  },
+  {
+   "tag": "iter60-vs-mute-6j",
+   "opponent": "self#mute",
+   "games": 600,
+   "winrate": 0.525,
+   "ci90": [
+    0.49142651481242505,
+    0.5583489955618075
+   ]
+  },
+  {
+   "tag": "iter60-vs-deafteam-4j",
+   "opponent": "self#deafteam",
+   "games": 600,
+   "winrate": 0.53,
+   "ci90": [
+    0.4964224376575899,
+    0.5633081747914894
+   ]
+  },
+  {
+   "tag": "iter60-vs-deafteam-6j",
+   "opponent": "self#deafteam",
+   "games": 600,
+   "winrate": 0.5233333333333333,
+   "ci90": [
+    0.48976195140248346,
+    0.5566951916134669
+   ]
+  },
+  {
+   "tag": "iter80-4j",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.665,
+   "ci90": [
+    0.6326243563453724,
+    0.6958940121245629
+   ]
+  },
+  {
+   "tag": "iter80-6j",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.7116666666666667,
+   "ci90": [
+    0.6803486454574619,
+    0.7410840090443742
+   ]
+  },
+  {
+   "tag": "iter80-vs-mute-4j",
+   "opponent": "self#mute",
+   "games": 600,
+   "winrate": 0.5366666666666666,
+   "ci90": [
+    0.5030888855399376,
+    0.5699151963422702
+   ]
+  },
+  {
+   "tag": "iter80-vs-mute-6j",
+   "opponent": "self#mute",
+   "games": 600,
+   "winrate": 0.58,
+   "ci90": [
+    0.5465675272332671,
+    0.6127141059642773
+   ]
+  },
+  {
+   "tag": "iter80-vs-deafteam-4j",
+   "opponent": "self#deafteam",
+   "games": 600,
+   "winrate": 0.5766666666666667,
+   "ci90": [
+    0.5432138912561881,
+    0.6094310072247919
+   ]
+  },
+  {
+   "tag": "iter80-vs-deafteam-6j",
+   "opponent": "self#deafteam",
+   "games": 600,
+   "winrate": 0.5733333333333334,
+   "ci90": [
+    0.539861791241108,
+    0.6061463725233077
+   ]
+  },
+  {
+   "tag": "iter100-4j",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.6866666666666666,
+   "ci90": [
+    0.6547366727083077,
+    0.7169204714192958
+   ]
+  },
+  {
+   "tag": "iter100-6j",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.7266666666666667,
+   "ci90": [
+    0.6957690832394132,
+    0.7555288774869626
+   ]
+  },
+  {
+   "tag": "iter100-vs-mute-4j",
+   "opponent": "self#mute",
+   "games": 600,
+   "winrate": 0.5566666666666666,
+   "ci90": [
+    0.5231241746068744,
+    0.5897003155747194
+   ]
+  },
+  {
+   "tag": "iter100-vs-mute-6j",
+   "opponent": "self#mute",
+   "games": 600,
+   "winrate": 0.5766666666666667,
+   "ci90": [
+    0.5432138912561881,
+    0.6094310072247919
+   ]
+  },
+  {
+   "tag": "iter100-vs-deafteam-4j",
+   "opponent": "self#deafteam",
+   "games": 600,
+   "winrate": 0.5583333333333333,
+   "ci90": [
+    0.524796228445384,
+    0.5913466290944922
+   ]
+  },
+  {
+   "tag": "iter100-vs-deafteam-6j",
+   "opponent": "self#deafteam",
+   "games": 600,
+   "winrate": 0.5883333333333334,
+   "ci90": [
+    0.5549583698771202,
+    0.620915100111835
+   ]
+  },
+  {
+   "tag": "iter120-4j",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.6716666666666666,
+   "ci90": [
+    0.6394200474023722,
+    0.7023717905006918
+   ]
+  },
+  {
+   "tag": "iter120-6j",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.7583333333333333,
+   "ci90": [
+    0.7284652463754502,
+    0.7858816941582869
+   ]
+  },
+  {
+   "tag": "iter120-vs-mute-4j",
+   "opponent": "self#mute",
+   "games": 600,
+   "winrate": 0.55,
+   "ci90": [
+    0.5164397331500453,
+    0.58311128759842
+   ]
+  },
+  {
+   "tag": "iter120-vs-mute-6j",
+   "opponent": "self#mute",
+   "games": 600,
+   "winrate": 0.6166666666666667,
+   "ci90": [
+    0.5835604782521996,
+    0.6487252368275528
+   ]
+  },
+  {
+   "tag": "iter120-vs-deafteam-4j",
+   "opponent": "self#deafteam",
+   "games": 600,
+   "winrate": 0.5933333333333334,
+   "ci90": [
+    0.5599975327288981,
+    0.6258310393349037
+   ]
+  },
+  {
+   "tag": "iter120-vs-deafteam-6j",
+   "opponent": "self#deafteam",
+   "games": 600,
+   "winrate": 0.59,
+   "ci90": [
+    0.5566377013192023,
+    0.6225541360280351
+   ]
+  },
+  {
+   "tag": "iter140-4j",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.6966666666666667,
+   "ci90": [
+    0.6649685381262188,
+    0.7265988101510777
+   ]
+  },
+  {
+   "tag": "iter140-6j",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.7766666666666666,
+   "ci90": [
+    0.7474902383558367,
+    0.8033587431190042
+   ]
+  },
+  {
+   "tag": "iter140-vs-mute-4j",
+   "opponent": "self#mute",
+   "games": 600,
+   "winrate": 0.59,
+   "ci90": [
+    0.5566377013192023,
+    0.6225541360280351
+   ]
+  },
+  {
+   "tag": "iter140-vs-mute-6j",
+   "opponent": "self#mute",
+   "games": 600,
+   "winrate": 0.61,
+   "ci90": [
+    0.5768202611386799,
+    0.6421919845079436
+   ]
+  },
+  {
+   "tag": "iter140-vs-deafteam-4j",
+   "opponent": "self#deafteam",
+   "games": 600,
+   "winrate": 0.5733333333333334,
+   "ci90": [
+    0.539861791241108,
+    0.6061463725233077
+   ]
+  },
+  {
+   "tag": "iter140-vs-deafteam-6j",
+   "opponent": "self#deafteam",
+   "games": 600,
+   "winrate": 0.6183333333333333,
+   "ci90": [
+    0.5852465373327781,
+    0.6503575451052562
+   ]
+  },
+  {
+   "tag": "iter160-4j",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.705,
+   "ci90": [
+    0.6735081720851455,
+    0.734651012983562
+   ]
+  },
+  {
+   "tag": "iter160-6j",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.79,
+   "ci90": [
+    0.7613748584796051,
+    0.8160210618614933
+   ]
+  },
+  {
+   "tag": "iter160-vs-mute-4j",
+   "opponent": "self#mute",
+   "games": 600,
+   "winrate": 0.59,
+   "ci90": [
+    0.5566377013192023,
+    0.6225541360280351
+   ]
+  },
+  {
+   "tag": "iter160-vs-mute-6j",
+   "opponent": "self#mute",
+   "games": 600,
+   "winrate": 0.6266666666666667,
+   "ci90": [
+    0.5936829117207539,
+    0.6585130075086915
+   ]
+  },
+  {
+   "tag": "iter160-vs-deafteam-4j",
+   "opponent": "self#deafteam",
+   "games": 600,
+   "winrate": 0.57,
+   "ci90": [
+    0.5365112225026119,
+    0.6028602065452393
+   ]
+  },
+  {
+   "tag": "iter160-vs-deafteam-6j",
+   "opponent": "self#deafteam",
+   "games": 600,
+   "winrate": 0.625,
+   "ci90": [
+    0.5919948228281824,
+    0.6568827290429806
+   ]
+  },
+  {
+   "tag": "iter180-4j",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.6983333333333334,
+   "ci90": [
+    0.6666755033941284,
+    0.7282102122414503
+   ]
+  },
+  {
+   "tag": "iter180-6j",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.7716666666666666,
+   "ci90": [
+    0.7422942008735237,
+    0.7985996785264705
+   ]
+  },
+  {
+   "tag": "iter180-vs-mute-4j",
+   "opponent": "self#mute",
+   "games": 600,
+   "winrate": 0.5983333333333334,
+   "ci90": [
+    0.5650402123226875,
+    0.630743461815961
+   ]
+  },
+  {
+   "tag": "iter180-vs-mute-6j",
+   "opponent": "self#mute",
+   "games": 600,
+   "winrate": 0.6183333333333333,
+   "ci90": [
+    0.5852465373327781,
+    0.6503575451052562
+   ]
+  },
+  {
+   "tag": "iter180-vs-deafteam-4j",
+   "opponent": "self#deafteam",
+   "games": 600,
+   "winrate": 0.5866666666666667,
+   "ci90": [
+    0.5532794269876574,
+    0.6192756756430157
+   ]
+  },
+  {
+   "tag": "iter180-vs-deafteam-6j",
+   "opponent": "self#deafteam",
+   "games": 600,
+   "winrate": 0.6116666666666667,
+   "ci90": [
+    0.5785047144607585,
+    0.6438258985441472
+   ]
+  },
+  {
+   "tag": "iter200-4j",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.7116666666666667,
+   "ci90": [
+    0.6803486454574619,
+    0.7410840090443742
+   ]
+  },
+  {
+   "tag": "iter200-6j",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.7833333333333333,
+   "ci90": [
+    0.7544272640753076,
+    0.8096951868326621
+   ]
+  },
+  {
+   "tag": "iter200-vs-mute-4j",
+   "opponent": "self#mute",
+   "games": 600,
+   "winrate": 0.6083333333333333,
+   "ci90": [
+    0.5751362068943686,
+    0.6405576713939727
+   ]
+  },
+  {
+   "tag": "iter200-vs-mute-6j",
+   "opponent": "self#mute",
+   "games": 600,
+   "winrate": 0.645,
+   "ci90": [
+    0.6122791489642487,
+    0.6764188112063005
+   ]
+  },
+  {
+   "tag": "iter200-vs-deafteam-4j",
+   "opponent": "self#deafteam",
+   "games": 600,
+   "winrate": 0.605,
+   "ci90": [
+    0.571769292017916,
+    0.6372878515538609
+   ]
+  },
+  {
+   "tag": "iter200-vs-deafteam-6j",
+   "opponent": "self#deafteam",
+   "games": 600,
+   "winrate": 0.58,
+   "ci90": [
+    0.5465675272332671,
+    0.6127141059642773
+   ]
+  },
+  {
+   "tag": "iter220-4j",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.73,
+   "ci90": [
+    0.699201520410552,
+    0.758733175032388
+   ]
+  },
+  {
+   "tag": "iter220-6j",
+   "opponent": "hard",
+   "games": 600,
+   "winrate": 0.7866666666666666,
+   "ci90": [
+    0.7578997180609323,
+    0.8128594675636017
+   ]
+  },
+  {
+   "tag": "iter220-vs-mute-4j",
+   "opponent": "self#mute",
+   "games": 600,
+   "winrate": 0.59,
+   "ci90": [
+    0.5566377013192023,
+    0.6225541360280351
+   ]
+  },
+  {
+   "tag": "iter220-vs-mute-6j",
+   "opponent": "self#mute",
+   "games": 600,
+   "winrate": 0.6766666666666666,
+   "ci90": [
+    0.6445215023195391,
+    0.7072254376583714
+   ]
+  },
+  {
+   "tag": "iter220-vs-deafteam-4j",
+   "opponent": "self#deafteam",
+   "games": 600,
+   "winrate": 0.5616666666666666,
+   "ci90": [
+    0.5281414713143622,
+    0.5946381209420781
+   ]
+  },
+  {
+   "tag": "iter220-vs-deafteam-6j",
+   "opponent": "self#deafteam",
+   "games": 600,
+   "winrate": 0.6016666666666667,
+   "ci90": [
+    0.5684039627606894,
+    0.6340164460945232
+   ]
+  }
+ ],
+ "gauntlet": [],
+ "best": "r8-C-sinsenas-equipo/iter220",
+ "lastStyle": {
+  "truco": 0.147,
+  "farol": 0.48,
+  "envido": 0.58,
+  "farol_envido": 0.466,
+  "envido_<24": 0.514,
+  "envido_24-27": 0.708,
+  "envido_28-30": 0.814,
+  "envido_31+": 0.856,
+  "quiere_truco": 0.447,
+  "sube_truco": 0.081,
+  "quiere_envido": 0.335,
+  "acepta_envido_<24": 0.345,
+  "acepta_envido_24-27": 0.6,
+  "acepta_envido_28-30": 0.824,
+  "acepta_envido_31+": 0.963,
+  "farol_envido_exito": 0.566,
+  "farol_envido_pts": 0.03,
+  "farol_envido_dW": 0.0051,
+  "tantos_envido_exito": 0.554,
+  "tantos_envido_pts": 0.69,
+  "tantos_envido_dW": 0.0253
+ },
+ "lastEntropyByDecision": {
+  "cartas": 0.197,
+  "turno": 0.475,
+  "resp_truco": 0.333,
+  "resp_envido": 0.222,
+  "indica": 0.67,
+  "habla": 0.725
+ },
+ "talkAblation": [
+  {
+   "iter": 40,
+   "rates": {
+    "mute-4j": 0.4816666666666667,
+    "mute-6j": 0.46,
+    "deafteam-4j": 0.475,
+    "deafteam-6j": 0.5116666666666667
+   }
+  },
+  {
+   "iter": 60,
+   "rates": {
+    "mute-4j": 0.49166666666666664,
+    "mute-6j": 0.525,
+    "deafteam-4j": 0.53,
+    "deafteam-6j": 0.5233333333333333
+   }
+  },
+  {
+   "iter": 80,
+   "rates": {
+    "mute-4j": 0.5366666666666666,
+    "mute-6j": 0.58,
+    "deafteam-4j": 0.5766666666666667,
+    "deafteam-6j": 0.5733333333333334
+   }
+  },
+  {
+   "iter": 100,
+   "rates": {
+    "mute-4j": 0.5566666666666666,
+    "mute-6j": 0.5766666666666667,
+    "deafteam-4j": 0.5583333333333333,
+    "deafteam-6j": 0.5883333333333334
+   }
+  },
+  {
+   "iter": 120,
+   "rates": {
+    "mute-4j": 0.55,
+    "mute-6j": 0.6166666666666667,
+    "deafteam-4j": 0.5933333333333334,
+    "deafteam-6j": 0.59
+   }
+  },
+  {
+   "iter": 140,
+   "rates": {
+    "mute-4j": 0.59,
+    "mute-6j": 0.61,
+    "deafteam-4j": 0.5733333333333334,
+    "deafteam-6j": 0.6183333333333333
+   }
+  },
+  {
+   "iter": 160,
+   "rates": {
+    "mute-4j": 0.59,
+    "mute-6j": 0.6266666666666667,
+    "deafteam-4j": 0.57,
+    "deafteam-6j": 0.625
+   }
+  },
+  {
+   "iter": 180,
+   "rates": {
+    "mute-4j": 0.5983333333333334,
+    "mute-6j": 0.6183333333333333,
+    "deafteam-4j": 0.5866666666666667,
+    "deafteam-6j": 0.6116666666666667
+   }
+  },
+  {
+   "iter": 200,
+   "rates": {
+    "mute-4j": 0.6083333333333333,
+    "mute-6j": 0.645,
+    "deafteam-4j": 0.605,
+    "deafteam-6j": 0.58
+   }
+  },
+  {
+   "iter": 220,
+   "rates": {
+    "mute-4j": 0.59,
+    "mute-6j": 0.6766666666666666,
+    "deafteam-4j": 0.5616666666666666,
+    "deafteam-6j": 0.6016666666666667
+   }
+  }
+ ],
+ "lastClaims": {
+  "dice_tanto_mucho_engano": {
+   "mucho": 0.76,
+   "algo": 0.08,
+   "nada": 0.08,
+   "calla": 0.08
+  },
+  "dice_tanto_algo_engano": {
+   "mucho": 0.14,
+   "algo": 0.36,
+   "nada": 0.28,
+   "calla": 0.22
+  },
+  "dice_tanto_nada_engano": {
+   "mucho": 0.01,
+   "algo": 0.37,
+   "nada": 0.42,
+   "calla": 0.21
+  },
+  "miente_nada_con_mucho": 0.077,
+  "miente_mucho_con_nada": 0.006,
+  "info_tanto_bits": 0.355,
+  "info_tanto_frac": 0.252,
+  "info_cartas_bits": 0.07,
+  "info_cartas_frac": 0.052,
+  "dice_cartas": {
+   "mucho": {
+    "mucho": 0.45,
+    "algo": 0.35,
+    "nada": 0.11,
+    "calla": 0.09
+   },
+   "algo": {
+    "mucho": 0.24,
+    "algo": 0.47,
+    "nada": 0.16,
+    "calla": 0.13
+   },
+   "nada": {
+    "mucho": 0.15,
+    "algo": 0.32,
+    "nada": 0.38,
+    "calla": 0.14
+   }
+  },
+  "canta_si_nada_dicho": 0.58,
+  "canta_si_compa_mucho": 0.828,
+  "canta_si_compa_algo": 0.508,
+  "canta_si_compa_nada": 0.484,
+  "canta_si_compa_calla": 0.512,
+  "comprobado_tanto": 0.215,
+  "comprobado_cartas": 0.132,
+  "pescada_mintiendo": 0.091,
+  "engano_manos": 458,
+  "engano_rival_canta": 0.393,
+  "engano_pts": 0.61
+ }
+}
