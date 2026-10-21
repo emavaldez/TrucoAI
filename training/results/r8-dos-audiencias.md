@@ -71,8 +71,17 @@ Duelos de 1000 pares (IC90 ±1,8) con la "mejor" de cada corrida, 4j / 6j:
 | D (iteración 220) | **57,0 / 64,7** | **55,0 / 59,1** | 52,5 / 52,1 | 72,3 / 75,0 |
 
 Ojo: la "mejor" se elige por lo que le gana a la difícil, y en A y B salió temprano (iteraciones 60 y 40, antes de
-que la charla de B cambiara). Para esas dos valen más los números del entrenamiento; los duelos de 1000 pares con la
-última red (iteración 225) están en la sección 4.
+que la charla de B cambiara). Por eso se repitieron los duelos con la **última red (iteración 225)** de cada una:
+
+| última red, 4j / 6j | callada | sorda a su equipo | sorda a los rivales | contra la difícil |
+|---|---|---|---|---|
+| A | 50,8 / 50,4 | 49,1 / 49,4 | 51,6 / 50,5 | 70,0 / 75,5 |
+| B | 51,6 / 57,1 | 53,4 / 54,8 | 52,7 / 49,5 | 70,0 / 69,0 |
+| C | **59,8 / 65,2** | **59,0 / 61,0** | — | 73,8 / 78,7 |
+| D | 56,8 / 63,1 | 54,9 / 57,9 | 51,9 / 52,2 | 72,8 / 76,8 |
+
+**Cuánto vale escuchar al compañero** (sorda a su equipo, promedio de 4 y 6): A ≈ 0 · B +4 · D +6 · C +10. Crece de
+forma ordenada con la privacidad del canal. Lo que le saca el rival escuchando: D +2, B +1.
 
 ## 3. Lectura
 
@@ -84,14 +93,15 @@ que la charla de B cambiara). Para esas dos valen más los números del entrenam
    que oye, y hablar vale 9–15 puntos (callada: 60,5% / 65,3%). La charla recupera buena parte de lo que se perdió al
    sacar las señas (contra la difícil: C 73/78 contra A 75/81), pero no todo: con tres palabras no se dice lo que dice
    una seña ("tengo el ancho de espada").
-3. **Que el rival oiga la mitad casi no cambia nada** (D ≈ C: 0,35 bits; el rival le saca 2–3 puntos escuchando).
-   **Que oiga todo lo cambia mucho** (B: 0,13 bits, hablar vale 2–4 puntos y escuchar al rival nada). La curva
-   información contra probabilidad de que escuche el rival no es lineal: aguanta hasta ½ y se cae en 1.
+3. **Que el rival oiga la mitad casi no cambia la información** (D ≈ C: 0,35 bits; el rival le saca 2 puntos
+   escuchando), aunque sí lo que vale (escuchar al compañero: +6 en D contra +10 en C). **Que oiga todo lo cambia
+   mucho** (B: 0,13 bits, escuchar al compañero +4, escuchar al rival +1). La curva información contra probabilidad
+   de que escuche el rival no es lineal: aguanta hasta ½ y se cae en 1.
 4. Es lo que predice Farrell y Gibbons: con dos audiencias, la charla pública queda parcialmente creíble. En B, "mucho"
    se dice con mucho 72% y sin nada 20%: informa algo al compañero sin regalarle todo al rival.
-5. **Callarse también es un mensaje.** En B, la red le gana a su versión callada solo 47% en los duelos de la red de la
-   iteración 40: el equipo que siempre se calla se aprovecha de rivales que leen el silencio como debilidad. En A
-   (nadie escucha) no pasa.
+5. **Callarse también es un mensaje** (efecto pasajero). Con la red de B de la iteración 40, el equipo que siempre se
+   calla le ganó al que habla (la red le ganó a su versión callada solo 47%): los rivales leían el silencio como
+   debilidad. Al final del entrenamiento ya no pasa (51,6% / 57,1%). En A, nadie escucha y no pasa nunca.
 6. **Lo que no sirve para decidir se olvida**, aun en privado: la charla de cartas pierde información en las cuatro
    condiciones; la del tanto (que decide el envido) se afila donde sirve.
 
