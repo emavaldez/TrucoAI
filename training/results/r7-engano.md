@@ -32,7 +32,7 @@ importa. `engano_pts` (puntos de envido netos cuando el rival cae): +2 a +3 por 
 | 300 | 80 / 68 | 78 / 69 | 54 / 50 | 68 / 70 | 45 / 43 | 44 / 40 |
 | 350 | 79 / 71 | 78 / 73 | 53 / 50 | 69 / 71 | 47 / 44 | 45 / 43 |
 
-## 3. Duelos finales, 1000 pares (IC90 ±1,8), la "mejor" de r7 (iteración 340)
+## 3. Duelos finales, 1000 pares (IC90 ±1,8), la "mejor" de r7 (iteración 190; corregido el 2026-10-22, decía 340 por error)
 
 | r7… contra ESC (que escucha) | 4 jugadores | 6 jugadores |
 |---|---|---|

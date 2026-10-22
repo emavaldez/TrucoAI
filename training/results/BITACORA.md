@@ -456,3 +456,17 @@ Diseño del piloto (4 jugadores, solo el tanto; `config/r4-piloto.json`):
   información contra probabilidad de que escuche el rival aguanta hasta ½ y se cae en 1. En C/D el lenguaje se
   comprime a "mucho / no mucho" (lo que decide el envido); la charla de cartas se pierde en todas las condiciones.
   Callarse también es un mensaje (B: el equipo callado le gana al que habla, porque leen el silencio como debilidad).
+
+## 2026-10-22 00:05 — Carrera armamentista de la charla (`training/carrera.sh`, `learner/carrera_cfg.py`)
+
+- Tanda 2 del programa del habla. Con señas y charla pública con reputación, como en el juego. Generación 0 = la mejor
+  de r7-engano (iteración 190, la que aprendió a mentir; `r7-engano.md` decía 340 por error, corregido).
+- Cadena "ultima": 6 generaciones, cada una mejor respuesta a la anterior congelada (100 iteraciones, arranca de los
+  pesos de la anterior). Pregunta: ¿cicla mentir ↔ desconfiar? Se evalúa cada 20 contra el objetivo oyendo y sorda
+  (cuánto de lo que le saca viene de la charla).
+- Cadena "mezcla": generaciones 2 a 5 contra la mezcla uniforme de todas las anteriores (PSRO con meta-solver uniforme =
+  juego ficticio). Pregunta: ¿se apaga hacia el balbuceo? La mejor se elige por el promedio contra todas.
+- Al final, matriz de duelos de 400 pares en 4 jugadores entre las 11 generaciones, R, r6-escucha-verdad, r3 y la
+  difícil: la tabla de pagos empírica para calcular el equilibrio de la población.
+- Se mira por generación: `info_tanto_bits`, qué dice con mucho tanto cuando el pie rival puede cantar (la mentira),
+  `canta_si_nada` / `canta_si_tiene` (cuánto le cree al rival), `engano_*`.
